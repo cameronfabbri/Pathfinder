@@ -71,13 +71,6 @@ class PathFinder:
             """
         )
 
-        self.graph_dict = {
-            self.student_agent: [self.counselor_agent],
-            self.counselor_agent: [self.student_agent, self.career_agent]
-        }
-
-        self.agents = [self.counselor_agent, self.student_agent, self.career_agent]
-
         def custom_speaker_selection_func(last_speaker, group_chat):
 
             print('last_speaker:', last_speaker.name)
@@ -136,7 +129,8 @@ class PathFinder:
         self.student_agent.initiate_chat(
             self.counselor_agent,
             message="Good morning",
-            clear_history=False
+            clear_history=False,
+            speaker_selection_method=custom_speaker_selection_func
         )
         exit()
 
