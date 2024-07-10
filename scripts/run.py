@@ -1,6 +1,7 @@
 """
 """
 import os
+import json
 import pprint
 
 from collections import defaultdict
@@ -17,13 +18,17 @@ from autogen.oai.openai_utils import config_list_from_dotenv
 from src import prompts
 
 
-class Student:
+def build_llm_chat_client(
+        model: str = constants.DEFAULT_MODEL) -> Callable[[list[Message]], str]:
+    """Make an LLM client that accepts a list of messages and returns a response."""
+    if 'gpt' in model:
+        client = openaiapi.get_openaiai_client()
+        chat_session = openaiapi.start_chat(model, client)
 
-    def __init__(self):
+        def chat(messages: list[Message]) -> Message:
+            return chat_session(messages)
 
-        self.first_name = ''
-        self.last_name = ''
-        self.about = ''
+    return chat
 
 
 class PathFinder:
@@ -71,68 +76,48 @@ class PathFinder:
             """
         )
 
-        def custom_speaker_selection_func(last_speaker, group_chat):
+    def speaker_selection_func(self, last_speaker, conversation_history):
 
-            print('last_speaker:', last_speaker.name)
+        next_speaker = self.counselor_agent
 
-            # Student always talks to the counselor
-            if last_speaker == self.student_agent:
-                next_speaker = self.counselor_agent
+        #print('last_speaker:', last_speaker.name)
 
-            # Check if the counselor needs to contact an external agent
-            elif last_speaker == self.counselor_agent:
-                next_speaker = self.student_agent
+        #response = conversation_history[-1][1].chat_history[-1]['content']
+        #print('response:', response)
+        #exit()
 
-            elif last_speaker == self.career_agent:
-                next_speaker = self.counselor_agent
+        # Student always talks to the counselor
+        if last_speaker == self.student_agent:
+            next_speaker = self.counselor_agent
 
-            print('groupchat messages')
-            print(group_chat.messages, '\n\n')
+        # Check if the counselor needs to contact an external agent
+        elif last_speaker == self.counselor_agent:
+            next_speaker = self.student_agent
 
-            # Determine if the counselor should respond, or if it needs to chat
-            # with another agent
-            if 'career' in group_chat.messages[-1]['content']:
-                return self.career_agent
+        #elif last_speaker == self.career_agent:
+        #    next_speaker = self.counselor_agent
 
-            #print('messages')
-            #print(last_speaker.chat_messages)
-            #print('next_speaker:', next_speaker.name)
-            #print('\n', '*' * 50, '\n')
-
-            return next_speaker
-
-        # create the groupchat
-        #group_chat = GroupChat(
-        #    agents=self.agents,
-        #    messages=[],
-        #    max_round=25,
-        #    allowed_or_disallowed_speaker_transitions=self.graph_dict,
-        #    allow_repeat_speaker=None,
-        #    speaker_transitions_type="allowed",
-        #    speaker_selection_method=custom_speaker_selection_func
-        #)
-
-        #self.manager = GroupChatManager(
-        #    groupchat=group_chat,
-        #    llm_config=self.llm_config,
-        #    is_termination_msg=lambda x: x.get("content", "") and x.get("content", "").rstrip().endswith("TERMINATE"),
-        #    code_execution_config=False,
-        #)
-
-        #print(dir(self.manager))
-        #print(self.manager.description, '\n')
-        #self.manager.update_system_message('Update message')
-        #print(self.manager.system_message, '\n')
+        print('conversation history')
+        print(conversation_history, '\n')
+        #exit()
+        #print('messages')
+        #print(last_speaker.chat_messages)
+        #print('next_speaker:', next_speaker.name)
+        #print('\n', '*' * 50, '\n')
+        print('next_speaker:', next_speaker.name, '\n')
+        return next_speaker
 
     def run(self):
 
-        self.student_agent.initiate_chat(
-            self.counselor_agent,
-            message="Good morning",
-            clear_history=False,
-            speaker_selection_method=custom_speaker_selection_func
-        )
-        exit()
+        current_speaker = self.student_agent
+        initial_message = 'Good morning'
+
+        # Student initiates the conversation
+        #response = current_speaker.initiate_chat(
+        #    recipient=self.counselor_agent,
+        #    message=initial_message,
+        #    summary_method="last_msg",
+        #)
 
         i = 0
         while True:
@@ -141,9 +126,10 @@ class PathFinder:
                 break
             request_reply = True
 
-            out = self.student_agent.send(
-                message, self.counselor_agent, request_reply=request_reply
+            self.student_agent.send(
+                message, self.counselor_agent, request_reply=False
             )
+            print(self.counselor_agent.chat_messages)
             print('\n')
             i += 1
 
@@ -161,58 +147,6 @@ class PathFinder:
             #print(history, '\n')
             #print('\n', '$' * 80, '\n')
 
-            if i == 2:
-
-                summary_args = {
-                    'summary_prompt': "Summarize the takeaway from the conversation. Do not add any introductory phrases."
-                }
-                summary = self.counselor_agent._summarize_chat(
-                    summary_method='reflection_with_llm',
-                    summary_args=summary_args,
-                    recipient=self.counselor_agent
-                )
-                print('SUMMARY')
-                print(summary)
-                exit()
-
-                '''
-                history = self.counselor_agent.chat_messages
-
-                history[self.student_agent].append(
-                    {'content': 'my favorite number is 7', 'role': 'user'}
-                )
-                history[self.student_agent].append(
-                    {'content': 'What\'s my favorite number?', 'role': 'user'}
-                )
-
-                message_to_send = {
-                    'content': [
-                        {
-                            'text': 'my favorite number is 7',
-                            'role': 'user',
-                            'type': 'text'
-                        },
-                        {
-                            'text': 'What\'s my favorite number?',
-                            'role': 'user',
-                            'type': 'text'
-                        }
-                    ],
-                    'role': 'user',
-                }
-
-                print(history, '\n')
-                print('message')
-                print(message_to_send)
-                exit()
-
-                self.student_agent.send(
-                    message_to_send,
-                    self.career_agent,
-                    request_reply=1
-                )
-                '''
-
         #print(self.counselor_agent.chat_messages_for_summary(self.student_agent))
 
 
@@ -229,19 +163,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-'''
-assessment_agent = ConversableAgent(
-    name="AssessmentAgent",
-    system_message="""Your job is to evaluate a student's skills, interests, personality traits, and academic performance to provide personalized recommendations and insights. Be sure to ask questions in order to obtain all of the following information: grades, favorite subjects, least favorite subjects, interests, hobbies, clubs and extracurricular activities, personality traits, strengths, weaknesses. Once an assessment has been completed, interact with the CareerAgent to discuss potential career options.""",
-    llm_config=llm_config,
-    human_input_mode='NEVER'
-)
-
-profile_agent = ConversableAgent(
-    name="ProfileAgent",
-    system_message="""ProfileAgent. Your job is to infer the assessment on a student and create/update a personalized profile for them.""",
-    llm_config=llm_config,
-    human_input_mode='NEVER'
-)
-'''
