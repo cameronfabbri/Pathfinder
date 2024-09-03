@@ -36,3 +36,17 @@ tools = [
         }
     }
 ]
+
+
+def get_student_first_name_from_id(student_id):
+    return "Cameron"
+
+
+def get_student_last_name_from_id(student_id):
+    return "Fabbri"
+
+
+function_map = {
+    "get_student_first_name_from_id": get_student_first_name_from_id,
+    "get_student_last_name_from_id": get_student_last_name_from_id
+}
