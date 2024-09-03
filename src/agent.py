@@ -2,11 +2,13 @@
 """
 
 import json
-from src.tools import function_map, get_student_first_name_from_id, get_student_last_name_from_id
+from src.tools import function_map
+
 
 class Agent:
-    def __init__(self, client, tools, system_prompt: str):
+    def __init__(self, client, name, tools, system_prompt: str):
         self.client = client
+        self.name = name
         self.tools = tools
         self.system_prompt = system_prompt
         self.messages = [{"role": "system", "content": self.system_prompt}]
@@ -21,6 +23,7 @@ class Agent:
 
     def handle_tool_call(self, response):
         for tool_call in response.choices[0].message.tool_calls:
+            print(f"Agent {self.name}: Handling tool call: {tool_call.function.name}")
             arguments = json.loads(tool_call.function.arguments)
 
             result = function_map[tool_call.function.name](arguments)

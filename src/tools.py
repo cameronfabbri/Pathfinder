@@ -2,35 +2,17 @@ tools = [
     {
         "type": "function",
         "function": {
-            "name": "get_student_first_name_from_id",
-            "description": "Get the student's first name from their ID",
+            "name": "get_suny_school_info",
+            "description": "Get the information about a SUNY school from its ID",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "student_id": {
+                    "school_name": {
                         "type": "string",
-                        "description": "The student's ID.",
+                        "description": "The name of the SUNY school.",
                     },
                 },
-                "required": ["student_id"],
-                "additionalProperties": False,
-            },
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_student_last_name_from_id",
-            "description": "Get the student's last name from their ID",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "student_id": {
-                        "type": "string",
-                        "description": "The student's ID.",
-                    },
-                },
-                "required": ["student_id"],
+                "required": ["school_name"],
                 "additionalProperties": False,
             },
         }
@@ -38,15 +20,10 @@ tools = [
 ]
 
 
-def get_student_first_name_from_id(student_id):
-    return "Cameron"
-
-
-def get_student_last_name_from_id(student_id):
-    return "Fabbri"
+def get_suny_school_info(school_name):
+    return "Founded in 1816 and located in Potsdam, NY"
 
 
 function_map = {
-    "get_student_first_name_from_id": get_student_first_name_from_id,
-    "get_student_last_name_from_id": get_student_last_name_from_id
+    "get_suny_school_info": get_suny_school_info,
 }
