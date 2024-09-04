@@ -4,6 +4,11 @@
 import json
 from src.tools import function_map
 
+# Add these color constants at the top of the file
+BLUE = "\033[94m"
+GREEN = "\033[92m"
+ORANGE = "\033[93m"
+RESET = "\033[0m"
 
 class Agent:
     def __init__(self, client, name, tools, system_prompt: str):
@@ -12,6 +17,16 @@ class Agent:
         self.tools = tools
         self.system_prompt = system_prompt
         self.messages = [{"role": "system", "content": self.system_prompt}]
+        self.color = self._get_color()
+
+    def _get_color(self):
+        if self.name.lower() == "user":
+            return BLUE
+        elif self.name.lower() == "counselor":
+            return GREEN
+        elif self.name.lower() == "suny":
+            return ORANGE
+        return ""
 
     def add_message(self, role, content):
         self.messages.append({"role": role, "content": content})
@@ -21,9 +36,14 @@ class Agent:
             model='gpt-4o', messages=self.messages, tools=self.tools
         )
 
+    def print_messages(self):
+        print(f'Agent {self.color}{self.name}{RESET}:')
+        [print(x) for x in self.messages]
+        print('\n', 40 * '-', '\n')
+
     def handle_tool_call(self, response):
         for tool_call in response.choices[0].message.tool_calls:
-            print(f"Agent {self.name}: Handling tool call: {tool_call.function.name}")
+            print(f"{self.color}{self.name}{RESET}: Handling tool call: {tool_call.function.name}")
             arguments = json.loads(tool_call.function.arguments)
 
             result = function_map[tool_call.function.name](arguments)
