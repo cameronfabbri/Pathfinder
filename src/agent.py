@@ -31,6 +31,10 @@ class Agent:
     def add_message(self, role, content):
         self.messages.append({"role": role, "content": content})
 
+    def delete_last_message(self):
+        if len(self.messages) > 1:
+            self.messages.pop()
+
     def invoke(self):
         return self.client.chat.completions.create(
             model='gpt-4o', messages=self.messages, tools=self.tools

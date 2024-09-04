@@ -7,14 +7,14 @@ import hashlib
 import getpass
 
 class User:
-    def __init__(self, first_name, last_name, email):
-        self.first_name = first_name
-        self.last_name = last_name
-        self.email = email
-        
+    def __init__(self, username, user_id):
+        #self.first_name = first_name
+        #self.last_name = last_name
+        self.username = username
+        self.user_id = user_id
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name} <{self.email}>"
+        return f"{self.username}"
 
 
 # Database connection and setup
@@ -68,9 +68,8 @@ def login():
         _, hashed_password = hash_password(password, stored_salt)
         
         if hashed_password == stored_hashed_password:
-            formatted_user_id = f'{user_id:08d}'
             print(f"Login successful! Welcome, {username}!")
-            print(f"Your user ID is {formatted_user_id}\n")
+            print(f"Your user ID is {user_id}\n")
         else:
             print("Incorrect password.")
     else:
@@ -79,8 +78,8 @@ def login():
         cursor.execute("INSERT INTO users (username, salt, hashed_password) VALUES (?, ?, ?)", 
                        (username, salt.decode('latin1'), hashed_password))
         conn.commit()
-        formatted_user_id = f'{cursor.lastrowid:08d}'  # Format the new user ID
-        print(f"User created successfully! Your user ID is {formatted_user_id}\n")
+        print(f"User created successfully! Your user ID is {user_id}\n")
 
     conn.close()
 
+    return User(username, user_id)

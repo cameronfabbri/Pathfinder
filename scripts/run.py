@@ -2,22 +2,47 @@
 """
 import os
 import hashlib
-import chromadb
 from openai import OpenAI
-from getpass import getpass
 
-import json
 from src import utils
 from src import prompts
 from src.tools import tools
+from src.user import User, login
+from src.database import ChromaDB
+from src.pdf_tools import parse_pdf_with_llama
 from src.agent import Agent, BLUE, GREEN, ORANGE, RESET
-
-from src.user import login
 
 
 def main():
 
-    login()
+    #texts = pdf_to_text('./data/suny/SUNY-IR-Fact-Book-2023-2024-V1.pdf')
+    #pdf_file = './data/suny/SUNY-IR-Fact-Book-2023-2024-V1.pdf'
+
+    # Generate a unique ID for the document
+    pdf_file = 'data/travis-transcript.pdf'
+    md_file = 'data/travis-transcript.md'
+    doc_id = str(hashlib.md5(pdf_file.encode()).hexdigest())
+
+    if not os.path.exists(md_file):
+        text = parse_pdf_with_llama(pdf_file)
+        with open(md_file, 'w') as f:
+            f.write(text)
+    else:
+        with open(md_file, 'r') as f:
+            text = f.read()
+
+    chroma_data_path = './chroma_data'
+    chroma_db = ChromaDB(chroma_data_path, distance_metric="cosine")
+
+    res = chroma_db.collection.get(ids=[doc_id])
+    if len(res['ids']) == 0:
+        chroma_db.add_document(text, doc_id, user_id="00000001")
+
+    #print(chroma_db.collection.query(query_texts=["Global history"], n_results=1))
+
+    user = login()
+    print(user)
+    exit()
 
     client = OpenAI(api_key=os.getenv("PATHFINDER_OPENAI_API_KEY"))
     counselor_agent = Agent(client, name="Counselor", tools=None, system_prompt=prompts.COUNSELOR_SYSTEM_PROMPT)
