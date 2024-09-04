@@ -45,15 +45,15 @@ def hash_password(password, salt=None):
     return salt, hashed_pw
 
 # Function to check if user exists, or create new one if they don't
-def login():
+def login(username, password):
     conn = initialize_db()
     cursor = conn.cursor()
     
     # Get username and password input
     #username = input("Enter username: ")
     #password = getpass.getpass("Enter password: ")
-    username = 'cameron'
-    password = 'fabbri'
+    #username = 'cameron'
+    #password = 'fabbri'
     
     # Check if the username exists
     cursor.execute("SELECT id, salt, hashed_password FROM users WHERE username=?", (username,))

@@ -1,8 +1,15 @@
 """
 """
 import os
+import sys
 import hashlib
+import streamlit as st
+
 from openai import OpenAI
+
+# Added for streamlit
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, project_root)
 
 from src import utils
 from src import prompts
@@ -13,69 +20,56 @@ from src.pdf_tools import parse_pdf_with_llama
 from src.agent import Agent, BLUE, GREEN, ORANGE, RESET
 
 
-def main():
+def streamlit_login():
+    if "user" not in st.session_state:
+        placeholder = st.empty()
 
-    #texts = pdf_to_text('./data/suny/SUNY-IR-Fact-Book-2023-2024-V1.pdf')
-    #pdf_file = './data/suny/SUNY-IR-Fact-Book-2023-2024-V1.pdf'
+        with placeholder.form("login"):
+            st.markdown("#### Enter your credentials")
+            username = 'cameron'#st.text_input("Username")
+            password = 'fabbri'#st.text_input("Password", type="password")
+            submit = st.form_submit_button("Login")
 
-    # Generate a unique ID for the document
-    pdf_file = 'data/travis-transcript.pdf'
-    md_file = 'data/travis-transcript.md'
-    doc_id = str(hashlib.md5(pdf_file.encode()).hexdigest())
+        if submit:
+            user = login(username, password)
+            if user:
+                st.session_state.user = user
+                placeholder.empty()
+                st.success("Login successful")
+                return user
+            else:
+                st.error("Login failed")
+        return None
+    return st.session_state.user
 
-    if not os.path.exists(md_file):
-        text = parse_pdf_with_llama(pdf_file)
-        with open(md_file, 'w') as f:
-            f.write(text)
-    else:
-        with open(md_file, 'r') as f:
-            text = f.read()
 
-    chroma_data_path = './chroma_data'
-    chroma_db = ChromaDB(chroma_data_path, distance_metric="cosine")
+def chat_interface(counselor_agent, suny_agent):
+    st.title("💬 Counselor Chatbot")
+    st.caption("🚀 Chat with your SUNY counselor")
 
-    res = chroma_db.collection.get(ids=[doc_id])
-    if len(res['ids']) == 0:
-        chroma_db.add_document(text, doc_id, user_id="00000001")
+    if "messages" not in st.session_state:
+        st.session_state.messages = [{"role": "assistant", "content": "Hello! How can I assist you with SUNY-related questions today?"}]
 
-    #print(chroma_db.collection.query(query_texts=["Global history"], n_results=1))
+    for msg in st.session_state.messages:
+        st.chat_message(msg["role"]).write(msg["content"])
 
-    user = login()
-    print(user)
-    exit()
+    if prompt := st.chat_input():
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        st.chat_message("user").write(prompt)
 
-    client = OpenAI(api_key=os.getenv("PATHFINDER_OPENAI_API_KEY"))
-    counselor_agent = Agent(client, name="Counselor", tools=None, system_prompt=prompts.COUNSELOR_SYSTEM_PROMPT)
-    suny_agent = Agent(client, name="SUNY", tools=tools, system_prompt=prompts.SUNY_SYSTEM_PROMPT)
-
-    user_input = 'What year was SUNY Potsdam founded?'
-    user_input = ''
-
-    while True:
-        if not user_input:
-            user_input = input(f"{BLUE}User{RESET}: ")
-        else:
-            print(f"{BLUE}User{RESET}: {user_input}")
-
-        counselor_agent.add_message("user", user_input)
+        counselor_agent.add_message("user", prompt)
         counselor_response = counselor_agent.invoke()
 
-        # Check if the response contains a tool call
         if counselor_response.choices[0].message.tool_calls:
             counselor_response = counselor_agent.handle_tool_call(counselor_response)
 
         counselor_response_str = counselor_response.choices[0].message.content
-
-        # Parse out the recipient and message
         counselor_response_json = utils.parse_json(counselor_response_str)
 
         recipient = counselor_response_json.get("recipient")
         counselor_message = counselor_response_json.get("message")
 
-        counselor_agent.add_message("assistant", counselor_response_str)
-
         if recipient == "suny":
-            print(f'{GREEN}Counselor{RESET} to {ORANGE}SUNY{RESET}: {counselor_message}')
             suny_agent.add_message("user", counselor_message)
             suny_response = suny_agent.invoke()
 
@@ -83,26 +77,33 @@ def main():
                 suny_response = suny_agent.handle_tool_call(suny_response)
 
             suny_response_str = utils.format_for_json(suny_response.choices[0].message.content)
-
             suny_agent.add_message("assistant", suny_response_str)
-            print(f'{ORANGE}SUNY{RESET} to {GREEN}Counselor{RESET}: {suny_response_str}')
 
-            # Add SUNY response to counselor's message history
             counselor_agent.add_message("assistant", '{"recipient": "user", "message": ' + suny_response_str + '}')
-
-            # Counselor then processes and responds to the user
             counselor_response = counselor_agent.invoke()
             counselor_response_str = counselor_response.choices[0].message.content
             counselor_response_json = utils.parse_json(counselor_response_str)
-
-            recipient = counselor_response_json.get("recipient")
             counselor_message = counselor_response_json.get("message")
 
-        print(f'{GREEN}Counselor{RESET} to {BLUE}User{RESET}: {counselor_message}\n')
+        st.session_state.messages.append({"role": "assistant", "content": counselor_message})
+        st.chat_message("assistant").write(counselor_message)
 
-        # Reset user_input for the next iteration
-        user_input = ''
 
+def main():
+    st.set_page_config(page_title="SUNY Counselor Chat", page_icon="💬")
+
+    user = streamlit_login()
+    if user:
+        st.sidebar.success(f"Logged in as: {user.username}")
+
+        if "counselor_agent" not in st.session_state:
+            client = OpenAI(api_key=os.getenv("PATHFINDER_OPENAI_API_KEY"))
+            st.session_state.counselor_agent = Agent(client, name="Counselor", tools=None, system_prompt=prompts.COUNSELOR_SYSTEM_PROMPT)
+            st.session_state.suny_agent = Agent(client, name="SUNY", tools=tools, system_prompt=prompts.SUNY_SYSTEM_PROMPT)
+
+        chat_interface(st.session_state.counselor_agent, st.session_state.suny_agent)
+    else:
+        st.error("Please log in to continue")
 
 if __name__ == "__main__":
     main()
