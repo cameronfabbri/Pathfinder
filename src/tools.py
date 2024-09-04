@@ -20,6 +20,7 @@ tools = [
 ]
 
 
+
 def get_suny_school_info(school_name):
     return "Founded in 1816 and located in Potsdam, NY"
 

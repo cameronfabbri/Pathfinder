@@ -1,44 +1,30 @@
 """
 """
 import os
+import hashlib
+import chromadb
 from openai import OpenAI
+from getpass import getpass
 
 import json
+from src import utils
 from src import prompts
 from src.tools import tools
 from src.agent import Agent, BLUE, GREEN, ORANGE, RESET
 
-
-def format_for_json(input_string):
-    """
-    Takes a string and formats it properly for use in JSON.
-    Escapes special characters like quotes and newlines.
-    """
-    # Use json.dumps to handle escaping
-    formatted_string = json.dumps(input_string)
-    
-    # Remove the surrounding double quotes added by json.dumps
-    return formatted_string[1:-1]
-
-
-def parse_json(message):
-    """
-    Parses a string as JSON, with special handling for the JSON format used by the agents.
-    """
-    try:
-        return json.loads(message)
-    except:
-        print('Could not parse message as JSON')
-        print(message)
-        exit()
+from src.user import login
 
 
 def main():
+
+    login()
+
     client = OpenAI(api_key=os.getenv("PATHFINDER_OPENAI_API_KEY"))
     counselor_agent = Agent(client, name="Counselor", tools=None, system_prompt=prompts.COUNSELOR_SYSTEM_PROMPT)
     suny_agent = Agent(client, name="SUNY", tools=tools, system_prompt=prompts.SUNY_SYSTEM_PROMPT)
 
     user_input = 'What year was SUNY Potsdam founded?'
+    user_input = ''
 
     while True:
         if not user_input:
@@ -56,7 +42,7 @@ def main():
         counselor_response_str = counselor_response.choices[0].message.content
 
         # Parse out the recipient and message
-        counselor_response_json = parse_json(counselor_response_str)
+        counselor_response_json = utils.parse_json(counselor_response_str)
 
         recipient = counselor_response_json.get("recipient")
         counselor_message = counselor_response_json.get("message")
@@ -71,7 +57,7 @@ def main():
             if suny_response.choices[0].message.tool_calls:
                 suny_response = suny_agent.handle_tool_call(suny_response)
 
-            suny_response_str = format_for_json(suny_response.choices[0].message.content)
+            suny_response_str = utils.format_for_json(suny_response.choices[0].message.content)
 
             suny_agent.add_message("assistant", suny_response_str)
             print(f'{ORANGE}SUNY{RESET} to {GREEN}Counselor{RESET}: {suny_response_str}')
@@ -82,7 +68,7 @@ def main():
             # Counselor then processes and responds to the user
             counselor_response = counselor_agent.invoke()
             counselor_response_str = counselor_response.choices[0].message.content
-            counselor_response_json = parse_json(counselor_response_str)
+            counselor_response_json = utils.parse_json(counselor_response_str)
 
             recipient = counselor_response_json.get("recipient")
             counselor_message = counselor_response_json.get("message")
