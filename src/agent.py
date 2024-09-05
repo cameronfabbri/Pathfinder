@@ -11,11 +11,13 @@ ORANGE = "\033[93m"
 RESET = "\033[0m"
 
 class Agent:
-    def __init__(self, client, name, tools, system_prompt: str):
+    def __init__(self, client, name, tools, system_prompt: str, json_mode: bool = False, temperature: float = 0.0):
         self.client = client
         self.name = name
         self.tools = tools
         self.system_prompt = system_prompt
+        self.json_mode = json_mode
+        self.temperature = temperature
         self.messages = [{"role": "system", "content": self.system_prompt}]
         self.color = self._get_color()
 
@@ -37,7 +39,11 @@ class Agent:
 
     def invoke(self):
         return self.client.chat.completions.create(
-            model='gpt-4o', messages=self.messages, tools=self.tools
+            model='gpt-4o',
+            messages=self.messages,
+            tools=self.tools,
+            response_format={ "type": "json_object" } if self.json_mode else None,
+            temperature=self.temperature
         )
 
     def print_messages(self):
