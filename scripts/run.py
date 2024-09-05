@@ -20,6 +20,32 @@ from src.tools import counselor_tools, suny_tools
 from src.user import User, login, get_db_connection
 from src.agent import Agent, BLUE, GREEN, ORANGE, RESET
 
+def logout():
+
+    # Only summarize the chat if the counselor agent has received user messages
+    num_user_messages = len([msg for msg in st.session_state.counselor_agent.messages if msg['role'] == 'user'])
+    if num_user_messages > 0:
+        st.session_state.counselor_agent.add_message("user", prompts.SUMMARY_PROMPT)
+        response = st.session_state.counselor_agent.invoke()
+        summary = response.choices[0].message.content
+
+        print("SUMMARY")
+        print(summary)
+
+        # Add the summary to the chat history
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(f"INSERT INTO chat_summary (user_id, summary) VALUES ('{st.session_state.user.user_id}', '{summary}');")
+            conn.commit()
+            print('Chat summary updated')
+
+    # Clear the session state
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+    
+    # Rerun the script to return to the login page
+    st.rerun()
+
 
 def display_student_info(user):
     st.sidebar.title("Student Information")
@@ -181,6 +207,12 @@ def main():
     user = streamlit_login()
 
     if user:
+
+        col1, col2, col3 = st.columns([1,1,1])
+        with col3:
+            if st.button("Logout"):
+                logout()
+
         st.sidebar.success(f"Logged in as: {user.username}")
         display_student_info(user)
 
@@ -242,10 +274,24 @@ def main():
         
         if "user_messages" not in st.session_state:
 
+            print("LOGIN NUMBER: ", login_number)
+
             if login_number == 0:
                 first_message = prompts.WELCOME_MESSAGE
             else:
-                first_message = prompts.WELCOME_BACK_MESSAGE
+                with get_db_connection() as conn:
+                    cursor.execute("SELECT summary FROM chat_summary WHERE user_id=? ORDER BY id DESC LIMIT 1;", (st.session_state.user.user_id,))
+                    last_chat_message = cursor.fetchone()[0]
+                    prompt1 = 'Reword the following summary from your last conversation with the student and transform it into a friendly greeting.'
+                    response = client.chat.completions.create(
+                        model='gpt-4o',
+                        messages=[
+                            {"role": "assistant", "content": prompt1 + '\n\n' + '**Previous Conversation Summary**\n' + last_chat_message},
+                        ],
+                        tools=None,
+                        temperature=0.0
+                    )
+                    first_message = response.choices[0].message.content
 
             st.session_state.user_messages = [{"role": "assistant", "content": first_message}]
         

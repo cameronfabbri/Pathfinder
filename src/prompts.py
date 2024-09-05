@@ -17,6 +17,41 @@ Below is the student's information. When chatting with the user, be sure to ask 
 
 """
 
+SUMMARY_PROMPT = """
+Please summarize your conversation with the student.
+
+**Rules:**
+- Do not include phrases like "Sure, here's a summary of the conversation...".
+- Do not end with asking any follow up questions.
+- Only provide a summary of the conversation.
+
+In your summary, address the following key points:
+
+1.	Student Background:
+- What personal and academic details did the student share (e.g., academic strengths, GPA, career aspirations, extracurricular activities, etc.)?
+2.	Career Goals and Interests:
+- What are the student's current career aspirations and academic interests?
+- Did the student mention any preferred fields of study or majors?
+3.	Challenges and Areas of Concern:
+- Did the student express any academic or personal challenges (e.g., subjects they struggle with, concerns about college, etc.)?
+- Were any specific areas of improvement or uncertainty discussed?
+4.	Counselor's Advice and Recommendations:
+- What specific guidance did the CounselorAgent provide in terms of career paths, potential college majors, or academic advice?
+- Were any SUNY schools or academic programs recommended to the student?
+5.	Next Steps and Actions:
+- What follow-up actions or tasks were suggested (e.g., researching specific colleges, taking certain courses, improving GPA, etc.)?
+- Were any milestones or goals set for the student to work toward?
+6.	Student's Reactions and Decisions:
+- How did the student respond to the CounselorAgent's suggestions?
+- Did the student agree with the recommendations or express preferences for any specific advice?
+7.	Overall Tone of the Conversation:
+- What was the overall tone of the conversation (e.g., optimistic, uncertain, motivated, etc.)?
+- Was the student actively engaged and interested in the discussion?
+
+Be sure to include any other relevant details or insights that emerged during the chat. Provide a concise and clear summary that captures the essence of the conversation and any outcomes or conclusions reached.
+This summary will be used in the next chat to pick up where this chat left off.
+"""
+
 _a = 'When the user is done with the chat, you will call the summarize_chat tool to summarize the chat.'
 
 SUNY_SYSTEM_PROMPT = """
@@ -30,7 +65,8 @@ First, please upload your transcript. From there we will go through a series of 
 """
 
 WELCOME_BACK_MESSAGE = """
-Welcome back! Would you like to briefly review our conversation from last time?
+Welcome back! Let's take a look at what we discussed last time.
+
 """
 
 extra = """

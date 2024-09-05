@@ -142,6 +142,17 @@ def initialize_db():
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
         ''')
+
+        # Create chat summary table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS chat_summary (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                summary TEXT NOT NULL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+        ''')
         conn.commit()
 
 # Function to hash and salt password
