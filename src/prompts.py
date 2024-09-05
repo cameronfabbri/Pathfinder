@@ -12,6 +12,11 @@ All of your messages must be in the following JSON format, without ```json. Be s
 }
 
 When the user is done with the chat, you will call the summarize_chat tool to summarize the chat.
+
+Below is the student's information. When chatting with the user, be sure to ask them for any information that is missing, one item at a time.
+
+**Student Info:**
+
 """
 
 SUNY_SYSTEM_PROMPT = """

@@ -47,13 +47,66 @@ def main():
     st.set_page_config(page_title="SUNY Counselor Chat", page_icon="💬", layout="wide")
 
     user = streamlit_login()
+
+    print(user)
+
+    import sqlite3
+
     if user:
         st.sidebar.success(f"Logged in as: {user.username}")
+        conn = sqlite3.connect('users.db')
+        cursor = conn.cursor()
+
+        cursor.execute(f"SELECT * FROM students where user_id={user.user_id};")
+        student_info = cursor.fetchall()
+        student_info_dict = {
+            'first_name': student_info[0][0],
+            'last_name': student_info[0][1],
+            #'email': student_info[0][2],
+            #'phone_number': student_info[0][3],
+            #'user_id': student_info[0][4],
+            'age': student_info[0][5],
+            'gender': student_info[0][6],
+            #'ethnicity': student_info[0][7],
+            'high_school': student_info[0][8],
+            'high_school_grad_year': student_info[0][9],
+            #'gpa': student_info[0][10],
+            #'sat_score': student_info[0][11],
+            #'act_score': student_info[0][12],
+            'favorite_subjects': student_info[0][13],
+            'extracurriculars': student_info[0][14],
+            'career_aspirations': student_info[0][15],
+            'preferred_major': student_info[0][16],
+            #'clifton_strengths': student_info[0][17],
+            #'personality_test_results': student_info[0][18],
+            #'address': student_info[0][19],
+            #'city': student_info[0][20],
+            #'state': student_info[0][21],
+            #'zip_code': student_info[0][22],
+            'intended_college': student_info[0][23],
+            'intended_major': student_info[0][24],
+            #'application_status': student_info[0][25]
+        }
+
+        student_info_str = ""
+        for key, value in student_info_dict.items():
+            student_info_str += f"{key.replace('_', ' ').title()}: {value}\n"
 
         if "counselor_agent" not in st.session_state:
             client = OpenAI(api_key=os.getenv("PATHFINDER_OPENAI_API_KEY"))
-            st.session_state.counselor_agent = Agent(client, name="Counselor", tools=None, system_prompt=prompts.COUNSELOR_SYSTEM_PROMPT, json_mode=True)
-            st.session_state.suny_agent = Agent(client, name="SUNY", tools=tools, system_prompt=prompts.SUNY_SYSTEM_PROMPT)
+            st.session_state.counselor_agent = Agent(
+                client,
+                name="Counselor",
+                tools=None,
+                system_prompt=prompts.COUNSELOR_SYSTEM_PROMPT + student_info_str,
+                json_mode=True
+            )
+            st.session_state.suny_agent = Agent(
+                client,
+                name="SUNY",
+                tools=tools,
+                system_prompt=prompts.SUNY_SYSTEM_PROMPT
+            )
         
         if "user_messages" not in st.session_state:
             st.session_state.user_messages = [{"role": "assistant", "content": "Hello! How can I assist you with SUNY-related questions today?"}]
@@ -76,15 +129,6 @@ def main():
 def main_chat_interface():
     st.title("💬 User-Counselor Chat")
     st.caption("🚀 Chat with your SUNY counselor")
-
-    #for msg in st.session_state.user_messages:
-    #    st.chat_message(msg["role"]).write(msg["content"])
-
-    #if prompt := st.chat_input("Type your message here..."):
-    #    st.session_state.user_messages.append({"role": "user", "content": prompt})
-    #    st.chat_message("user").write(prompt)
-    #    process_user_input(prompt)
-    #    st.rerun()
 
     chat_container = st.container()
 

@@ -8,8 +8,6 @@ import getpass
 
 class User:
     def __init__(self, username, user_id):
-        #self.first_name = first_name
-        #self.last_name = last_name
         self.username = username
         self.user_id = user_id
 
@@ -22,13 +20,59 @@ def initialize_db():
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
     
-    # Create users table if it doesn't exist
+    # Create users table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             salt TEXT NOT NULL,
             hashed_password TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS students (
+            first_name TEXT,
+            last_name TEXT,
+            email TEXT,
+            phone_number TEXT,
+            user_id INTEGER NOT NULL,
+            age INTEGER,
+            gender TEXT,
+            ethnicity TEXT,
+            high_school TEXT,
+            high_school_grad_year INTEGER,
+            gpa REAL,
+            sat_score INTEGER,
+            act_score INTEGER,
+            favorite_subjects TEXT,
+            extracurriculars TEXT,
+            career_aspirations TEXT,
+            preferred_major TEXT,
+            clifton_strengths TEXT,
+            personality_test_results TEXT,
+            address TEXT,
+            city TEXT,
+            state TEXT,
+            zip_code TEXT,
+            intended_college TEXT,
+            intended_major TEXT,
+            application_status TEXT,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        );
+    ''')
+    conn.commit()
+
+    # Create chat history table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS chat_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            login_number INTEGER NOT NULL,
+            message TEXT NOT NULL,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
         )
     ''')
     conn.commit()
@@ -78,7 +122,16 @@ def login(username, password):
         cursor.execute("INSERT INTO users (username, salt, hashed_password) VALUES (?, ?, ?)", 
                        (username, salt.decode('latin1'), hashed_password))
         conn.commit()
+
+        cursor.execute("SELECT id, salt, hashed_password FROM users WHERE username=?", (username,))
+        result = cursor.fetchone()
+        user_id = result[0]
+
         print(f"User created successfully! Your user ID is {user_id}\n")
+
+        cursor.execute("INSERT INTO students (user_id, age) VALUES (?, ?)", (user_id, 16))
+        conn.commit()
+        print(f"User info created successfully!\n")
 
     conn.close()
 
