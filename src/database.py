@@ -1,14 +1,9 @@
-import os
-import chromadb
-from chromadb.config import Settings
-import uuid 
-from chromadb.utils import embedding_functions
 import chromadb
 from chromadb.config import DEFAULT_TENANT, DEFAULT_DATABASE, Settings
 
 
 class ChromaDB:
-    def __init__(self, path, distance_metric: str):
+    def __init__(self, path, distance_metric: str = "cosine"):
         """
         Initialize the ChromaDB client and collection.
 

@@ -55,8 +55,10 @@ class Agent:
         for tool_call in response.choices[0].message.tool_calls:
             print(f"{self.color}{self.name}{RESET}: Handling tool call: {tool_call.function.name}")
             arguments = json.loads(tool_call.function.arguments)
+            print(f"{self.color}{self.name}{RESET}: Arguments: {arguments}")
 
-            result = function_map[tool_call.function.name](arguments)
+            result = function_map[tool_call.function.name](**arguments)
+            print(f"{self.color}{self.name}{RESET}: Result: {result}")
 
             args_and_result = {
                 **arguments,
@@ -83,5 +85,8 @@ class Agent:
 
             self.messages.append({"role": "assistant", "tool_calls": tool_call_message})
             self.messages.append(function_call_result_message)
+
+            print('MESSAGES')
+            [print(x) for x in self.messages]
 
         return self.invoke()
