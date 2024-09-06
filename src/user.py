@@ -208,12 +208,26 @@ def login(username, password):
 
     return User(user_id, username, login_number)
 
-def select_from_db(query, args):
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(query, args)
-        out = cursor.fetchall()
-    return out
+def execute_query(query, args) -> list | None:
+    """
+    Execute a query on the database
+
+    Args:
+        query (str): The query to execute
+        args (tuple): The arguments to pass to the query
+    Returns:
+        The result of the query | None if error
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, args)
+            out = cursor.fetchall()
+            return out
+    except Exception as e:
+        print(f"Error executing query: {e}")
+        return None
+
 
 def get_db_connection():
     """

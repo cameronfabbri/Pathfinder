@@ -14,13 +14,25 @@ sys.path.insert(0, project_root)
 
 from src import utils
 from src import prompts
+from src.personas import DAVID, EMMA, LIAM
 from src.database import ChromaDB
 from src.pdf_tools import parse_pdf_with_llama
 from src.tools import counselor_tools, suny_tools
-from src.user import User, login, select_from_db, get_db_connection
+from src.user import User, login, execute_query, get_db_connection
 from src.agent import Agent, BLUE, GREEN, ORANGE, RESET
 
-def logout():
+
+def summarize_chat():
+    """
+    Summarize the chat and add it to the database
+
+    Args:
+        None
+    Returns:
+        summary (str): The summary of the chat
+    """
+
+    summary = None
 
     # Only summarize the chat if the counselor agent has received user messages
     num_user_messages = len([msg for msg in st.session_state.counselor_agent.messages if msg['role'] == 'user'])
@@ -29,15 +41,35 @@ def logout():
         response = st.session_state.counselor_agent.invoke()
         summary = response.choices[0].message.content
 
+        summary = utils.parse_json(summary)['message']
+
         print("SUMMARY")
         print(summary)
+    else:
+        print("No summary to write")
 
-        # Add the summary to the chat history
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(f"INSERT INTO chat_summary (user_id, summary) VALUES ('{st.session_state.user.user_id}', '{summary}');")
-            conn.commit()
-            print('Chat summary updated')
+    return summary
+
+
+def write_summary_to_db(summary):
+    """
+    Write the summary to the database
+
+    Args:
+        summary (str): The summary of the chat
+    Returns:
+        None
+    """
+    execute_query("INSERT INTO chat_summary (user_id, summary) VALUES (?, ?)", (st.session_state.user.user_id, summary))
+    print('Chat summary updated')
+
+
+def logout():
+
+    summary = summarize_chat()
+
+    if summary:
+        write_summary_to_db(summary)
 
     # Clear the session state
     for key in list(st.session_state.keys()):
@@ -49,7 +81,17 @@ def logout():
 
 def display_student_info(user):
     st.sidebar.title("Student Information")
-    
+
+        # Add custom CSS for text wrapping
+    st.markdown("""
+        <style>
+        [data-testid="stSidebar"] .stText {
+            word-wrap: break-word;
+            white-space: pre-wrap;      
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(f"SELECT * FROM students WHERE user_id='{user.user_id}';")
@@ -74,7 +116,14 @@ def display_student_info(user):
         
         for key, value in info_dict.items():
             st.sidebar.text(f"{key}: {value}")
-    
+
+    # Add transcript upload button to sidebar
+    st.sidebar.markdown("---")  # Add a separator
+    st.sidebar.subheader("Upload Transcript")
+    uploaded_file = st.sidebar.file_uploader("Choose a file", type=["csv", "xlsx", "pdf", "txt"])
+    if uploaded_file is not None:
+        process_transcript(uploaded_file) 
+
 
 def streamlit_login():
     if "user" not in st.session_state:
@@ -164,9 +213,54 @@ def process_transcript(uploaded_file):
     db.add_document(transcript_text, doc_id=uploaded_file.name, user_id=st.session_state.user.user_id)
 
 
+def display_counselor_options():
+    st.subheader("Choose your counselor!")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.image("data/david.jpg", width=150)
+    with col2:
+        st.image("data/emma.jpg", width=150)
+    with col3:
+        st.image("data/liam.jpg", width=150)
+
+    return st.radio(
+        "Counselor Selection",
+        ("David - The Mentor", "Emma - The Strategist", "Liam - The Explorer"),
+        horizontal=True,
+        label_visibility="collapsed",
+        index=None
+    )
+
+
+def update_student_info(user: User, student_info: dict):
+    """
+    Update the student info in the database
+
+    Args:
+        user (User): The user object
+        student_info (dict): The student info
+    Returns:
+        None
+    """
+    query = f"UPDATE students SET {', '.join([f'{key}=?' for key in student_info])} WHERE user_id=?"
+    execute_query(query, tuple(list(student_info.values()) + [st.session_state.user.user_id]))
+
+
 def main_chat_interface():
     st.title("💬 User-Counselor Chat")
     st.caption("🚀 Chat with your SUNY counselor")
+
+    persona = display_counselor_options()
+
+    if persona:
+        if persona == "David - The Mentor":
+            st.info(DAVID)
+        elif persona == "Emma - The Strategist":
+            st.info(EMMA)
+        elif persona == "Liam - The Explorer":
+            st.info(LIAM)
 
     if len(st.session_state.user_messages) == 1:
         first_message = st.session_state.user_messages[0]["content"]
@@ -174,11 +268,6 @@ def main_chat_interface():
         # Add in the first message to the counselor agent if it's not already there
         if {"role": "assistant", "content": first_message} not in st.session_state.counselor_agent.messages:
             st.session_state.counselor_agent.add_message("assistant", first_message)
-
-    # Add transcript upload button
-    uploaded_file = st.file_uploader("Upload your transcript", type=["csv", "xlsx", "pdf", "txt"])
-    if uploaded_file is not None:
-        process_transcript(uploaded_file)
 
     chat_container = st.container()
 
@@ -188,6 +277,31 @@ def main_chat_interface():
     with chat_container:
         for msg in st.session_state.user_messages:
             st.chat_message(msg["role"]).write(msg["content"])
+
+    st.session_state.messages_since_update += 1
+    print('MESSAGES SINCE UPDATE:', st.session_state.messages_since_update)
+    if st.session_state.messages_since_update > 4:
+        st.session_state.messages_since_update = 0
+        print('Updating student info...')
+        current_student_info = get_student_info(st.session_state.user)
+        chat_summary = summarize_chat()
+        new_info_prompt = "Below is the student's information and a summary of the current conversation. Your task is to generate arguments in JSON format for the information that should be updated. Your argument's variable names must match the student's information keys exactly. Each value must be a string."
+        new_info_prompt += f"Student Information:\n{current_student_info}\n\nConversation Summary: {chat_summary}"
+        response = st.session_state.counselor_agent.client.chat.completions.create(
+            model='gpt-4o',
+            messages=[
+                {"role": "assistant", "content": new_info_prompt},
+            ],
+            temperature=0.0,
+            response_format={ "type": "json_object" }
+        ).choices[0].message.content
+
+        response_json = utils.parse_json(response)
+        for key, value in response_json.items():
+            if key in current_student_info:
+                current_student_info[key] = value
+        
+        update_student_info(st.session_state.user, current_student_info)
 
     # Process the user input
     if prompt:
@@ -201,7 +315,7 @@ def main_chat_interface():
         st.rerun()
 
 
-def get_chat_summary(client: OpenAI) -> str:
+def get_chat_summary_from_db(client: OpenAI) -> str:
     """
     Get the chat summary from the database
 
@@ -213,8 +327,8 @@ def get_chat_summary(client: OpenAI) -> str:
 
     query = "SELECT summary FROM chat_summary WHERE user_id=? ORDER BY id DESC LIMIT 1;"
 
-    # [0][0] because the select_from_db uses fetchall(), not fetchone()
-    summary = select_from_db(query, (st.session_state.user.user_id,))[0][0]
+    # [0][0] because the execute_query uses fetchall(), not fetchone()
+    summary = execute_query(query, (st.session_state.user.user_id,))[0][0]
     summary = utils.parse_json(summary)
     summary = summary.get("message")
     prompt = prompts.WELCOME_BACK_PROMPT.format(summary=summary)
@@ -229,7 +343,7 @@ def get_chat_summary(client: OpenAI) -> str:
     return first_message
 
 
-def get_student_info(user):
+def get_student_info(user: User) -> dict:
     """
     Get the login number and student info from the database
 
@@ -237,14 +351,13 @@ def get_student_info(user):
         user (User): The user object
 
     Returns:
-        login_number (int): The login number
-        student_info_str (str): The student info
+        student_info_dict (dict): The student info
     """
 
-    login_number = select_from_db("SELECT login_number FROM users WHERE username=?;", (user.username,))[0]
-    student_info = select_from_db("SELECT * FROM students WHERE user_id=?;", (user.user_id,))[0]
+    #login_number = execute_query("SELECT login_number FROM users WHERE username=?;", (user.username,))[0][0]
+    student_info = execute_query("SELECT * FROM students WHERE user_id=?;", (user.user_id,))[0]
 
-    student_info_dict = {
+    return {
         'first_name': student_info[0],
         'last_name': student_info[1],
         #'email': student_info[2],
@@ -270,18 +383,48 @@ def get_student_info(user):
         'zip_code': student_info[22],
         'intended_college': student_info[23],
         'intended_major': student_info[24],
-        'login_number': login_number,
     }
 
-    student_info_str = ""
-    for key, value in student_info_dict.items():
-        student_info_str += f"{key.replace('_', ' ').title()}: {value}\n"
 
-    return login_number, student_info_str
+def dict_to_str(info_dict: dict) -> str:
+    """
+    Convert a dictionary to a string
+
+    Args:
+        info_dict (dict): The info dictionary
+
+    Returns:
+        info_str (str): The info string
+    """
+    info_str = ""
+    for key, value in info_dict.items():
+        info_str += key.replace('_', ' ').title() + ": " + str(value) + "\n"
+    return info_str
 
 
 def main():
     st.set_page_config(page_title="SUNY Counselor Chat", page_icon="💬", layout="wide")
+
+    # Add this CSS for styling chat messages
+    st.markdown("""
+        <style>
+        .chat-message {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+        .chat-message.user {
+            background-color: #e6f3ff;
+            text-align: right;
+        }
+        .chat-message.assistant {
+            background-color: #f0f0f0;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    if 'messages_since_update' not in st.session_state:
+        st.session_state.messages_since_update = 0
 
     user = streamlit_login()
 
@@ -295,7 +438,7 @@ def main():
         st.sidebar.success(f"Logged in as: {user.username}")
         display_student_info(user)
 
-        login_number, student_info_str = get_student_info(user)
+        student_info_str = dict_to_str(get_student_info(user))
 
         if "counselor_agent" not in st.session_state:
             client = OpenAI(api_key=os.getenv("PATHFINDER_OPENAI_API_KEY"))
@@ -314,11 +457,10 @@ def main():
             )
         
         if "user_messages" not in st.session_state:
-
-            if login_number == 0:
+            if user.login_number == 0:
                 first_message = prompts.WELCOME_MESSAGE
             else:
-                first_message = get_chat_summary(client)
+                first_message = get_chat_summary_from_db(client)
             st.session_state.user_messages = [{"role": "assistant", "content": first_message}]
         
         if "counselor_suny_messages" not in st.session_state:
