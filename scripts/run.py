@@ -39,12 +39,16 @@ def summarize_chat():
     if num_user_messages > 0:
         st.session_state.counselor_agent.add_message("user", prompts.SUMMARY_PROMPT)
         response = st.session_state.counselor_agent.invoke()
+        st.session_state.counselor_agent.delete_last_message()
         summary = response.choices[0].message.content
-
         summary = utils.parse_json(summary)['message']
 
         print("SUMMARY")
         print(summary)
+        print('\n')
+        print('\n------------------------MESSAGES----------------------------------\n')
+        [print(x) for x in st.session_state.counselor_agent.messages]
+        print('\n------------------------------------------------------------------\n')
     else:
         print("No summary to write")
 
@@ -280,7 +284,7 @@ def main_chat_interface():
 
     st.session_state.messages_since_update += 1
     print('MESSAGES SINCE UPDATE:', st.session_state.messages_since_update)
-    if st.session_state.messages_since_update > 4:
+    if st.session_state.messages_since_update > 5:
         st.session_state.messages_since_update = 0
         print('Updating student info...')
         current_student_info = get_student_info(st.session_state.user)
@@ -295,6 +299,10 @@ def main_chat_interface():
             temperature=0.0,
             response_format={ "type": "json_object" }
         ).choices[0].message.content
+
+        print('\n')
+        print('UPDATE INFO RESPONSE')
+        print(response, '\n')
 
         response_json = utils.parse_json(response)
         for key, value in response_json.items():
@@ -329,8 +337,6 @@ def get_chat_summary_from_db(client: OpenAI) -> str:
 
     # [0][0] because the execute_query uses fetchall(), not fetchone()
     summary = execute_query(query, (st.session_state.user.user_id,))[0][0]
-    summary = utils.parse_json(summary)
-    summary = summary.get("message")
     prompt = prompts.WELCOME_BACK_PROMPT.format(summary=summary)
     response = client.chat.completions.create(
         model='gpt-4o',
@@ -354,7 +360,6 @@ def get_student_info(user: User) -> dict:
         student_info_dict (dict): The student info
     """
 
-    #login_number = execute_query("SELECT login_number FROM users WHERE username=?;", (user.username,))[0][0]
     student_info = execute_query("SELECT * FROM students WHERE user_id=?;", (user.user_id,))[0]
 
     return {
@@ -405,24 +410,6 @@ def dict_to_str(info_dict: dict) -> str:
 def main():
     st.set_page_config(page_title="SUNY Counselor Chat", page_icon="💬", layout="wide")
 
-    # Add this CSS for styling chat messages
-    st.markdown("""
-        <style>
-        .chat-message {
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 5px;
-        }
-        .chat-message.user {
-            background-color: #e6f3ff;
-            text-align: right;
-        }
-        .chat-message.assistant {
-            background-color: #f0f0f0;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
     if 'messages_since_update' not in st.session_state:
         st.session_state.messages_since_update = 0
 
@@ -460,7 +447,11 @@ def main():
             if user.login_number == 0:
                 first_message = prompts.WELCOME_MESSAGE
             else:
-                first_message = get_chat_summary_from_db(client)
+                try:
+                    first_message = get_chat_summary_from_db(client)
+                except:
+                    print('\nNo chat summary found in database, did you quit without logging out?\n')
+                    first_message = prompts.WELCOME_MESSAGE
             st.session_state.user_messages = [{"role": "assistant", "content": first_message}]
         
         if "counselor_suny_messages" not in st.session_state:
