@@ -11,7 +11,7 @@ All of your messages must be in the following JSON format, without ```json. Be s
     "message": "..."
 }
 
-Below is the student's information. When chatting with the user, be sure to ask them for any information that is missing, one item at a time.
+Below is the student's information. When chatting with the student, be sure to ask them for any information that is missing, one item at a time.
 
 **Student Info:**
 
@@ -64,9 +64,17 @@ Welcome to the SUNY college planning chatbot! I'm here to help you explore your 
 First, please upload your transcript. From there we will go through a series of questions to create a personalized profile for you.
 """
 
-WELCOME_BACK_MESSAGE = """
-Welcome back! Let's take a look at what we discussed last time.
+WELCOME_BACK_PROMPT = """Reword the following summary from your last conversation with the student and use it as a transition to start a new conversation.
 
+**Rules:**
+1. Do not include a title for the message.
+2. Do not re-generate the summary.
+3. Welcome the student back to the chat and ask them how they would like to continue.
+4. Suggest one way to continue the conversation based on the summary.
+5. Make your message concise and engaging.
+
+**Summary**
+{summary}
 """
 
 extra = """

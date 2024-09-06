@@ -7,13 +7,6 @@ import hashlib
 import getpass
 
 
-def get_db_connection():
-    """
-    Returns a connection to the database.
-    """
-    return sqlite3.connect('users.db')
-
-
 class User:
     def __init__(self, user_id, username, login_number):
         self.user_id = user_id
@@ -214,3 +207,16 @@ def login(username, password):
         login_number = cursor.fetchone()[0]
 
     return User(user_id, username, login_number)
+
+def select_from_db(query, args):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, args)
+        out = cursor.fetchall()
+    return out
+
+def get_db_connection():
+    """
+    Returns a connection to the database.
+    """
+    return sqlite3.connect('users.db')

@@ -17,7 +17,7 @@ from src import prompts
 from src.database import ChromaDB
 from src.pdf_tools import parse_pdf_with_llama
 from src.tools import counselor_tools, suny_tools
-from src.user import User, login, get_db_connection
+from src.user import User, login, select_from_db, get_db_connection
 from src.agent import Agent, BLUE, GREEN, ORANGE, RESET
 
 def logout():
@@ -176,7 +176,7 @@ def main_chat_interface():
             st.session_state.counselor_agent.add_message("assistant", first_message)
 
     # Add transcript upload button
-    uploaded_file = st.file_uploader("Upload your transcript", type=["csv", "xlsx", "pdf"])
+    uploaded_file = st.file_uploader("Upload your transcript", type=["csv", "xlsx", "pdf", "txt"])
     if uploaded_file is not None:
         process_transcript(uploaded_file)
 
@@ -201,6 +201,85 @@ def main_chat_interface():
         st.rerun()
 
 
+def get_chat_summary(client: OpenAI) -> str:
+    """
+    Get the chat summary from the database
+
+    Args:
+        client (OpenAI): The OpenAI client
+    Returns:
+        summary (str): The chat summary
+    """
+
+    query = "SELECT summary FROM chat_summary WHERE user_id=? ORDER BY id DESC LIMIT 1;"
+
+    # [0][0] because the select_from_db uses fetchall(), not fetchone()
+    summary = select_from_db(query, (st.session_state.user.user_id,))[0][0]
+    summary = utils.parse_json(summary)
+    summary = summary.get("message")
+    prompt = prompts.WELCOME_BACK_PROMPT.format(summary=summary)
+    response = client.chat.completions.create(
+        model='gpt-4o',
+        messages=[
+            {"role": "assistant", "content": prompt},
+        ],
+        temperature=0.0
+    )
+    first_message = response.choices[0].message.content
+    return first_message
+
+
+def get_student_info(user):
+    """
+    Get the login number and student info from the database
+
+    Args:
+        user (User): The user object
+
+    Returns:
+        login_number (int): The login number
+        student_info_str (str): The student info
+    """
+
+    login_number = select_from_db("SELECT login_number FROM users WHERE username=?;", (user.username,))[0]
+    student_info = select_from_db("SELECT * FROM students WHERE user_id=?;", (user.user_id,))[0]
+
+    student_info_dict = {
+        'first_name': student_info[0],
+        'last_name': student_info[1],
+        #'email': student_info[2],
+        #'phone_number': student_info[3],
+        #'user_id': student_info[4],
+        'age': student_info[5],
+        'gender': student_info[6],
+        'ethnicity': student_info[7],
+        'high_school': student_info[8],
+        'high_school_grad_year': student_info[9],
+        'gpa': student_info[10],
+        #'sat_score': student_info[11],
+        #'act_score': student_info[12],
+        'favorite_subjects': student_info[13],
+        'extracurriculars': student_info[14],
+        'career_aspirations': student_info[15],
+        'preferred_major': student_info[16],
+        #'clifton_strengths': student_info[17],
+        #'personality_test_results': student_info[18],
+        'address': student_info[19],
+        'city': student_info[20],
+        'state': student_info[21],
+        'zip_code': student_info[22],
+        'intended_college': student_info[23],
+        'intended_major': student_info[24],
+        'login_number': login_number,
+    }
+
+    student_info_str = ""
+    for key, value in student_info_dict.items():
+        student_info_str += f"{key.replace('_', ' ').title()}: {value}\n"
+
+    return login_number, student_info_str
+
+
 def main():
     st.set_page_config(page_title="SUNY Counselor Chat", page_icon="💬", layout="wide")
 
@@ -216,45 +295,7 @@ def main():
         st.sidebar.success(f"Logged in as: {user.username}")
         display_student_info(user)
 
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(f"SELECT login_number FROM users WHERE username='{user.username}';")
-            login_number = cursor.fetchone()[0]
-
-            cursor.execute(f"SELECT * FROM students WHERE user_id='{user.user_id}';")
-            student_info = cursor.fetchall()
-            student_info_dict = {
-                'first_name': student_info[0][0],
-                'last_name': student_info[0][1],
-                #'email': student_info[0][2],
-                #'phone_number': student_info[0][3],
-                #'user_id': student_info[0][4],
-                'age': student_info[0][5],
-                'gender': student_info[0][6],
-                'ethnicity': student_info[0][7],
-                'high_school': student_info[0][8],
-                'high_school_grad_year': student_info[0][9],
-                'gpa': student_info[0][10],
-                #'sat_score': student_info[0][11],
-                #'act_score': student_info[0][12],
-                'favorite_subjects': student_info[0][13],
-                'extracurriculars': student_info[0][14],
-                'career_aspirations': student_info[0][15],
-                'preferred_major': student_info[0][16],
-                #'clifton_strengths': student_info[0][17],
-                #'personality_test_results': student_info[0][18],
-                'address': student_info[0][19],
-                'city': student_info[0][20],
-                'state': student_info[0][21],
-                'zip_code': student_info[0][22],
-                'intended_college': student_info[0][23],
-                'intended_major': student_info[0][24],
-                'login_number': login_number,
-            }
-
-        student_info_str = ""
-        for key, value in student_info_dict.items():
-            student_info_str += f"{key.replace('_', ' ').title()}: {value}\n"
+        login_number, student_info_str = get_student_info(user)
 
         if "counselor_agent" not in st.session_state:
             client = OpenAI(api_key=os.getenv("PATHFINDER_OPENAI_API_KEY"))
@@ -274,25 +315,10 @@ def main():
         
         if "user_messages" not in st.session_state:
 
-            print("LOGIN NUMBER: ", login_number)
-
             if login_number == 0:
                 first_message = prompts.WELCOME_MESSAGE
             else:
-                with get_db_connection() as conn:
-                    cursor.execute("SELECT summary FROM chat_summary WHERE user_id=? ORDER BY id DESC LIMIT 1;", (st.session_state.user.user_id,))
-                    last_chat_message = cursor.fetchone()[0]
-                    prompt1 = 'Reword the following summary from your last conversation with the student and transform it into a friendly greeting.'
-                    response = client.chat.completions.create(
-                        model='gpt-4o',
-                        messages=[
-                            {"role": "assistant", "content": prompt1 + '\n\n' + '**Previous Conversation Summary**\n' + last_chat_message},
-                        ],
-                        tools=None,
-                        temperature=0.0
-                    )
-                    first_message = response.choices[0].message.content
-
+                first_message = get_chat_summary(client)
             st.session_state.user_messages = [{"role": "assistant", "content": first_message}]
         
         if "counselor_suny_messages" not in st.session_state:
