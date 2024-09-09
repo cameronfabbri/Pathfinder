@@ -256,7 +256,7 @@ def main_chat_interface():
     st.title("💬 User-Counselor Chat")
     st.caption("🚀 Chat with your SUNY counselor")
 
-    persona = display_counselor_options()
+    persona = None#display_counselor_options()
 
     if persona:
         if persona == "David - The Mentor":
@@ -284,20 +284,25 @@ def main_chat_interface():
 
     st.session_state.messages_since_update += 1
     print('MESSAGES SINCE UPDATE:', st.session_state.messages_since_update)
-    if st.session_state.messages_since_update > 5:
+    if st.session_state.messages_since_update > 3:
         st.session_state.messages_since_update = 0
         print('Updating student info...')
         current_student_info = get_student_info(st.session_state.user)
-        chat_summary = summarize_chat()
-        new_info_prompt = "Below is the student's information and a summary of the current conversation. Your task is to generate arguments in JSON format for the information that should be updated. Your argument's variable names must match the student's information keys exactly. Each value must be a string."
-        new_info_prompt += f"Student Information:\n{current_student_info}\n\nConversation Summary: {chat_summary}"
+        current_student_info_str = dict_to_str(current_student_info)
+        print('CURRENT STUDENT INFO')
+        print(current_student_info_str)
+        new_info_prompt = prompts.UPDATE_INFO_PROMPT
+        new_info_prompt += f"\n**Student's Current Information:**\n{current_student_info_str}\n\n"
+        new_info_prompt += f"**Conversation History:**\n{st.session_state.user_messages}\n\n"
+        print('NEW INFO PROMPT')
+        print(new_info_prompt, '\n')
         response = st.session_state.counselor_agent.client.chat.completions.create(
             model='gpt-4o',
             messages=[
                 {"role": "assistant", "content": new_info_prompt},
             ],
             temperature=0.0,
-            response_format={ "type": "json_object" }
+            response_format={"type": "json_object"}
         ).choices[0].message.content
 
         print('\n')
@@ -409,6 +414,19 @@ def dict_to_str(info_dict: dict) -> str:
 
 def main():
     st.set_page_config(page_title="SUNY Counselor Chat", page_icon="💬", layout="wide")
+
+    if 'data_loaded' not in st.session_state:
+
+        st.session_state.data_loaded = True
+
+        # Insert data into chromadb
+        st.session_state.db = ChromaDB(path='./chroma_data')
+
+        doc_id = 'suny-fast-facts.md'
+        with open('data/suny/suny-fast-facts.md') as f:
+            content = f.read()
+
+        st.session_state.db.add_document(content, doc_id=doc_id, user_id=None)
 
     if 'messages_since_update' not in st.session_state:
         st.session_state.messages_since_update = 0

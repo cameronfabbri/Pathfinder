@@ -17,6 +17,12 @@ Below is the student's information. When chatting with the student, be sure to a
 
 """
 
+UPDATE_INFO_PROMPT = """
+Below is the student's current information. For each item, look through the conversation history to see if any changes have been made.
+If there was a change made, add it to a list of variables that will be updated in JSON format. Each value must be a string.
+
+"""
+
 SUMMARY_PROMPT = """
 Please summarize your conversation with the student.
 

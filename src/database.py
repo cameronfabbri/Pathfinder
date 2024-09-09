@@ -34,3 +34,8 @@ class ChromaDB:
             metadatas=[metadata],  # Access control metadata
         )
         print(f"Document added successfully with ID: {doc_id}")
+
+
+
+from qdrant_client import QdrantClient
+client = QdrantClient(path="path/to/db")
