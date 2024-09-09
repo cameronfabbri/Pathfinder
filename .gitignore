@@ -5,6 +5,7 @@ __pycache__/
 temp.py
 scripts/temp.py
 data
+system_data
 .DS*
 
 # C extensions
