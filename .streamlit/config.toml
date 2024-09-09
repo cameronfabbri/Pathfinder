@@ -1,0 +1,7 @@
+[server]
+runOnSave = true
+
+browser.gatherUsageStats = false
+
+[python]
+path = [".", "src"]
