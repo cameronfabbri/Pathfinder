@@ -3,12 +3,24 @@
 
 import json
 from src.tools import function_map
+from src.logger import log_messages
 
 # Add these color constants at the top of the file
 BLUE = "\033[94m"
 GREEN = "\033[92m"
 ORANGE = "\033[93m"
 RESET = "\033[0m"
+
+
+def format_content(content):
+    try:
+        # Try to parse the content as JSON
+        parsed = json.loads(content)
+        return json.dumps(parsed, indent=2)
+    except json.JSONDecodeError:
+        # If it's not valid JSON, return the original content
+        return content
+
 
 class Agent:
     def __init__(self, client, name, tools, system_prompt: str, json_mode: bool = False, temperature: float = 0.0):
@@ -38,7 +50,11 @@ class Agent:
             self.messages.pop()
 
     def invoke(self):
-        return self.client.chat.completions.create(
+
+        # Log messages before invoking the API
+        log_messages(self.name, self.messages)
+
+        response = self.client.chat.completions.create(
             model='gpt-4o',
             messages=self.messages,
             tools=self.tools,
@@ -46,9 +62,24 @@ class Agent:
             temperature=self.temperature
         )
 
+        return response
+
     def print_messages(self):
         print(f'Agent {self.color}{self.name}{RESET}:')
-        [print(x) for x in self.messages]
+        for message in self.messages:
+            print(f"Role: {message['role']}")
+            if 'content' in message and message['content'] is not None:
+                print("Content:")
+                formatted_content = format_content(message['content'])
+                print(f"{formatted_content}\n")
+            if 'tool_calls' in message:
+                print("Tool Calls:")
+                for tool_call in message['tool_calls']:
+                    print(f"Tool: {tool_call['function']['name']}")
+                    print(f"Arguments: {format_content(tool_call['function']['arguments'])}\n")
+            if 'tool_call_id' in message:
+                print(f"Tool Call ID: {message['tool_call_id']}")
+            print('-' * 40)
         print('\n', 40 * '-', '\n')
 
     def handle_tool_call(self, response):
