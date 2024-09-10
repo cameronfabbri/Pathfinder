@@ -21,12 +21,15 @@ def load_pdf_text(file_path, page_start=0, page_end=None):
     Returns:
         list[str]: A list of text strings, one for each page.
     """
-    pdf_file = open(file_path, 'rb')
-    pdf_reader = PyPDF2.PdfReader(pdf_file)
-    texts = []
-    for page_num in range(page_start, page_end if page_end else len(pdf_reader.pages)):
-        texts.append(pdf_reader.pages[page_num].extract_text())
-    pdf_file.close()
+    with open(file_path, 'rb') as pdf_file:
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
+        texts = []
+        for page_num in range(page_start, page_end if page_end else len(pdf_reader.pages)):
+            page_text = pdf_reader.pages[page_num].extract_text()
+
+            # Remove excessive whitespace and normalize line breaks
+            cleaned_text = ' '.join(page_text.split())
+            texts.append(cleaned_text)
     return texts
 
 
@@ -50,9 +53,7 @@ def parse_pdf_with_llama(pdf_file):
         language="en",  # Optionally you can define a language, default=en
     )
 
-    documents = parser.load_data(pdf_file)
-
-    return documents[0].text
+    return parser.load_data(pdf_file)
 
 
 def extract_page(pdf_file, page_number, output_pdf):
@@ -136,3 +137,43 @@ def parse_pdf_with_gpt(pdf_file, image_urls):
         f.write(response.choices[0].message.content)
 
     return response.choices[0].message.content
+
+
+def chunk_pages(pages, chunk_size=500, overlap_percentage=25):
+    """
+    Split pages into chunks with a specified overlap percentage, including across pages.
+
+    Args:
+        pages (list[str]): A list of strings, each containing text from a page.
+        chunk_size (int): The target size of each chunk in words. Defaults to 500.
+        overlap_percentage (int): The percentage of overlap between chunks. Defaults to 25.
+
+    Returns:
+        list[str]: A list of chunks.
+    """
+    chunks = []
+    all_words = []
+    for page in pages:
+        all_words.extend(page.split())
+    
+    total_words = len(all_words)
+    overlap_size = int(chunk_size * (overlap_percentage / 100))
+    stride = chunk_size - overlap_size
+
+    #print('total_words:', total_words)
+    #print('overlap_size:', overlap_size)
+    #print('stride:', stride)
+
+    for i in range(0, total_words, stride):
+        chunk = ' '.join(all_words[i:i + chunk_size])
+        chunks.append(chunk)
+    
+    # If the last chunk is too small, merge it with the previous one
+    if len(chunks) > 1 and len(chunks[-1].split()) < chunk_size // 2:
+        chunks[-2] = ' '.join(chunks[-2].split() + chunks[-1].split())
+        chunks.pop()
+
+    return chunks
+
+# Example usage:
+# chunked_pages = chunk_pages(pages, chunk_size=500, overlap_percentage=25)

@@ -17,6 +17,46 @@ Below is the student's information. When chatting with the student, be sure to a
 
 """
 
+SUNY_SYSTEM_PROMPT = """
+You are an expert in the SUNY school system that searches for and provides information about SUNY schools.
+Your task is to search for and provide information about SUNY schools.
+
+When you obtain information as a result of a tool call, be sure to relay that information back to the user in a consice manner.
+"""
+
+# TODO - probably add this in later, there's just way too many files with this right now for testing
+_FILTER_FILES_PROMPT = '9.  Curriculum Checksheet: Information on the courses and requirements for each major.'
+
+FILTER_FILES_PROMPT = """
+Determine if the given document is relavant or not. Relevant documents are those that contain information about the university that would be useful for a prospective student.
+
+**Examples of Relevant Documents:**
+	1.	Admissions Information: Application guidelines, deadlines, and requirements.
+	2.	Academic Programs: Course catalogs, program brochures, major and minor offerings.
+    3.  Student Life: Information on housing, dining, clubs, sports, and extracurriculars.
+    4.  Financial Aid & Scholarships: Details on grants, loans, and scholarships.
+    5.  Campus Life: Information on housing, dining, clubs, sports, and extracurriculars.
+    6.  Campus Maps & Tours: Maps, orientation materials, and virtual tours.
+    7.  Student Support: Counseling, tutoring, and career services.
+    8.  Tuition & Fees: Cost breakdowns for in-state and out-of-state students.
+
+**Examples of Irrelevant Documents:**
+	1.	Research papers and academic theses.
+	2.	Internal administrative documents (memos, budgets, governance).
+	3.	Marketing and promotional materials unrelated to academics.
+	4.	Historical or archival documents (e.g., yearbooks, newsletters).
+	5.	Legal documents (contracts, bylaws, etc.).
+	6.	Employee-related documents (handbooks, job postings, training materials).
+
+
+**Format:** Your output should be a JSON object with the following structure, without ```json or any other formatting.
+
+{
+    "filepath": "filepath",
+    "relevant": "YES" | "NO"
+}
+"""
+
 UPDATE_INFO_PROMPT = """
 Below is the student's current information. For each item, look through the conversation history to see if any changes have been made.
 If there was a change made, add it to a list of variables that will be updated in JSON format. Each value must be a string.
@@ -59,11 +99,6 @@ This summary will be used in the next chat to pick up where this chat left off.
 """
 
 _a = 'When the user is done with the chat, you will call the summarize_chat tool to summarize the chat.'
-
-SUNY_SYSTEM_PROMPT = """
-You are an expert in the SUNY school system that searches for and provides information about SUNY schools.
-Your task is to search for and provide information about SUNY schools.
-"""
 
 WELCOME_MESSAGE = """
 Welcome to the SUNY college planning chatbot! I'm here to help you explore your options and make informed decisions about your future.

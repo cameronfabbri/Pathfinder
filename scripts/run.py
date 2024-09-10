@@ -207,56 +207,6 @@ def process_user_input(prompt):
         st.session_state.user_messages.append({"role": "assistant", "content": counselor_message})
 
 
-def process_transcript(uploaded_file):
-    upload_dir = 'uploads'
-    os.makedirs(upload_dir, exist_ok=True)
-    file_path = os.path.join(upload_dir, uploaded_file.name)
-    with open(file_path, "wb") as f:
-        f.write(uploaded_file.getvalue())
-
-    # Process the transcript using parse_pdf_with_llama
-    transcript_text = parse_pdf_with_llama(file_path)
-
-    # Insert into chromadb
-    db = ChromaDB(path='./chroma_data')
-    db.add_document(transcript_text, doc_id=uploaded_file.name, user_id=st.session_state.user.user_id)
-
-
-def display_counselor_options():
-    st.subheader("Choose your counselor!")
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.image("data/david.jpg", width=150)
-    with col2:
-        st.image("data/emma.jpg", width=150)
-    with col3:
-        st.image("data/liam.jpg", width=150)
-
-    return st.radio(
-        "Counselor Selection",
-        ("David - The Mentor", "Emma - The Strategist", "Liam - The Explorer"),
-        horizontal=True,
-        label_visibility="collapsed",
-        index=None
-    )
-
-
-def update_student_info(user: User, student_info: dict):
-    """
-    Update the student info in the database
-
-    Args:
-        user (User): The user object
-        student_info (dict): The student info
-    Returns:
-        None
-    """
-    query = f"UPDATE students SET {', '.join([f'{key}=?' for key in student_info])} WHERE user_id=?"
-    execute_query(query, tuple(list(student_info.values()) + [st.session_state.user.user_id]))
-
-
 def main_chat_interface():
     st.title("💬 User-Counselor Chat")
     st.caption("🚀 Chat with your SUNY counselor")
@@ -283,21 +233,28 @@ def main_chat_interface():
     prompt = st.chat_input("Type your message here...")
 
     # Display chat messages in the container
-    pdf_path = '/Users/cameronfabbri/canton/www.canton.edu/media/pdf/campus_map.pdf'
+    #pdf_path = '/Users/cameronfabbri/canton/www.canton.edu/media/pdf/campus_map.pdf'
     with chat_container:
-        with open(pdf_path, "rb") as pdf_file:
-            pdf_content = pdf_file.read()
-        pdf_viewer(pdf_content, width=1000, height=700)
+        #with open(pdf_path, "rb") as pdf_file:
+        #    pdf_content = pdf_file.read()
+        #pdf_viewer(pdf_content, width=1000, height=700)
         for msg in st.session_state.user_messages:
             st.chat_message(msg["role"]).write(msg["content"])
 
     st.session_state.messages_since_update += 1
-    print('MESSAGES SINCE UPDATE:', st.session_state.messages_since_update)
-    if st.session_state.messages_since_update > 10:
+    #print('MESSAGES SINCE UPDATE:', st.session_state.messages_since_update)
+    print('\n\n--------------START COUNSELOR MESSAGES--------------')
+    [print(x) for x in st.session_state.counselor_agent.messages]
+    print('---------------END COUNSELOR MESSAGES---------------')
+    print('\n\n--------------START STREAMLIT MESSAGES--------------')
+    [print(x) for x in st.session_state.user_messages]
+    print('---------------END STREAMLIT MESSAGES---------------')
+
+    if st.session_state.messages_since_update > 1000:
         st.session_state.messages_since_update = 0
         print('Updating student info...')
         current_student_info = get_student_info(st.session_state.user)
-        current_student_info_str = dict_to_str(current_student_info)
+        current_student_info_str = utils.dict_to_str(current_student_info)
         print('CURRENT STUDENT INFO')
         print(current_student_info_str)
         new_info_prompt = prompts.UPDATE_INFO_PROMPT
@@ -405,22 +362,6 @@ def get_student_info(user: User) -> dict:
     }
 
 
-def dict_to_str(info_dict: dict) -> str:
-    """
-    Convert a dictionary to a string
-
-    Args:
-        info_dict (dict): The info dictionary
-
-    Returns:
-        info_str (str): The info string
-    """
-    info_str = ""
-    for key, value in info_dict.items():
-        info_str += key.replace('_', ' ').title() + ": " + str(value) + "\n"
-    return info_str
-
-
 def main():
     st.set_page_config(page_title="SUNY Counselor Chat", page_icon="💬", layout="wide")
 
@@ -429,7 +370,7 @@ def main():
         st.session_state.data_loaded = True
 
         # Insert data into chromadb
-        st.session_state.db = ChromaDB(path='./chroma_data')
+        #st.session_state.db = ChromaDB(path='./chroma_data')
 
         #doc_id = 'suny-fast-facts.md'
         #with open('data/suny/suny-fast-facts.md') as f:
@@ -452,7 +393,7 @@ def main():
         st.sidebar.success(f"Logged in as: {user.username}")
         display_student_info(user)
 
-        student_info_str = dict_to_str(get_student_info(user))
+        student_info_str = utils.dict_to_str(get_student_info(user))
 
         if "counselor_agent" not in st.session_state:
             client = OpenAI(api_key=os.getenv("PATHFINDER_OPENAI_API_KEY"))
@@ -498,6 +439,55 @@ def main():
     else:
         st.error("Please log in to continue")
 
+
+def process_transcript(uploaded_file):
+    upload_dir = 'uploads'
+    os.makedirs(upload_dir, exist_ok=True)
+    file_path = os.path.join(upload_dir, uploaded_file.name)
+    with open(file_path, "wb") as f:
+        f.write(uploaded_file.getvalue())
+
+    # Process the transcript using parse_pdf_with_llama
+    transcript_text = parse_pdf_with_llama(file_path)
+
+    # Insert into chromadb
+    db = ChromaDB(path='./chroma_data')
+    db.add_document(transcript_text, doc_id=uploaded_file.name, user_id=st.session_state.user.user_id)
+
+
+def display_counselor_options():
+    st.subheader("Choose your counselor!")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.image("data/david.jpg", width=150)
+    with col2:
+        st.image("data/emma.jpg", width=150)
+    with col3:
+        st.image("data/liam.jpg", width=150)
+
+    return st.radio(
+        "Counselor Selection",
+        ("David - The Mentor", "Emma - The Strategist", "Liam - The Explorer"),
+        horizontal=True,
+        label_visibility="collapsed",
+        index=None
+    )
+
+
+def update_student_info(user: User, student_info: dict):
+    """
+    Update the student info in the database
+
+    Args:
+        user (User): The user object
+        student_info (dict): The student info
+    Returns:
+        None
+    """
+    query = f"UPDATE students SET {', '.join([f'{key}=?' for key in student_info])} WHERE user_id=?"
+    execute_query(query, tuple(list(student_info.values()) + [st.session_state.user.user_id]))
 
 if __name__ == "__main__":
     main()

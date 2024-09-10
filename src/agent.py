@@ -23,11 +23,12 @@ def format_content(content):
 
 
 class Agent:
-    def __init__(self, client, name, tools, system_prompt: str, json_mode: bool = False, temperature: float = 0.0):
+    def __init__(self, client, name, tools, system_prompt: str, model: str = 'gpt-4o', json_mode: bool = False, temperature: float = 0.0):
         self.client = client
         self.name = name
         self.tools = tools
         self.system_prompt = system_prompt
+        self.model = model
         self.json_mode = json_mode
         self.temperature = temperature
         self.messages = [{"role": "system", "content": self.system_prompt}]
@@ -55,7 +56,7 @@ class Agent:
         log_messages(self.name, self.messages)
 
         response = self.client.chat.completions.create(
-            model='gpt-4o',
+            model=self.model,
             messages=self.messages,
             tools=self.tools,
             response_format={ "type": "json_object" } if self.json_mode else None,

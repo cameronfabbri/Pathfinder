@@ -3,6 +3,24 @@
 
 import json
 
+
+
+def dict_to_str(info_dict: dict) -> str:
+    """
+    Convert a dictionary to a string
+
+    Args:
+        info_dict (dict): The info dictionary
+
+    Returns:
+        info_str (str): The info string
+    """
+    info_str = ""
+    for key, value in info_dict.items():
+        info_str += key.replace('_', ' ').title() + ": " + str(value) + "\n"
+    return info_str
+
+
 def format_for_json(input_string):
     """
     Takes a string and formats it properly for use in JSON.

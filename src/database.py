@@ -107,7 +107,7 @@ def initialize_db():
 
 
 class ChromaDB:
-    def __init__(self, path, distance_metric: str = "cosine"):
+    def __init__(self, path: str, name: str, distance_metric: str = "cosine"):
         """
         Initialize the ChromaDB client and collection.
 
@@ -122,7 +122,7 @@ class ChromaDB:
             database=DEFAULT_DATABASE,
         )
 
-        self.collection = self.client.get_or_create_collection(name="documents", metadata={"hnsw:space": distance_metric})
+        self.collection = self.client.get_or_create_collection(name=name, metadata={"hnsw:space": distance_metric})
 
     def add_document(self, content, doc_id: str, user_id=None):
         
