@@ -2,10 +2,10 @@
 """
 import os
 import sys
-import sqlite3
 import streamlit as st
 
 from openai import OpenAI
+from streamlit_pdf_viewer import pdf_viewer
 
 # Added for streamlit
 # Need to run `streamlit scripts/run.py` to start the app
@@ -17,8 +17,10 @@ from src import prompts
 from src.personas import DAVID, EMMA, LIAM
 from src.database import ChromaDB
 from src.pdf_tools import parse_pdf_with_llama
-from src.tools import counselor_tools, suny_tools
-from src.user import User, login, execute_query, get_db_connection
+from src.tools import suny_tools
+from src.user import User
+from src.database import execute_query, get_db_connection
+from src.auth import login
 from src.agent import Agent, BLUE, GREEN, ORANGE, RESET
 
 
@@ -189,6 +191,9 @@ def process_user_input(prompt):
             if suny_response.choices[0].message.tool_calls:
                 suny_response = suny_agent.handle_tool_call(suny_response)
 
+            print('SUNY RESPONSE')
+            print(suny_response)
+
             suny_response_str = utils.format_for_json(suny_response.choices[0].message.content)
             st.session_state.counselor_suny_messages.append({"role": "suny", "content": suny_response_str})
             suny_agent.add_message("assistant", suny_response_str)
@@ -278,13 +283,17 @@ def main_chat_interface():
     prompt = st.chat_input("Type your message here...")
 
     # Display chat messages in the container
+    pdf_path = '/Users/cameronfabbri/canton/www.canton.edu/media/pdf/campus_map.pdf'
     with chat_container:
+        with open(pdf_path, "rb") as pdf_file:
+            pdf_content = pdf_file.read()
+        pdf_viewer(pdf_content, width=1000, height=700)
         for msg in st.session_state.user_messages:
             st.chat_message(msg["role"]).write(msg["content"])
 
     st.session_state.messages_since_update += 1
     print('MESSAGES SINCE UPDATE:', st.session_state.messages_since_update)
-    if st.session_state.messages_since_update > 3:
+    if st.session_state.messages_since_update > 10:
         st.session_state.messages_since_update = 0
         print('Updating student info...')
         current_student_info = get_student_info(st.session_state.user)
@@ -422,11 +431,11 @@ def main():
         # Insert data into chromadb
         st.session_state.db = ChromaDB(path='./chroma_data')
 
-        doc_id = 'suny-fast-facts.md'
-        with open('data/suny/suny-fast-facts.md') as f:
-            content = f.read()
+        #doc_id = 'suny-fast-facts.md'
+        #with open('data/suny/suny-fast-facts.md') as f:
+        #    content = f.read()
 
-        st.session_state.db.add_document(content, doc_id=doc_id, user_id=None)
+        #st.session_state.db.add_document(content, doc_id=doc_id, user_id=None)
 
     if 'messages_since_update' not in st.session_state:
         st.session_state.messages_since_update = 0
@@ -450,7 +459,7 @@ def main():
             st.session_state.counselor_agent = Agent(
                 client,
                 name="Counselor",
-                tools=counselor_tools,
+                tools=None,
                 system_prompt=prompts.COUNSELOR_SYSTEM_PROMPT + student_info_str,
                 json_mode=True
             )
@@ -460,6 +469,9 @@ def main():
                 tools=suny_tools,
                 system_prompt=prompts.SUNY_SYSTEM_PROMPT
             )
+
+            #log_messages('counselor', st.session_state.counselor_agent.messages)
+            #log_messages('suny', st.session_state.suny_agent.messages)
         
         if "user_messages" not in st.session_state:
             if user.login_number == 0:

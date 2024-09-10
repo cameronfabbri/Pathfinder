@@ -5,8 +5,8 @@ suny_tools = [
     {
         "type": "function",
         "function": {
-            "name": "get_suny_school_info",
-            "description": "Get the information about a SUNY school from its ID",
+            "name": "show_campus_map",
+            "description": "Display the campus map of the chosen SUNY school. Call this if a user asks to see the campus map.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -22,41 +22,11 @@ suny_tools = [
     }
 ]
 
-counselor_tools = None
-_counselor_tools = [
-    {
-        "type": "function",
-        "function": {
-            "name": "update_student_info",
-            "description": "Update the student's information",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "first_name": {
-                        "type": "string",
-                        "description": "The first name of the student.",
-                    },
-                    "last_name": {
-                        "type": "string",
-                        "description": "The last name of the student.",
-                    },
-                    "intended_college": {
-                        "type": "string",
-                        "description": "The intended college of the student.",
-                    },
-                },
-                "required": ["first_name", "last_name", "intended_college"],
-                "additionalProperties": False,
-            }
-        }
-    }
-]
 
-
-def get_suny_school_info(school_name):
-    return "Founded in 1816 and located in Potsdam, NY"
+def show_campus_map(school_name: str):
+    return f"Here is the campus map for {school_name}"
 
 
 function_map = {
-    "get_suny_school_info": get_suny_school_info,
+    "show_campus_map": show_campus_map,
 }
