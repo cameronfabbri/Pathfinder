@@ -2,6 +2,17 @@
 
 def main():
 
+    question = 'What does the third semester of a Agribusiness Management major look like?'
+    answer = """The third semester of an Agribusiness Management major includes the following courses:
+
+        - **ACCT 102 Foundations of Managerial Accounting** - 3 credits
+        - **ECON 103 Microeconomics** - 3 credits
+        - **BSAD 203 Marketing** - 3 credits
+        - **BSAD 215 Small Business Management** - 3 credits
+        - **Other World Civilization (GER 6)** - 3 credits
+
+        Total Credits: 15"""
+
     qa = [
         ("What percentage of Buffalo State's enrollment was undergraduate in Fall 2013?", "84.3%"),
         ("What percentage of Buffalo State's enrollment was undergraduate in Fall 2018?", "88.6%"),
