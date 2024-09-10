@@ -183,7 +183,7 @@ def process_user_input(prompt):
         counselor_agent.add_message("assistant", counselor_response_str)
 
         if recipient == "suny":
-            st.chat_message('assistant').write('Contacting SUNY Agent...')
+            #st.chat_message('assistant').write('Contacting SUNY Agent...')
             st.session_state.counselor_suny_messages.append({"role": "counselor", "content": counselor_message})
             suny_agent.add_message("user", counselor_message)
             suny_response = suny_agent.invoke()
@@ -211,15 +211,15 @@ def main_chat_interface():
     st.title("💬 User-Counselor Chat")
     st.caption("🚀 Chat with your SUNY counselor")
 
-    persona = None#display_counselor_options()
+    #persona = None#display_counselor_options()
 
-    if persona:
-        if persona == "David - The Mentor":
-            st.info(DAVID)
-        elif persona == "Emma - The Strategist":
-            st.info(EMMA)
-        elif persona == "Liam - The Explorer":
-            st.info(LIAM)
+    #if persona:
+    #    if persona == "David - The Mentor":
+    #        st.info(DAVID)
+    #    elif persona == "Emma - The Strategist":
+    #        st.info(EMMA)
+    #    elif persona == "Liam - The Explorer":
+    #        st.info(LIAM)
 
     if len(st.session_state.user_messages) == 1:
         first_message = st.session_state.user_messages[0]["content"]
@@ -231,24 +231,42 @@ def main_chat_interface():
     chat_container = st.container()
 
     prompt = st.chat_input("Type your message here...")
-
+    
     # Display chat messages in the container
     #pdf_path = '/Users/cameronfabbri/canton/www.canton.edu/media/pdf/campus_map.pdf'
     with chat_container:
         #with open(pdf_path, "rb") as pdf_file:
         #    pdf_content = pdf_file.read()
         #pdf_viewer(pdf_content, width=1000, height=700)
+        #for msg in st.session_state.user_messages:
+        #    content = msg.get('content').replace('\n', ' ')
+        #    st.chat_message(msg["role"]).write(content)
         for msg in st.session_state.user_messages:
-            st.chat_message(msg["role"]).write(msg["content"])
+            if isinstance(msg, dict) and 'role' in msg and 'content' in msg:
+                if isinstance(msg['content'], str):
+                    st.chat_message(msg["role"]).write(msg["content"])
+            else:
+                print(f"Debug: Skipping invalid message format: {msg}")
 
-    st.session_state.messages_since_update += 1
+    #st.session_state.messages_since_update += 1
     #print('MESSAGES SINCE UPDATE:', st.session_state.messages_since_update)
-    print('\n\n--------------START COUNSELOR MESSAGES--------------')
-    [print(x) for x in st.session_state.counselor_agent.messages]
-    print('---------------END COUNSELOR MESSAGES---------------')
-    print('\n\n--------------START STREAMLIT MESSAGES--------------')
-    [print(x) for x in st.session_state.user_messages]
-    print('---------------END STREAMLIT MESSAGES---------------')
+    #print('\n\n--------------START COUNSELOR MESSAGES--------------')
+    #[print(x) for x in st.session_state.counselor_agent.messages]
+    #print('---------------END COUNSELOR MESSAGES---------------')
+    #print('\n\n--------------START STREAMLIT MESSAGES--------------')
+    #[print(x) for x in st.session_state.user_messages]
+    #print('---------------END STREAMLIT MESSAGES---------------')
+
+    # Process the user input
+    if prompt:
+        # Add user message to chat history
+        st.session_state.user_messages.append({"role": "user", "content": prompt})
+
+        # Process user input and get response
+        process_user_input(prompt)
+
+        # Force a rerun to display the new messages
+        st.rerun()
 
     if st.session_state.messages_since_update > 1000:
         st.session_state.messages_since_update = 0
@@ -281,17 +299,6 @@ def main_chat_interface():
                 current_student_info[key] = value
         
         update_student_info(st.session_state.user, current_student_info)
-
-    # Process the user input
-    if prompt:
-        # Add user message to chat history
-        st.session_state.user_messages.append({"role": "user", "content": prompt})
-
-        # Process user input and get response
-        process_user_input(prompt)
-
-        # Force a rerun to display the new messages
-        st.rerun()
 
 
 def get_chat_summary_from_db(client: OpenAI) -> str:
@@ -364,19 +371,6 @@ def get_student_info(user: User) -> dict:
 
 def main():
     st.set_page_config(page_title="SUNY Counselor Chat", page_icon="💬", layout="wide")
-
-    if 'data_loaded' not in st.session_state:
-
-        st.session_state.data_loaded = True
-
-        # Insert data into chromadb
-        #st.session_state.db = ChromaDB(path='./chroma_data')
-
-        #doc_id = 'suny-fast-facts.md'
-        #with open('data/suny/suny-fast-facts.md') as f:
-        #    content = f.read()
-
-        #st.session_state.db.add_document(content, doc_id=doc_id, user_id=None)
 
     if 'messages_since_update' not in st.session_state:
         st.session_state.messages_since_update = 0
