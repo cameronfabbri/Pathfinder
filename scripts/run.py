@@ -66,8 +66,13 @@ def write_summary_to_db(summary):
     Returns:
         None
     """
-    execute_query("INSERT INTO chat_summary (user_id, summary) VALUES (?, ?)", (st.session_state.user.user_id, summary))
+    query = "INSERT INTO chat_summary (user_id, summary) VALUES (?, ?)"
+    args = (st.session_state.user.user_id, summary)
+    print('Query:', query)
+    print('Args:', args)
+    res = execute_query(query, args)
     print('Chat summary updated')
+    print('Result:', res)
 
 
 def logout():
@@ -268,7 +273,9 @@ def main_chat_interface():
         # Force a rerun to display the new messages
         st.rerun()
 
-    if st.session_state.messages_since_update > 1000:
+    st.session_state.messages_since_update += 1
+    print('Messages since update:', st.session_state.messages_since_update)
+    if st.session_state.messages_since_update > 3:
         st.session_state.messages_since_update = 0
         print('Updating student info...')
         current_student_info = get_student_info(st.session_state.user)
@@ -281,7 +288,7 @@ def main_chat_interface():
         print('NEW INFO PROMPT')
         print(new_info_prompt, '\n')
         response = st.session_state.counselor_agent.client.chat.completions.create(
-            model='gpt-4o',
+            model='gpt-4o-mini',
             messages=[
                 {"role": "assistant", "content": new_info_prompt},
             ],
@@ -395,6 +402,7 @@ def main():
                 client,
                 name="Counselor",
                 tools=None,
+                model='gpt-4o-mini',
                 system_prompt=prompts.COUNSELOR_SYSTEM_PROMPT + student_info_str,
                 json_mode=True
             )

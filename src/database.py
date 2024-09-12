@@ -5,7 +5,7 @@ import chromadb
 from chromadb.config import DEFAULT_TENANT, DEFAULT_DATABASE, Settings
 import sqlite3
 
-def execute_query(query, args) -> list | None:
+def execute_query(query, args=None) -> list | None:
     """
     Execute a query on the database
 
@@ -18,7 +18,10 @@ def execute_query(query, args) -> list | None:
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(query, args)
+            if args is not None:
+                cursor.execute(query, args)
+            else:
+                cursor.execute(query)
             out = cursor.fetchall()
             return out
     except Exception as e:

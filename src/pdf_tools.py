@@ -1,15 +1,63 @@
+"""
+Tools for working with PDFs.
+"""
+
 import os
-from openai import OpenAI
-from PyPDF2 import PdfReader, PdfWriter
-from getpass import getpass
-from llama_parse import LlamaParse
-from PIL import Image
 import fitz
-import nest_asyncio
 import PyPDF2
+import pytesseract
+import nest_asyncio
+
+from PIL import Image
+from openai import OpenAI
+from llama_parse import LlamaParse
+from PyPDF2 import PdfReader, PdfWriter
 
 
-def load_pdf_text(file_path, page_start=0, page_end=None):
+def is_pdf_searchable(pdf_path):
+    """
+    Check if a PDF is searchable or a scanned image.
+    
+    Args:
+        pdf_path (str): Path to the PDF file.
+    
+    Returns:
+        bool: True if the PDF is searchable, False if it's likely a scanned image.
+    """
+    with open(pdf_path, 'rb') as file:
+        reader = PyPDF2.PdfReader(file)
+        
+        # Check the first few pages (adjust as needed)
+        pages_to_check = min(3, len(reader.pages))
+        
+        for page_num in range(pages_to_check):
+            page = reader.pages[page_num]
+            
+            # Check if the page has text
+            if page.extract_text().strip():
+                return True
+            
+            # Check if the page has images
+            if '/XObject' in page['/Resources']:
+                x_object = page['/Resources']['/XObject'].get_object()
+                if x_object:
+                    for obj in x_object:
+                        if x_object[obj]['/Subtype'] == '/Image':
+                            # If we find an image and no text, it's likely a scanned document
+                            return False
+    
+    # If we haven't returned yet, assume it's searchable
+    return True
+
+
+def parse_text_from_image(image_path: str) -> str:
+    """
+    Parse text from an image using OCR.
+    """
+    return pytesseract.image_to_string(Image.open(image_path))
+
+
+def load_pdf_text(file_path: str, page_start: int = 0, page_end: int = None) -> list[str]:
     """
     Convert a PDF file to a list of text strings, one for each page.
 
@@ -33,7 +81,7 @@ def load_pdf_text(file_path, page_start=0, page_end=None):
     return texts
 
 
-def parse_pdf_with_llama(pdf_file):
+def parse_pdf_with_llama(pdf_file: str) -> str:
     """
     Load the text from a PDF file using llama_parse.
 
@@ -56,7 +104,7 @@ def parse_pdf_with_llama(pdf_file):
     return parser.load_data(pdf_file)
 
 
-def extract_page(pdf_file, page_number, output_pdf):
+def extract_page(pdf_file: str, page_number: int, output_pdf: str) -> None:
     """
     Extract a single page from a PDF file and save it to a new PDF file.
 
@@ -80,7 +128,7 @@ def extract_page(pdf_file, page_number, output_pdf):
     print(f"Extracted page {page_number} to {output_pdf}")
 
 
-def save_pdf_as_png(pdf_file, output_prefix):
+def save_pdf_as_png(pdf_file: str, output_prefix: str) -> None:
     """
     Save a PNG image of each page in a PDF file.
 
@@ -101,13 +149,13 @@ def save_pdf_as_png(pdf_file, output_prefix):
     doc.close()
 
 
-def parse_pdf_with_gpt(pdf_file, image_urls):
+def parse_pdf_with_gpt(pdf_file: str, image_urls: list[str]) -> str:
 
     if os.path.exists('gpt-output.md'):
         with open('gpt-output.md', 'r') as f:
             return f.read()
 
-    pdf_text = pdf_to_text(pdf_file)[0]
+    pdf_text = load_pdf_text(pdf_file)[0]
     client = OpenAI(api_key=os.environ.get("PATHFINDER_OPENAI_API_KEY"))
 
     image_urls = ['https://i.imgur.com/OPfinKX.png']

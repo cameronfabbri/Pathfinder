@@ -1,8 +1,25 @@
 """
 """
-
+import os
 import json
+import subprocess
 
+
+def is_file_pdf(file_path: str) -> bool:
+    try:
+        # Note: We're not using text=True here anymore because it can fail
+        result = subprocess.run(['file', file_path], capture_output=True, check=True)
+        file_type_output = result.stdout.decode('utf-8', errors='ignore').strip()
+        return 'PDF document' in file_type_output
+    except subprocess.CalledProcessError as e:
+        print(f"Error running 'file' command on {file_path}: {e}")
+        return False
+    except UnicodeDecodeError as e:
+        print(f"Error decoding output for {file_path}: {e}")
+        return False
+    except Exception as e:
+        print(f"Unexpected error checking file {file_path}: {e}")
+        return False
 
 
 def dict_to_str(info_dict: dict) -> str:
