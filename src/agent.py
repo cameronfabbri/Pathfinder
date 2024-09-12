@@ -34,6 +34,13 @@ class Agent:
         self.messages = [{"role": "system", "content": self.system_prompt}]
         self.color = self._get_color()
 
+    def update_system_prompt(self, new_prompt):
+        self.system_prompt = new_prompt
+        print('UPDATED SYSTEM PROMPT')
+        print(self.system_prompt)
+        print('END')
+        self.messages[0]["content"] = self.system_prompt
+
     def _get_color(self):
         if self.name.lower() == "user":
             return BLUE

@@ -39,6 +39,42 @@ def get_db_connection():
     return sqlite3.connect('users.db')
 
 
+def get_top_strengths(user):
+    """
+    Get the top 5 strengths for the user.
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        # Fetch Strengths data
+        cursor.execute('''
+            SELECT themes.theme_name, theme_results.total_score, theme_results.strength_level
+            FROM theme_results
+            JOIN themes ON theme_results.theme_id = themes.theme_id
+            WHERE theme_results.user_id = ?
+            ORDER BY theme_results.total_score DESC
+            LIMIT 5
+        ''', (user.user_id,))
+        return cursor.fetchall()
+
+
+def get_bot_strengths(user):
+    """
+    Get the bottom 5 strengths for the user.
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT themes.theme_name, theme_results.total_score, theme_results.strength_level
+            FROM theme_results
+            JOIN themes ON theme_results.theme_id = themes.theme_id
+            WHERE theme_results.user_id = ?
+            ORDER BY theme_results.total_score ASC
+            LIMIT 5
+        ''', (user.user_id,))
+        return cursor.fetchall()
+
+
 def insert_user_responses(user_id, responses):
     """
     Insert the user responses into the user_responses table.

@@ -16,7 +16,6 @@ All of your messages must be in the following JSON format, without ```json. Be s
 Below is the student's information. When chatting with the student, be sure to ask them for any information that is missing, one item at a time.
 
 **Student Info:**
-
 """
 
 PSYCHOLOGIST_SYSTEM_PROMPT = """

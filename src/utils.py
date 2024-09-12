@@ -22,7 +22,7 @@ def is_file_pdf(file_path: str) -> bool:
         return False
 
 
-def dict_to_str(info_dict: dict) -> str:
+def dict_to_str(info_dict: dict, format: bool) -> str:
     """
     Convert a dictionary to a string
 
@@ -34,7 +34,10 @@ def dict_to_str(info_dict: dict) -> str:
     """
     info_str = ""
     for key, value in info_dict.items():
-        info_str += key.replace('_', ' ').title() + ": " + str(value) + "\n"
+        if format:
+            info_str += key.replace('_', ' ').title() + ": " + str(value) + "\n"
+        else:
+            info_str += key + ": " + str(value) + "\n"
     return info_str
 
 
