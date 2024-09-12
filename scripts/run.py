@@ -1,7 +1,9 @@
 """
+Main script
 """
 import os
 import sys
+import pickle
 import streamlit as st
 
 from openai import OpenAI
@@ -14,15 +16,15 @@ sys.path.insert(0, project_root)
 
 from src import utils
 from src import prompts
-from src.personas import DAVID, EMMA, LIAM
-from src.database import ChromaDB
-from src.pdf_tools import parse_pdf_with_llama
-from src.tools import suny_tools
 from src.user import User
-from src.database import execute_query, get_db_connection
 from src.auth import login
+from src.tools import suny_tools
+from src.database import ChromaDB
+from src.assessment import answers
+from src.personas import DAVID, EMMA, LIAM
+from src.pdf_tools import parse_pdf_with_llama
 from src.agent import Agent, BLUE, GREEN, ORANGE, RESET
-
+from src.database import execute_query, get_db_connection, insert_user_responses, insert_strengths
 
 def summarize_chat():
     """
@@ -93,7 +95,7 @@ def logout():
 def display_student_info(user):
     st.sidebar.title("Student Information")
 
-        # Add custom CSS for text wrapping
+    # Add custom CSS for text wrapping
     st.markdown("""
         <style>
         [data-testid="stSidebar"] .stText {
@@ -107,6 +109,27 @@ def display_student_info(user):
         cursor = conn.cursor()
         cursor.execute(f"SELECT * FROM students WHERE user_id='{user.user_id}';")
         student_info = cursor.fetchone()
+        
+        # Fetch Strengths data
+        cursor.execute('''
+            SELECT themes.theme_name, theme_results.total_score, theme_results.strength_level
+            FROM theme_results
+            JOIN themes ON theme_results.theme_id = themes.theme_id
+            WHERE theme_results.user_id = ?
+            ORDER BY theme_results.total_score DESC
+            LIMIT 5
+        ''', (user.user_id,))
+        top_strengths = cursor.fetchall()
+
+        cursor.execute('''
+            SELECT themes.theme_name, theme_results.total_score, theme_results.strength_level
+            FROM theme_results
+            JOIN themes ON theme_results.theme_id = themes.theme_id
+            WHERE theme_results.user_id = ?
+            ORDER BY theme_results.total_score ASC
+            LIMIT 5
+        ''', (user.user_id,))
+        bottom_strengths = cursor.fetchall()
     
     if student_info:
         info_dict = {
@@ -127,6 +150,19 @@ def display_student_info(user):
         
         for key, value in info_dict.items():
             st.sidebar.text(f"{key}: {value}")
+        
+        # Display Strengths
+        if top_strengths:
+            st.sidebar.markdown("---")
+            st.sidebar.subheader("Top 5 Strengths")
+            for theme, score, strength_level in top_strengths:
+                st.sidebar.text(f"{theme}: {score} ({strength_level})")
+
+        if bottom_strengths:
+            st.sidebar.markdown("---")
+            st.sidebar.subheader("Bottom 5 Strengths")
+            for theme, score, strength_level in bottom_strengths:
+                st.sidebar.text(f"{theme}: {score} ({strength_level})")
 
     # Add transcript upload button to sidebar
     st.sidebar.markdown("---")  # Add a separator
@@ -138,14 +174,25 @@ def display_student_info(user):
 
 def streamlit_login():
     if "user" not in st.session_state:
-        placeholder = st.empty()
 
+        # Temp while testing
+        username = 'cameron'
+        password = 'fabbri'
+
+        user = login(username, password)
+        if user:
+            st.session_state.user = user
+            st.success("Login successful")
+            return user
+        else:
+            st.error("Automatic login failed. Please contact support.")
+        return st.session_state.user
+
+        placeholder = st.empty()
         with placeholder.form("login"):
             st.markdown("#### Enter your credentials")
-            #email = st.text_input("Email")
-            #password = st.text_input("Password", type="password")
-            username = 'cameron'
-            password = 'fabbri'
+            email = st.text_input("Email")
+            password = st.text_input("Password", type="password")
             submit = st.form_submit_button("Login")
 
         if submit:
@@ -269,11 +316,11 @@ def main_chat_interface():
 
         # Process user input and get response
         process_user_input(prompt)
+        st.session_state.messages_since_update += 1
 
         # Force a rerun to display the new messages
         st.rerun()
 
-    st.session_state.messages_since_update += 1
     print('Messages since update:', st.session_state.messages_since_update)
     if st.session_state.messages_since_update > 3:
         st.session_state.messages_since_update = 0
@@ -288,7 +335,8 @@ def main_chat_interface():
         print('NEW INFO PROMPT')
         print(new_info_prompt, '\n')
         response = st.session_state.counselor_agent.client.chat.completions.create(
-            model='gpt-4o-mini',
+            #model='gpt-4o-mini',
+            model='gpt-4o-2024-08-06',
             messages=[
                 {"role": "assistant", "content": new_info_prompt},
             ],
@@ -307,6 +355,7 @@ def main_chat_interface():
         
         update_student_info(st.session_state.user, current_student_info)
 
+        st.rerun()
 
 def get_chat_summary_from_db(client: OpenAI) -> str:
     """
@@ -324,7 +373,8 @@ def get_chat_summary_from_db(client: OpenAI) -> str:
     summary = execute_query(query, (st.session_state.user.user_id,))[0][0]
     prompt = prompts.WELCOME_BACK_PROMPT.format(summary=summary)
     response = client.chat.completions.create(
-        model='gpt-4o',
+        #model='gpt-4o',
+        model='gpt-4o-2024-08-06',
         messages=[
             {"role": "assistant", "content": prompt},
         ],
@@ -365,8 +415,6 @@ def get_student_info(user: User) -> dict:
         'extracurriculars': student_info[14],
         'career_aspirations': student_info[15],
         'preferred_major': student_info[16],
-        #'clifton_strengths': student_info[17],
-        #'personality_test_results': student_info[18],
         'address': student_info[19],
         'city': student_info[20],
         'state': student_info[21],
@@ -374,6 +422,80 @@ def get_student_info(user: User) -> dict:
         'intended_college': student_info[23],
         'intended_major': student_info[24],
     }
+
+
+def first_time_user_page():
+    responses_file = 'saved_responses.pkl'
+
+    st.title("Welcome to SUNY Counselor Chat!")
+    st.write("As this is your first time using our service, we'd like you to complete a brief assessment.")
+
+    st.subheader("Strengths Assessment")
+    st.write("Rate each statement on a scale of 1 to 5:")
+    st.write("1 = Strongly Disagree, 2 = Disagree, 3 = Neutral, 4 = Agree, 5 = Strongly Agree")
+
+    user_responses = {}
+
+    with st.form("strengths_form"):
+        submit = st.form_submit_button("Submit")
+
+        # Fetch questions from the database
+        questions = execute_query("SELECT themes.theme_name, questions.statement FROM questions JOIN themes ON questions.theme_id = themes.theme_id;")
+
+        # Group questions by theme
+        theme_questions = {}
+        for theme, question in questions:
+            if theme not in theme_questions:
+                theme_questions[theme] = []
+            theme_questions[theme].append(question)
+
+        # Display questions for each theme
+        for theme, questions in theme_questions.items():
+            st.subheader(theme)
+            for question in questions:
+                response = st.radio(
+                    question,
+                    options=[1, 2, 3, 4, 5],
+                    format_func=lambda x: f"{x} - {['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'][x-1]}",
+                    index=None
+                )
+                user_responses[question] = response
+    
+        user_responses = answers
+
+    if submit:
+        if None in user_responses.values():
+            # Load saved responses if they exist
+            user_responses = {}
+            theme_scores = {}
+            if os.path.exists(responses_file):
+                with open(responses_file, 'rb') as f:
+                    saved_data = pickle.load(f)
+                    user_responses = saved_data['user_responses']
+                    theme_scores = saved_data['theme_scores']
+                st.success("Loaded saved responses for testing.")
+            #st.error("Please answer all questions before submitting.")
+
+        # Calculate theme scores
+        theme_scores = {}
+        for theme, questions in theme_questions.items():
+            theme_score = sum(user_responses[q] for q in questions)
+            theme_scores[theme] = theme_score
+
+        # Save responses to pickle file
+        with open(responses_file, 'wb') as f:
+            pickle.dump({'user_responses': user_responses, 'theme_scores': theme_scores}, f)
+
+        print('USER RESPONSES')
+        print(user_responses)
+        print('THEME SCORES')
+        print(theme_scores)
+
+        insert_user_responses(st.session_state.user.user_id, user_responses)
+        insert_strengths(st.session_state.user.user_id, theme_scores)
+
+        st.session_state.first_time_completed = True
+        st.rerun()
 
 
 def main():
@@ -385,58 +507,61 @@ def main():
     user = streamlit_login()
 
     if user:
+        if user.login_number == 0 and 'first_time_completed' not in st.session_state:
+            first_time_user_page()
+        else:
+            col1, col2, col3 = st.columns([1,1,1])
+            with col3:
+                if st.button("Logout"):
+                    logout()
 
-        col1, col2, col3 = st.columns([1,1,1])
-        with col3:
-            if st.button("Logout"):
-                logout()
+            st.sidebar.success(f"Logged in as: {user.username}")
+            display_student_info(user)
 
-        st.sidebar.success(f"Logged in as: {user.username}")
-        display_student_info(user)
+            student_info_str = utils.dict_to_str(get_student_info(user))
 
-        student_info_str = utils.dict_to_str(get_student_info(user))
+            if "counselor_agent" not in st.session_state:
+                client = OpenAI(api_key=os.getenv("PATHFINDER_OPENAI_API_KEY"))
+                st.session_state.counselor_agent = Agent(
+                    client,
+                    name="Counselor",
+                    tools=None,
+                    model='gpt-4o-2024-08-06',
+                    system_prompt=prompts.COUNSELOR_SYSTEM_PROMPT + student_info_str,
+                    json_mode=True
+                )
+                st.session_state.suny_agent = Agent(
+                    client,
+                    name="SUNY",
+                    tools=suny_tools,
+                    model='gpt-4o-2024-08-06',
+                    system_prompt=prompts.SUNY_SYSTEM_PROMPT
+                )
 
-        if "counselor_agent" not in st.session_state:
-            client = OpenAI(api_key=os.getenv("PATHFINDER_OPENAI_API_KEY"))
-            st.session_state.counselor_agent = Agent(
-                client,
-                name="Counselor",
-                tools=None,
-                model='gpt-4o-mini',
-                system_prompt=prompts.COUNSELOR_SYSTEM_PROMPT + student_info_str,
-                json_mode=True
-            )
-            st.session_state.suny_agent = Agent(
-                client,
-                name="SUNY",
-                tools=suny_tools,
-                system_prompt=prompts.SUNY_SYSTEM_PROMPT
-            )
-
-            #log_messages('counselor', st.session_state.counselor_agent.messages)
-            #log_messages('suny', st.session_state.suny_agent.messages)
-        
-        if "user_messages" not in st.session_state:
-            if user.login_number == 0:
-                first_message = prompts.WELCOME_MESSAGE
-            else:
-                try:
-                    first_message = get_chat_summary_from_db(client)
-                except:
-                    print('\nNo chat summary found in database, did you quit without logging out?\n')
+                #log_messages('counselor', st.session_state.counselor_agent.messages)
+                #log_messages('suny', st.session_state.suny_agent.messages)
+            
+            if "user_messages" not in st.session_state:
+                if user.login_number == 0:
                     first_message = prompts.WELCOME_MESSAGE
-            st.session_state.user_messages = [{"role": "assistant", "content": first_message}]
-        
-        if "counselor_suny_messages" not in st.session_state:
-            st.session_state.counselor_suny_messages = []
+                else:
+                    try:
+                        first_message = get_chat_summary_from_db(client)
+                    except:
+                        print('\nNo chat summary found in database, did you quit without logging out?\n')
+                        first_message = prompts.WELCOME_MESSAGE
+                st.session_state.user_messages = [{"role": "assistant", "content": first_message}]
+            
+            if "counselor_suny_messages" not in st.session_state:
+                st.session_state.counselor_suny_messages = []
 
-        user_chat_column, counselor_suny_chat_column = st.columns(2)
+            user_chat_column, counselor_suny_chat_column = st.columns(2)
 
-        with user_chat_column:
-            main_chat_interface()
+            with user_chat_column:
+                main_chat_interface()
 
-        with counselor_suny_chat_column:
-            counselor_suny_chat_interface()
+            with counselor_suny_chat_column:
+                counselor_suny_chat_interface()
 
     else:
         st.error("Please log in to continue")

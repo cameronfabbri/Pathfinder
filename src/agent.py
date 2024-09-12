@@ -23,7 +23,7 @@ def format_content(content):
 
 
 class Agent:
-    def __init__(self, client, name, tools, system_prompt: str, model: str = 'gpt-4o', json_mode: bool = False, temperature: float = 0.0):
+    def __init__(self, client, name, tools, system_prompt: str, model: str = 'gpt-4o-2024-08-06', json_mode: bool = False, temperature: float = 0.0):
         self.client = client
         self.name = name
         self.tools = tools
