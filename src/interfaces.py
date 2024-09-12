@@ -12,9 +12,11 @@ import pickle
 
 from src import prompts
 from src.auth import login
+from src.assessment import answers
 from src.utils import dict_to_str, parse_json
 from src.database import execute_query, get_db_connection
 from src.run_tools import process_user_input, get_student_info, update_student_info
+from src.database import insert_user_responses, insert_strengths, get_top_strengths, get_bot_strengths
 
 
 def main_chat_interface():
