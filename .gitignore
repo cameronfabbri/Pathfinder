@@ -4,6 +4,8 @@ __pycache__/
 *$py.class
 
 # My stuff
+*.pdf
+Screenshots
 temp.py
 scripts/temp.py
 data
@@ -11,6 +13,9 @@ system_data
 .DS*
 *.db
 chroma_data/
+*.png
+*.jpg
+*.json
 
 # C extensions
 *.so
