@@ -23,7 +23,7 @@ def format_content(content):
 
 
 class Agent:
-    def __init__(self, client, name, tools, system_prompt: str, model: str = 'gpt-4o', json_mode: bool = False, temperature: float = 0.0):
+    def __init__(self, client, name, tools, system_prompt: str, model: str = 'gpt-4o-2024-08-06', json_mode: bool = False, temperature: float = 0.0):
         self.client = client
         self.name = name
         self.tools = tools
@@ -33,6 +33,13 @@ class Agent:
         self.temperature = temperature
         self.messages = [{"role": "system", "content": self.system_prompt}]
         self.color = self._get_color()
+
+    def update_system_prompt(self, new_prompt):
+        self.system_prompt = new_prompt
+        print('UPDATED SYSTEM PROMPT')
+        print(self.system_prompt)
+        print('END')
+        self.messages[0]["content"] = self.system_prompt
 
     def _get_color(self):
         if self.name.lower() == "user":
