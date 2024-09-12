@@ -2,14 +2,59 @@
 """
 import os
 import sys
+import time
 import streamlit as st
+
+from openai import OpenAI
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
 from src import utils
+from src import prompts
 from src.user import User
-from src.database import execute_query
+from src.pdf_tools import parse_pdf_with_llama
+from src.database import ChromaDB, execute_query
+
+import re
+
+def type_text(text, char_speed=0.03, sentence_pause=0.5):
+    placeholder = st.empty()
+    full_text = ""
+    sentences = re.split('([.!?]+)', text)
+    
+    for sentence in sentences:
+        for char in sentence:
+            full_text += char
+            placeholder.markdown(full_text + "▌")
+            time.sleep(char_speed)
+        
+        # Pause after completing a sentence (if it ends with .!?)
+        if sentence.strip() and sentence.strip()[-1] in '.!?':
+            placeholder.markdown(full_text)
+            time.sleep(sentence_pause)
+    
+    placeholder.markdown(full_text)
+
+def _type_text(text, speed=0.025):
+    """
+    Type text letter by letter
+
+    Args:
+        text (str): The text to type
+        speed (float): The speed of the typing
+    Returns:
+        None
+    """
+    # Create a placeholder for the text
+    placeholder = st.empty()
+
+    # Type text letter by letter
+    typed_text = ""
+    for letter in text:
+        typed_text += letter
+        placeholder.markdown(typed_text)
+        time.sleep(speed) 
 
 
 def process_user_input(prompt):
@@ -111,3 +156,110 @@ def update_student_info(user: User, student_info: dict):
     print('ARGS')
     print(tuple(list(student_info.values()) + [st.session_state.user.user_id]))
     execute_query(query, tuple(list(student_info.values()) + [st.session_state.user.user_id]))
+
+
+def process_transcript(uploaded_file):
+    upload_dir = 'uploads'
+    os.makedirs(upload_dir, exist_ok=True)
+    file_path = os.path.join(upload_dir, uploaded_file.name)
+    with open(file_path, "wb") as f:
+        f.write(uploaded_file.getvalue())
+
+    # Process the transcript using parse_pdf_with_llama
+    transcript_text = parse_pdf_with_llama(file_path)
+
+    # Insert into chromadb
+    db = ChromaDB(path='./chroma_data')
+    db.add_document(transcript_text, doc_id=uploaded_file.name, user_id=st.session_state.user.user_id)
+
+
+def summarize_chat():
+    """
+    Summarize the chat and add it to the database
+
+    Args:
+        None
+    Returns:
+        summary (str): The summary of the chat
+    """
+
+    summary = None
+
+    # Only summarize the chat if the counselor agent has received user messages
+    num_user_messages = len([msg for msg in st.session_state.counselor_agent.messages if msg['role'] == 'user'])
+    if num_user_messages > 0:
+        st.session_state.counselor_agent.add_message("user", prompts.SUMMARY_PROMPT)
+        response = st.session_state.counselor_agent.invoke()
+        st.session_state.counselor_agent.delete_last_message()
+        summary = response.choices[0].message.content
+        summary = utils.parse_json(summary)['message']
+
+        print("SUMMARY")
+        print(summary)
+        print('\n')
+        print('\n------------------------MESSAGES----------------------------------\n')
+        [print(x) for x in st.session_state.counselor_agent.messages]
+        print('\n------------------------------------------------------------------\n')
+    else:
+        print("No summary to write")
+
+    return summary
+
+
+def write_summary_to_db(summary):
+    """
+    Write the summary to the database
+
+    Args:
+        summary (str): The summary of the chat
+    Returns:
+        None
+    """
+    query = "INSERT INTO chat_summary (user_id, summary) VALUES (?, ?)"
+    args = (st.session_state.user.user_id, summary)
+    print('Query:', query)
+    print('Args:', args)
+    res = execute_query(query, args)
+    print('Chat summary updated')
+    print('Result:', res)
+
+
+def logout():
+
+    summary = summarize_chat()
+
+    if summary:
+        write_summary_to_db(summary)
+
+    # Clear the session state
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+    
+    # Rerun the script to return to the login page
+    st.rerun()
+
+
+def get_chat_summary_from_db(client: OpenAI) -> str:
+    """
+    Get the chat summary from the database
+
+    Args:
+        client (OpenAI): The OpenAI client
+    Returns:
+        summary (str): The chat summary
+    """
+
+    query = "SELECT summary FROM chat_summary WHERE user_id=? ORDER BY id DESC LIMIT 1;"
+
+    # [0][0] because the execute_query uses fetchall(), not fetchone()
+    summary = execute_query(query, (st.session_state.user.user_id,))[0][0]
+    prompt = prompts.WELCOME_BACK_PROMPT.format(summary=summary)
+    response = client.chat.completions.create(
+        model='gpt-4o-2024-08-06',
+        messages=[
+            {"role": "assistant", "content": prompt},
+        ],
+        temperature=0.0
+    )
+    first_message = response.choices[0].message.content
+    return first_message

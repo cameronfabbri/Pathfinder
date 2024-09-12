@@ -15,22 +15,13 @@ from src.auth import login
 from src.assessment import answers
 from src.utils import dict_to_str, parse_json
 from src.database import execute_query, get_db_connection
-from src.run_tools import process_user_input, get_student_info, update_student_info
 from src.database import insert_user_responses, insert_strengths, get_top_strengths, get_bot_strengths
+from src.run_tools import process_user_input, get_student_info, update_student_info, process_transcript, type_text
 
 
 def main_chat_interface():
     st.title("💬 User-Counselor Chat")
     st.caption("🚀 Chat with your SUNY counselor")
-
-    #persona = None#display_counselor_options()
-    #if persona:
-    #    if persona == "David - The Mentor":
-    #        st.info(DAVID)
-    #    elif persona == "Emma - The Strategist":
-    #        st.info(EMMA)
-    #    elif persona == "Liam - The Explorer":
-    #        st.info(LIAM)
 
     if len(st.session_state.user_messages) == 1:
         first_message = st.session_state.user_messages[0]["content"]
@@ -247,24 +238,61 @@ def first_time_user_page():
 
 
 def display_counselor_options():
-    st.subheader("Choose your counselor!")
+    st.subheader("Choose your counselor")
+
+    from src.personas import DAVID_WELCOME_MESSAGE, EMMA_WELCOME_MESSAGE, LIAM_WELCOME_MESSAGE
+    from src.run_tools import type_text
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.image("data/david.jpg", width=150)
+        st.image("system_data/counselors/david.jpg", width=150)
     with col2:
-        st.image("data/emma.jpg", width=150)
+        st.image("system_data/counselors/emma.jpg", width=150)
     with col3:
-        st.image("data/liam.jpg", width=150)
+        st.image("system_data/counselors/liam.jpg", width=150)
 
-    return st.radio(
-        "Counselor Selection",
+    def on_counselor_select():
+        if st.session_state.counselor_select != st.session_state.previous_counselor:
+            st.session_state.previous_counselor = st.session_state.counselor_select
+            st.session_state.show_welcome_message = True
+
+    persona = st.radio(
+        "Select your counselor",
         ("David - The Mentor", "Emma - The Strategist", "Liam - The Explorer"),
         horizontal=True,
         label_visibility="collapsed",
-        index=None
+        index=None,
+        key="counselor_select",
+        on_change=on_counselor_select
     )
+
+    if "show_welcome_message" not in st.session_state:
+        st.session_state.show_welcome_message = False
+    if "previous_counselor" not in st.session_state:
+        st.session_state.previous_counselor = None
+
+    if st.session_state.show_welcome_message and persona:
+        welcome_message = ""
+        if persona == "David - The Mentor":
+            welcome_message = DAVID_WELCOME_MESSAGE
+        elif persona == "Emma - The Strategist":
+            welcome_message = EMMA_WELCOME_MESSAGE
+        elif persona == "Liam - The Explorer":
+            welcome_message = LIAM_WELCOME_MESSAGE
+        
+        if welcome_message:
+            type_text(welcome_message, char_speed=0.00001)
+        st.session_state.show_welcome_message = False
+
+    with st.form("counselor_form"):
+        submit = st.form_submit_button("Select")
+
+    print('PERSONA', persona)
+    if submit and persona:
+        st.session_state.counselor_persona = persona
+        st.session_state.counselor_chosen = True
+        st.rerun()
 
 
 def streamlit_login():
