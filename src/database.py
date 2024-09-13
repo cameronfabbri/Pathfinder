@@ -1,4 +1,5 @@
 """
+File describing the database with additional functions for interacting with the database.
 """
 
 import sqlite3

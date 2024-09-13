@@ -31,6 +31,8 @@ def main():
     user = streamlit_login()
 
     if user:
+
+        # TODO - this should check the database, not the session state
         if user.login_number == 0 and 'first_time_completed' not in st.session_state:
             first_time_user_page()
         elif 'counselor_chosen' not in st.session_state:
