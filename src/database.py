@@ -6,6 +6,8 @@ import sqlite3
 import chromadb
 from chromadb.config import DEFAULT_TENANT, DEFAULT_DATABASE, Settings
 
+from typing import Any, Dict
+
 import src.assessment as assessment
 
 
@@ -321,10 +323,65 @@ class ChromaDB:
             database=DEFAULT_DATABASE,
         )
 
-        self.collection = self.client.get_or_create_collection(name=name, metadata={"hnsw:space": distance_metric})
+        self.collection = self.client.get_or_create_collection(
+            name=name, metadata={"hnsw:space": distance_metric}
+        )
 
-    def add_document(self, content, doc_id: str, metadata: dict = None, user_id=None, verbose=False):
-        
+    @staticmethod
+    def sanitize_metadata(metadata: dict) -> dict:
+        def sanitize_value(value: Any) -> str:
+            if isinstance(value, (str, int, float, bool)):
+                return value
+            elif value is None:
+                return ''
+            else:
+                return str(value)
+
+        return {key: sanitize_value(value) for key, value in metadata.items()}
+
+    def insert_if_not_exists(self, content: str, doc_id: str, metadata: Dict[Any, Any]) -> bool:
+        """
+        Insert a document into the collection if it does not already exist.
+
+        Args:
+            content (str): The content of the document.
+            doc_id (str): The ID of the document.
+            metadata (dict): The metadata of the document.
+        Returns:
+            bool: True if the document was added, False otherwise.
+        """
+        if not self.document_exists(doc_id):
+            sanitized_metadata = self.sanitize_metadata(metadata)
+            self.add_document(content=content, doc_id=doc_id, metadata=sanitized_metadata)
+            return True
+        return False
+
+    def document_exists(self, doc_id: str) -> bool:
+        """
+        Check if a document exists in the collection.
+
+        Args:
+            doc_id (str): The ID of the document to check.
+        Returns:
+            bool: True if the document exists, False otherwise.
+        """
+        results = self.collection.get(ids=[doc_id], include=['metadatas'])
+        return len(results['ids']) > 0
+
+    def add_document(
+            self, content, doc_id: str, metadata: dict = None, user_id=None, verbose=False) -> None:
+        """
+        Add a document to the collection.
+
+        Args:
+            content (str): The content of the document.
+            doc_id (str): The ID of the document.
+            metadata (dict): The metadata of the document.
+            user_id (int): The ID of the user.
+            verbose (bool): Whether to print verbose output.
+        Returns:
+            None
+        """
         if metadata is None:
             metadata = {}
 
@@ -343,3 +400,30 @@ class ChromaDB:
         if verbose:
             print(f"Document added successfully with ID: {doc_id}")
 
+    def get_document_by_id(self, doc_id: str):
+        """
+        Retrieve a document from the collection by its doc_id.
+
+        Args:
+            doc_id (str): The ID of the document to retrieve.
+        Returns:
+            dict: A dictionary containing the document's content, metadata, and embeddings (if available).
+                  Returns None if the document is not found.
+        """
+        try:
+            result = self.collection.get(
+                ids=[doc_id],
+                include=['documents', 'metadatas', 'embeddings']
+            )
+            if result['ids']:
+                return {
+                    'id': result['ids'][0],
+                    'document': result['documents'][0] if result['documents'] else None,
+                    'metadata': result['metadatas'][0] if result['metadatas'] else None,
+                    'embedding': result['embeddings'][0] if result['embeddings'] else None
+                }
+            else:
+                return None
+        except Exception as e:
+            print(f"{doc_id} not found: {e}")
+            return ''
