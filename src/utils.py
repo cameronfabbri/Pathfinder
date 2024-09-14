@@ -4,6 +4,20 @@ import os
 import json
 import subprocess
 
+opj = os.path.join
+
+
+def find_all_pdfs(directory):
+    """
+    Find all the PDFs in the directory.
+    """
+    pdf_files = []
+    for root, _, files in os.walk(directory):
+        for file in files:
+            if file.endswith('.pdf'):
+                pdf_files.append(opj(root, file))
+    return pdf_files
+
 
 def is_file_pdf(file_path: str) -> bool:
     try:

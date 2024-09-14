@@ -5,11 +5,11 @@ finds all the files with missing extensions and renames the files.
 
 import os
 import click
+import shutil
 
 from tqdm import tqdm
 
 from src.utils import is_file_pdf
-
 
 def count_directories(directory):
     return sum([len(dirs) for _, dirs, _ in os.walk(directory)])
@@ -29,7 +29,7 @@ def main(directory: str):
                 if is_file_pdf(path):
                     print(path)
                     new_path = os.path.splitext(path)[0] + '.pdf'
-                    os.rename(path, new_path)
+                    shutil.copy2(path, new_path)
                     print(f"Renamed: {path} -> {new_path}\n")
 
 

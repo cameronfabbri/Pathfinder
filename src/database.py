@@ -323,12 +323,16 @@ class ChromaDB:
 
         self.collection = self.client.get_or_create_collection(name=name, metadata={"hnsw:space": distance_metric})
 
-    def add_document(self, content, doc_id: str, user_id=None):
+    def add_document(self, content, doc_id: str, metadata: dict = None, user_id=None, verbose=False):
         
+        if metadata is None:
+            metadata = {}
+
         if user_id:
-            metadata = {"access": "private", "user_id": user_id}
+            metadata["access"] = "private"
+            metadata["user_id"] = user_id
         else:
-            metadata = {"access": "public"}
+            metadata["access"] = "public"
          
         # Add document to ChromaDB
         self.collection.add(
@@ -336,5 +340,6 @@ class ChromaDB:
             documents=[content],  # Document content
             metadatas=[metadata],  # Access control metadata
         )
-        print(f"Document added successfully with ID: {doc_id}")
+        if verbose:
+            print(f"Document added successfully with ID: {doc_id}")
 
