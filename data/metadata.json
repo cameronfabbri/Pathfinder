@@ -27,5 +27,14 @@
       "/Users/cameronfabbri/Projects/system_data/suny/www.alfred.edu/academics/undergrad-majors-minors/_docs/catalog/alfred-university-undergraduate-catalog-2022-2023.pdf",
       "Users/cameronfabbri/Projects/system_data/suny/www.alfred.edu/about/institutional-research/_docs/fact-book-may-2024.pdf"
     ]
+  },
+  "Binghamton University": {
+    "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/www.binghamton.edu/apps/academics/program",
+    "processing_instructions": {
+      "file_extensions": [".html"],
+      "include_in_path": [""]
+    },
+    "pdf_files": [],
+    "other_files": []
   }
 }
