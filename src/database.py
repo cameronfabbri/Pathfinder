@@ -422,7 +422,7 @@ class ChromaDB:
                     'id': result['ids'][0],
                     'document': result['documents'][0] if result['documents'] else None,
                     'metadata': result['metadatas'][0] if result['metadatas'] else None,
-                    'embedding': result['embeddings'][0] if result['embeddings'] else None
+                    #'embedding': result['embeddings'][0] if result['embeddings'] else None
                 }
             else:
                 return None

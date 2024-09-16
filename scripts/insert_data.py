@@ -308,6 +308,7 @@ def insert_pdf_files(db: ChromaDB, university_name: str, pdf_files: list[str]) -
             page_num += 1
             page_id = doc_id + f'-page-{page_num}'
             metadata['page_number'] = page_num
+            metadata['type'] = 'pdf'
             db.insert_if_not_exists(page_text, page_id, metadata)
 
         page_chunks = chunk_pages(pages, chunk_size=128, overlap_size=16)
@@ -316,6 +317,7 @@ def insert_pdf_files(db: ChromaDB, university_name: str, pdf_files: list[str]) -
             chunk_id = doc_id + f"-chunk-{chunk['metadata']['chunk_id']}"
             chunk['metadata']['filepath'] = path
             chunk['metadata']['university'] = university_name
+            chunk['metadata']['type'] = 'pdf'
             db.insert_if_not_exists(chunk['text'], chunk_id, chunk['metadata'])
 
                 #inserted = db.insert_if_not_exists(chunk['text'], doc_id, combined_metadata)
@@ -386,7 +388,7 @@ def insert_html_files(db: ChromaDB, university_name: str, html_files: list[str])
         # Insert the full document into the database
         metadata['filepath'] = path
         metadata['university'] = university_name
-        
+        metadata['type'] = 'html'
         db.insert_if_not_exists(text, doc_id, metadata)
 
         # Insert chunks into the database
@@ -396,6 +398,7 @@ def insert_html_files(db: ChromaDB, university_name: str, html_files: list[str])
             chunk_id = doc_id + f"-chunk-{chunk['metadata']['chunk_id']}"
             chunk['metadata']['filepath'] = path
             chunk['metadata']['university'] = university_name
+            chunk['metadata']['type'] = 'html'
             db.insert_if_not_exists(chunk['text'], chunk_id, chunk['metadata'])
 
 
