@@ -1,0 +1,31 @@
+{
+  "SUNY Adirondack": {
+    "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/sunyacc.smartcatalogiq.com/en/23-24/college-catalog/",
+    "processing_instructions": {
+      "file_extensions": [".html"],
+      "include_in_path": [""]
+    },
+    "pdf_files": [],
+    "other_files": []
+  },
+  "University at Albany": {
+    "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/www.albany.edu",
+    "processing_instructions": {
+      "file_extensions": [".html"],
+      "include_in_path": ["programs"]
+    },
+    "pdf_files": [],
+    "other_files": []
+  },
+  "Alfred University": {
+    "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/www.alfred.edu/academics/undergrad-majors-minors/",
+    "processing_instructions": {
+        "file_extensions": [".html"],
+        "include_in_path": [""]
+    },
+    "pdf_files": [
+      "/Users/cameronfabbri/Projects/system_data/suny/www.alfred.edu/academics/undergrad-majors-minors/_docs/catalog/alfred-university-undergraduate-catalog-2022-2023.pdf",
+      "Users/cameronfabbri/Projects/system_data/suny/www.alfred.edu/about/institutional-research/_docs/fact-book-may-2024.pdf"
+    ]
+  }
+}

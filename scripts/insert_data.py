@@ -2,17 +2,21 @@
 Script to insert files found by scripts/find_relevant_files.py into the database for RAG
 """
 import os
+import re
+import fitz
 import json
 import click
 
 from tqdm import tqdm
 from openai import OpenAI
+from bs4 import BeautifulSoup
 from difflib import SequenceMatcher
 
 from src.agent import Agent
 from src.database import ChromaDB
-from src.pdf_tools import load_pdf_text, chunk_pages, get_pdf_metadata
-from src.constants import SUNY_DATA_DIR, UNIVERSITY_DATA_DIR, CHROMA_DB_PATH, UNIVERSITY_MAPPING
+from src.pdf_tools import load_pdf_text
+from src.utils import chunk_pages, chunk_text
+from src.constants import UNIVERSITY_DATA_DIR, CHROMA_DB_PATH, UNIVERSITY_MAPPING, METADATA_PATH
 
 opj = os.path.join
 
@@ -45,6 +49,29 @@ You are a helpful assistant that generates a list of 5 questions based directly 
 }
 """
 
+
+def select_files(root_directory, instructions):
+    include_in_path = instructions.get('include_in_path', [])
+    exclude_from_path = instructions.get('exclude_from_path', [])
+    file_extensions = instructions.get('file_extensions', [])
+    selected_files = {'html_files': [], 'pdf_files': []}
+
+    for dirpath, _, filenames in os.walk(root_directory):
+        for filename in filenames:
+            if any(filename.endswith(ext) for ext in file_extensions):
+                file_path = os.path.join(dirpath, filename)
+                # Normalize the file path for consistent string matching
+                normalized_path = os.path.normpath(file_path)
+                include = not include_in_path or all(pattern in normalized_path for pattern in include_in_path)
+                exclude = any(pattern in normalized_path for pattern in exclude_from_path)
+                if include and not exclude:
+                    if filename.endswith('.html'):
+                        selected_files['html_files'].append(file_path)
+                    elif filename.endswith('.pdf'):
+                        selected_files['pdf_files'].append(file_path)
+    return selected_files
+
+
 def get_distinct_university_results(query_results, n_results=3):
     unique_universities = {}
     
@@ -62,6 +89,7 @@ def get_distinct_university_results(query_results, n_results=3):
             break
     
     return list(unique_universities.values())
+
 
 def generate_questions(agent: Agent, chunk: dict) -> list[str]:
     prompt = 'Generate a list of 5 questions that can be answered by the given document.'
@@ -98,54 +126,6 @@ def process_university(db: ChromaDB, university_dir: str) -> None:
         json_mode=True
     )
 
-    for path in tqdm(filepaths):
-
-        if not os.path.exists(path):
-            continue
-
-        filename = os.path.basename(path)
-        pages = load_pdf_text(path)
-        metadata = {}
-        metadata['university'] = university_name
-        metadata['filename'] = os.path.basename(path)
-        metadata['filepath'] = path
-
-        page_chunks = chunk_pages(pages, chunk_size=100)
-
-        for chunk in page_chunks:
-
-            doc_id = f"{university_name}-{filename}-chunk-{chunk['metadata']['chunk_id']}"
-            combined_metadata = {**metadata, **chunk['metadata']}
-
-            questions = None
-
-            try:
-
-                # Insert the document into the database
-                inserted = db.insert_if_not_exists(chunk['text'], doc_id, combined_metadata)
-                if inserted:
-                    print(f"Inserted new document: {doc_id}")
-                    questions = generate_questions(agent, chunk)
-                else:
-                    print(f"Document already exists: {doc_id}")
-
-                if questions is None:
-                    continue
-
-                # Insert the generated questions into the database
-                for idx, question in enumerate(questions[:2]):
-                    question_id = f"{doc_id}-question-{idx}"
-                    combined_metadata['reference_doc_id'] = doc_id
-                    inserted = db.insert_if_not_exists(question, question_id, combined_metadata)
-                    if inserted:
-                        print(f"Inserted new question: {question_id}")
-                    else:
-                        print(f"Question already exists: {question_id}")
-
-            except Exception as e:
-                print(f'Error processing document {doc_id}: {e}')
-                print('Metadata:', combined_metadata)
-                continue
 
 
 def remove_overlap(docs):
@@ -240,37 +220,226 @@ def ask_question(db, question):
     print('Answer:', response.choices[0].message.content)
 
 
-@click.command()
-@click.option('--data_dir', type=str, default=None, help='Directory to load data from')
-def main(data_dir: str | None):
+def get_html_metadata(html_file: str) -> dict:
+    """
+    Get the metadata from an html file.
 
-    if data_dir is None:
-        data_dir = UNIVERSITY_DATA_DIR
-        single_university = False
-    else:
-        single_university = True
-        university_dir = data_dir
+    Args:
+        html_file (str): The path to the html file.
+    Returns:
+        dict: The metadata of the html file.
+    """
+    metadata = {}
+
+    with open(html_file, 'r', encoding='utf-8') as file:
+        soup = BeautifulSoup(file, 'html.parser')
+
+    metadata['title'] = soup.title.string.strip().replace('\xa0', ' ') if soup.title else ''
+
+    description = soup.find('meta', attrs={'name': 'description'})
+    metadata['description'] = description['content'].strip() if description else ''
+
+    keywords = soup.find('meta', attrs={'name': 'keywords'})
+    metadata['keywords'] = keywords['content'].strip() if keywords else ''
+
+    # Check for h1 to h6
+    metadata['headers'] = {}
+    for i in range(1, 7):
+        headers = [header.get_text().strip() for header in soup.find_all(f'h{i}')]
+        if headers:
+            metadata['headers'][f'h{i}'] = headers
+
+    metadata['language'] = soup.html.get('lang', '')
+
+    metadata['source_url'] = soup.find('link', rel='canonical')['href'] if soup.find('link', rel='canonical') else ''
+
+    return metadata
+
+
+def extract_pdf_pages(pdf_file: str, text_type: str = 'text') -> list[str]:
+    """
+    Extract the text from each page of a pdf file as a list of strings.
+
+    Args:
+        pdf_file (str): The path to the pdf file.
+        text_type (str): The type of text to extract. Defaults to 'text'.
+        text, html, dict, json, xml, blocks, words, xhtml
+    Returns:
+        list[str]: A list of strings, one for each page of the pdf file.
+    """
+    pages_text = []
+    
+    with fitz.open(pdf_file) as doc:
+        for page_num in range(doc.page_count):
+            page = doc.load_page(page_num)
+            text = page.get_text(text_type)
+            pages_text.append(text)
+    
+    return pages_text
+
+
+def insert_pdf_files(db: ChromaDB, university_name: str, pdf_files: list[str]) -> None:
+    """
+    Insert the pdf files into the database
+
+    Args:
+        db (ChromaDB): The database to insert the documents into.
+        university_name (str): The name of the university.
+        pdf_files (list[str]): The list of pdf files to insert.
+    Returns:
+        None
+    """
+    for path in tqdm(pdf_files):
+
+        if not os.path.exists(path):
+            continue
+
+        # TODO - remove table of contents pages
+
+        doc_id = get_doc_id_from_path(path)
+        pages = extract_pdf_pages(path, 'text')
+        metadata = {
+            'university': university_name,
+            'filepath': path,
+        }
+
+        # Insert each page as a separate document before chunking
+        for page_num, page_text in enumerate(pages):
+            page_num += 1
+            page_id = doc_id + f'-page-{page_num}'
+            metadata['page_number'] = page_num
+            db.insert_if_not_exists(page_text, page_id, metadata)
+
+        page_chunks = chunk_pages(pages, chunk_size=128, overlap_size=16)
+
+        for chunk in page_chunks:
+            chunk_id = doc_id + f"-chunk-{chunk['metadata']['chunk_id']}"
+            chunk['metadata']['filepath'] = path
+            chunk['metadata']['university'] = university_name
+            db.insert_if_not_exists(chunk['text'], chunk_id, chunk['metadata'])
+
+                #inserted = db.insert_if_not_exists(chunk['text'], doc_id, combined_metadata)
+                #if inserted:
+                #    print(f"Inserted new document: {doc_id}")
+                    #questions = generate_questions(agent, chunk)
+                #else:
+                #    print(f"Document already exists: {doc_id}")
+
+#                if questions is None:
+#                    continue
+
+                # Insert the generated questions into the database
+                #for idx, question in enumerate(questions[:2]):
+                #    question_id = f"{doc_id}-question-{idx}"
+                    #combined_metadata['reference_doc_id'] = doc_id
+                    #inserted = db.insert_if_not_exists(question, question_id, combined_metadata)
+                #    if inserted:
+                #        print(f"Inserted new question: {question_id}")
+                #    else:
+                #        print(f"Question already exists: {question_id}")
+
+
+
+def get_doc_id_from_path(path: str) -> str:
+    """
+    Get the document id from the path
+
+    Args:
+        path (str): The path to the document.
+    Returns:
+        str: The document id.
+    """
+    doc_id = path.split(UNIVERSITY_DATA_DIR)[-1]
+    doc_id = doc_id.replace(os.sep, '-')
+    if doc_id.startswith('-'):
+        doc_id = doc_id[1:]
+    return doc_id
+
+
+def insert_html_files(db: ChromaDB, university_name: str, html_files: list[str]) -> None:
+    """
+    Insert the html files into the database
+
+    Args:
+        db (ChromaDB): The database to insert the documents into.
+        university_name (str): The name of the university.
+        html_files (list[str]): The list of html files to insert.
+    Returns:
+        None
+    """
+
+    for path in tqdm(html_files):
+
+        doc_id = get_doc_id_from_path(path)
+
+        with open(path, 'r') as f:
+            soup = BeautifulSoup(f, 'lxml')
+
+        # Remove all <script> tags
+        for script in soup(["script"]):
+            script.extract()
+
+        text = re.sub(r'\n{3,}', '\n\n', soup.get_text()).strip()
+
+        metadata = get_html_metadata(path)
+
+        # Insert the full document into the database
+        metadata['filepath'] = path
+        metadata['university'] = university_name
+        
+        db.insert_if_not_exists(text, doc_id, metadata)
+
+        # Insert chunks into the database
+        text_chunks = chunk_text(text, chunk_size=512, overlap_size=20)
+        
+        for chunk in text_chunks:
+            chunk_id = doc_id + f"-chunk-{chunk['metadata']['chunk_id']}"
+            chunk['metadata']['filepath'] = path
+            chunk['metadata']['university'] = university_name
+            db.insert_if_not_exists(chunk['text'], chunk_id, chunk['metadata'])
+
+
+@click.command()
+@click.option('--data_dir', '-d', type=str, default=None, help='University directory to process')
+def main(data_dir: str | None):
 
     db = ChromaDB(CHROMA_DB_PATH, 'universities')
 
-    if single_university:
-        process_university(db, university_dir)
-    else:
-        for university_dir in os.listdir(data_dir):
-            university_dir = opj(data_dir, university_dir)
-            if not os.path.isdir(university_dir):
+    with open(METADATA_PATH, 'r') as f:
+        metadata = json.load(f)
+
+    for university_name, data in metadata.items():
+
+        if data_dir is not None:
+            if university_name != UNIVERSITY_MAPPING[os.path.basename(data_dir)]:
+                print('Skipping', university_name)
                 continue
-            process_university(db, university_dir)
+
+        files = {
+            'html_files': data.get('html_files', []),
+            'pdf_files': data.get('pdf_files', [])
+        }
+
+        # Process files based on processing instructions
+        if 'processing_instructions' in data and data['processing_instructions']:
+            root_directory = data.get('root_directory')
+            if root_directory:
+                selected_files = select_files(
+                    root_directory=root_directory,
+                    instructions=data['processing_instructions']
+                )
+                files['html_files'].extend(selected_files.get('html_files', []))
+                files['pdf_files'].extend(selected_files.get('pdf_files', []))
+            else:
+                print(f"Warning: Root directory not specified for {university_name}")
+
+        if files['pdf_files']:
+            insert_pdf_files(db, university_name, files['pdf_files'])
+        if files['html_files']:
+            insert_html_files(db, university_name, files['html_files'])
 
     question = 'Does SUNY Potsdam offer a degree in Music?'
-    question = 'What coursework is involved in a music degree at the crane school of music?'
-    ask_question(db, question)
-    #print('\n===========================================\n')
-    #question = 'Can you give me more information on the Crane School of Music?'
-    #ask_question(db, question)
-    exit()
-
-
+    #question = 'What coursework is involved in a music degree at the crane school of music?'
     #question = 'What does the third semester of a Agribusiness Management major look like?'
     #question = 'What are the admission requirements for Engineering Science majors?'
     #question = 'Can you tell me about the nursing program?'

@@ -4,9 +4,9 @@ File describing the database with additional functions for interacting with the 
 
 import sqlite3
 import chromadb
-from chromadb.config import DEFAULT_TENANT, DEFAULT_DATABASE, Settings
 
-from typing import Any, Dict
+from typing import Any, Dict, List
+from chromadb.config import DEFAULT_TENANT, DEFAULT_DATABASE, Settings
 
 import src.assessment as assessment
 
@@ -354,6 +354,8 @@ class ChromaDB:
             sanitized_metadata = self.sanitize_metadata(metadata)
             self.add_document(content=content, doc_id=doc_id, metadata=sanitized_metadata)
             return True
+        else:
+            print(f"Document {doc_id} already exists.")
         return False
 
     def document_exists(self, doc_id: str) -> bool:
@@ -427,3 +429,29 @@ class ChromaDB:
         except Exception as e:
             print(f"{doc_id} not found: {e}")
             return ''
+
+    def query(self, query_text: str, top_k: int = 5) -> List[Dict[str, Any]]:
+        """
+        Query the collection to retrieve the most similar documents to the query text.
+
+        Args:
+            query_text (str): The text to query.
+            top_k (int): The number of top results to return.
+
+        Returns:
+            List[Dict[str, Any]]: A list of documents with their content, metadata, and distances.
+        """
+        results = self.collection.query(
+            query_texts=[query_text],
+            n_results=top_k,
+            include=['documents', 'metadatas', 'distances']
+        )
+
+        documents = []
+        for i in range(len(results['documents'][0])):
+            documents.append({
+                'document': results['documents'][0][i],
+                'metadata': results['metadatas'][0][i],
+                'distance': results['distances'][0][i],
+            })
+        return documents
