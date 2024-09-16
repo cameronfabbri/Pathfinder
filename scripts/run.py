@@ -35,9 +35,13 @@ def main():
         # TODO - this should check the database, not the session state
         if user.login_number == 0 and 'first_time_completed' not in st.session_state:
             first_time_user_page()
-        elif 'counselor_chosen' not in st.session_state:
-            display_counselor_options()
+        #elif 'counselor_chosen' not in st.session_state:
+        #    display_counselor_options()
         else:
+
+            # TODO - remove after testing
+            st.session_state.counselor_persona = 'David - The Mentor'
+
             col1, col2, col3 = st.columns([1,1,1])
             with col3:
                 if st.button("Logout"):

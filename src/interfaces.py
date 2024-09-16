@@ -17,6 +17,9 @@ from src.utils import dict_to_str, parse_json
 from src.database import execute_query, get_db_connection
 from src.database import insert_user_responses, insert_strengths, get_top_strengths, get_bot_strengths
 from src.run_tools import process_user_input, get_student_info, update_student_info, process_transcript, type_text
+from src.constants import SYSTEM_DATA_DIR
+
+opj = os.path.join
 
 
 def main_chat_interface():
@@ -246,11 +249,11 @@ def display_counselor_options():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.image("system_data/counselors/david.jpg", width=150)
+        st.image(opj(SYSTEM_DATA_DIR, 'counselors/david.jpg'), width=150)
     with col2:
-        st.image("system_data/counselors/emma.jpg", width=150)
+        st.image(opj(SYSTEM_DATA_DIR, 'counselors/emma.jpg'), width=150)
     with col3:
-        st.image("system_data/counselors/liam.jpg", width=150)
+        st.image(opj(SYSTEM_DATA_DIR, 'counselors/liam.jpg'), width=150)
 
     def on_counselor_select():
         if st.session_state.counselor_select != st.session_state.previous_counselor:

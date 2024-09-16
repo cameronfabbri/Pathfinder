@@ -5,13 +5,12 @@ import os
 from openai import OpenAI
 from typing import List, Dict, Any
 
-from src.agent import Agent
 from src.database import ChromaDB
 from src.constants import CHROMA_DB_PATH
 
 
 class RAG:
-    def __init__(self, agent: Agent, db: ChromaDB, top_k: int = 5):
+    def __init__(self, db: ChromaDB, top_k: int = 5):
         """
         Initialize the RAG (Retrieval Augmented Generation) class.
 
@@ -20,11 +19,10 @@ class RAG:
             db (ChromaDB): An instance of the ChromaDB class.
             top_k (int): The number of top documents to retrieve for context.
         """
-        self.agent = agent
         self.db = db
         self.top_k = top_k
 
-    def retrieve(self, query: str) -> List[Dict[str, Any]]:
+    def retrieve(self, query: str, school_name: str = None) -> List[Dict[str, Any]]:
         """
         Retrieve relevant documents from the database using the query.
 
@@ -34,12 +32,15 @@ class RAG:
         Returns:
             List[Dict[str, Any]]: A list of relevant documents with metadata.
         """
-        #results = self.db.query(query_text=query, top_k=self.top_k)
+        where = None
+        if school_name is not None:
+            where = {"university": school_name}
+
         return self.db.collection.query(
             query_texts=[query],
             n_results=self.top_k,
             include=['documents', 'metadatas', 'distances'],
-            where={"university": "Alfred University"}
+            where=where
         )
 
     def generate(self, query: str) -> str:
@@ -53,7 +54,7 @@ class RAG:
             str: The generated response.
         """
         # Retrieve relevant documents
-        documents = self.retrieve(query)
+        documents = self.retrieve(query, school_name)
 
         # Format the retrieved documents to include in the prompt
         context = self.format_documents(documents)
@@ -63,8 +64,6 @@ class RAG:
 
         # Add the user's query
         self.agent.add_message("user", query)
-
-        print(context, '\n')
 
         # Invoke the agent to generate a response
         response = self.agent.invoke()
@@ -156,6 +155,7 @@ def main():
     query = "What undergraduate programs are offered at the University of Albany?\n\n"
     query = 'For the school of art and design at Alfred University, what are the portfolio requirements for applying?'
     query = 'For the school of art and design, what are the portfolio requirements for applying?'
+    query = 'What coursework is required for a Chinese Studies major at Binghamton University?'
     response = rag.generate(query)
 
     print("Assistant's Response:")
