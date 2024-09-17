@@ -28,6 +28,18 @@
       "Users/cameronfabbri/Projects/system_data/suny/www.alfred.edu/about/institutional-research/_docs/fact-book-may-2024.pdf"
     ]
   },
+  "Alfred State College": {
+    "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/catalog.alfredstate.edu/",
+    "processing_instructions": {
+        "file_extensions": [".html"],
+        "include_in_path": ["current"],
+        "exclude_from_path": ["courses-by-code"]
+    },
+    "pdf_files": [
+      "/Users/cameronfabbri/Projects/system_data/suny/catalog.alfredstate.edu/current/catalog.pdf",
+      "catalog.alfredstate.edu/current/archive/AlfredState2024-25.pdf"
+    ]
+  },
   "Binghamton University": {
     "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/www.binghamton.edu/apps/academics/program",
     "processing_instructions": {
