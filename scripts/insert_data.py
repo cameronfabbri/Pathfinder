@@ -50,7 +50,16 @@ You are a helpful assistant that generates a list of 5 questions based directly 
 """
 
 
-def select_files(root_directory, instructions):
+def select_files(root_directory: str, instructions: dict) -> dict:
+    """
+    Select the files to insert into the database
+
+    Args:
+        root_directory (str): The root directory to search for files.
+        instructions (dict): The instructions for selecting files.
+    Returns:
+        dict: The selected files.
+    """
     include_in_path = instructions.get('include_in_path', [])
     exclude_from_path = instructions.get('exclude_from_path', [])
     file_extensions = instructions.get('file_extensions', [])
@@ -278,7 +287,7 @@ def extract_pdf_pages(pdf_file: str, text_type: str = 'text') -> list[str]:
     return pages_text
 
 
-def insert_pdf_files(db: ChromaDB, university_name: str, pdf_files: list[str]) -> None:
+def insert_pdf_files(db: ChromaDB, university_name: str, pdf_files: list[str], debug: bool) -> None:
     """
     Insert the pdf files into the database
 
@@ -309,7 +318,10 @@ def insert_pdf_files(db: ChromaDB, university_name: str, pdf_files: list[str]) -
             page_id = doc_id + f'-page-{page_num}'
             metadata['page_number'] = page_num
             metadata['type'] = 'pdf'
-            db.insert_if_not_exists(page_text, page_id, metadata)
+            if not debug:
+                db.insert_if_not_exists(page_text, page_id, metadata)
+            else:
+                print(f"[DEBUG] Inserted page: {page_id}")
 
         page_chunks = chunk_pages(pages, chunk_size=128, overlap_size=16)
 
@@ -318,7 +330,10 @@ def insert_pdf_files(db: ChromaDB, university_name: str, pdf_files: list[str]) -
             chunk['metadata']['filepath'] = path
             chunk['metadata']['university'] = university_name
             chunk['metadata']['type'] = 'pdf'
-            db.insert_if_not_exists(chunk['text'], chunk_id, chunk['metadata'])
+            if not debug:
+                db.insert_if_not_exists(chunk['text'], chunk_id, chunk['metadata'])
+            else:
+                print(f"[DEBUG] Inserted chunk: {chunk_id}")
 
                 #inserted = db.insert_if_not_exists(chunk['text'], doc_id, combined_metadata)
                 #if inserted:
@@ -358,7 +373,11 @@ def get_doc_id_from_path(path: str) -> str:
     return doc_id
 
 
-def insert_html_files(db: ChromaDB, university_name: str, html_files: list[str]) -> None:
+def insert_html_files(
+        db: ChromaDB,
+        university_name: str,
+        html_files: list[str],
+        debug: bool) -> None:
     """
     Insert the html files into the database
 
@@ -389,7 +408,10 @@ def insert_html_files(db: ChromaDB, university_name: str, html_files: list[str])
         metadata['filepath'] = path
         metadata['university'] = university_name
         metadata['type'] = 'html'
-        db.insert_if_not_exists(text, doc_id, metadata)
+        if not debug:
+            db.insert_if_not_exists(text, doc_id, metadata)
+        else:
+            print(f"[DEBUG] Inserted html: {doc_id}")
 
         # Insert chunks into the database
         text_chunks = chunk_text(text, chunk_size=512, overlap_size=20)
@@ -399,12 +421,16 @@ def insert_html_files(db: ChromaDB, university_name: str, html_files: list[str])
             chunk['metadata']['filepath'] = path
             chunk['metadata']['university'] = university_name
             chunk['metadata']['type'] = 'html'
-            db.insert_if_not_exists(chunk['text'], chunk_id, chunk['metadata'])
+            if not debug:
+                db.insert_if_not_exists(chunk['text'], chunk_id, chunk['metadata'])
+            else:
+                print(f"[DEBUG] Inserted chunk: {chunk_id}")
 
 
 @click.command()
 @click.option('--data_dir', '-d', type=str, default=None, help='University directory to process')
-def main(data_dir: str | None):
+@click.option('--debug', is_flag=True, default=False, help='Run in debug mode')
+def main(data_dir: str | None, debug: bool):
 
     db = ChromaDB(CHROMA_DB_PATH, 'universities')
 
@@ -437,9 +463,11 @@ def main(data_dir: str | None):
                 print(f"Warning: Root directory not specified for {university_name}")
 
         if files['pdf_files']:
-            insert_pdf_files(db, university_name, files['pdf_files'])
+            print('Inserting PDF files for', university_name, '...')
+            insert_pdf_files(db, university_name, files['pdf_files'], debug)
         if files['html_files']:
-            insert_html_files(db, university_name, files['html_files'])
+            print('Inserting HTML files for', university_name, '...')
+            insert_html_files(db, university_name, files['html_files'], debug)
 
     question = 'Does SUNY Potsdam offer a degree in Music?'
     #question = 'What coursework is involved in a music degree at the crane school of music?'
