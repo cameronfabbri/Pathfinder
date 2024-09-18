@@ -32,9 +32,11 @@ def main_chat_interface():
         # Add in the first message to the counselor agent if it's not already there
         if {"role": "assistant", "content": first_message} not in st.session_state.counselor_agent.messages:
             st.session_state.counselor_agent.add_message("assistant", first_message)
+            print('Added first message to counselor agent')
 
     chat_container = st.container()
 
+    st.session_state.counselor_agent.print_messages()
     prompt = st.chat_input("Type your message here...")
     
     # Display chat messages in the container
@@ -65,8 +67,8 @@ def main_chat_interface():
         # Force a rerun to display the new messages
         st.rerun()
 
-    print('Messages since update:', st.session_state.messages_since_update)
-    if st.session_state.messages_since_update > 2:
+    #print('Messages since update:', st.session_state.messages_since_update)
+    if st.session_state.messages_since_update > 200000000:
         st.session_state.messages_since_update = 0
         print('Updating student info...')
         current_student_info = get_student_info(st.session_state.user)

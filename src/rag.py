@@ -28,7 +28,7 @@ class RAG:
 
         Args:
             query (str): The user's query.
-
+            school_name (str | None): The name of the school to retrieve documents for.
         Returns:
             List[Dict[str, Any]]: A list of relevant documents with metadata.
         """
@@ -43,40 +43,6 @@ class RAG:
             where=where
         )
 
-    def generate(self, query: str) -> str:
-        """
-        Generate a response using Retrieval Augmented Generation.
-
-        Args:
-            query (str): The user's query.
-
-        Returns:
-            str: The generated response.
-        """
-        # Retrieve relevant documents
-        documents = self.retrieve(query, school_name)
-
-        # Format the retrieved documents to include in the prompt
-        context = self.format_documents(documents)
-
-        # Add the context to the agent's messages
-        self.agent.add_message("system", f"Use the following context to answer the user's question:\n{context}")
-
-        # Add the user's query
-        self.agent.add_message("user", query)
-
-        # Invoke the agent to generate a response
-        response = self.agent.invoke()
-
-        # Extract the assistant's reply
-        reply = response.choices[0].message.content
-
-        # Optionally, remove the last messages to reset the context
-        self.agent.delete_last_message()  # Remove user message
-        self.agent.delete_last_message()  # Remove system message with context
-
-        return reply
-
     def format_documents(self, documents: List[Dict[str, Any]]) -> str:
         """
         Format the retrieved documents into a string to be included in the prompt.
@@ -87,7 +53,12 @@ class RAG:
         Returns:
             str: The formatted documents.
         """
+
+        print('Retrieved Documents:')
+        [print(x) for x in documents['ids'][0]]
+        print('-' * 100)
         content_doc_ids = []
+        #content_doc_ids = documents['ids'][0]
         for doc_id in documents['ids'][0]:
 
             # Document is a full HTML page
@@ -149,17 +120,17 @@ def main():
     )
 
     # Initialize the RAG instance
-    rag = RAG(agent=agent, db=db, top_k=3)
+    #rag = RAG(agent=agent, db=db, top_k=3)
 
     # Generate a response using RAG
-    query = "What undergraduate programs are offered at the University of Albany?\n\n"
-    query = 'For the school of art and design at Alfred University, what are the portfolio requirements for applying?'
-    query = 'For the school of art and design, what are the portfolio requirements for applying?'
-    query = 'What coursework is required for a Chinese Studies major at Binghamton University?'
-    response = rag.generate(query)
+    #query = "What undergraduate programs are offered at the University of Albany?\n\n"
+    #query = 'For the school of art and design at Alfred University, what are the portfolio requirements for applying?'
+    #query = 'For the school of art and design, what are the portfolio requirements for applying?'
+    #query = 'What coursework is required for a Chinese Studies major at Binghamton University?'
+    #response = rag.generate(query)
 
-    print("Assistant's Response:")
-    print(response)
+    #print("Assistant's Response:")
+    #print(response)
 
 if __name__ == "__main__": 
     main()

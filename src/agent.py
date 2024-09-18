@@ -36,9 +36,9 @@ class Agent:
 
     def update_system_prompt(self, new_prompt):
         self.system_prompt = new_prompt
-        print('UPDATED SYSTEM PROMPT')
-        print(self.system_prompt)
-        print('END')
+        #print('UPDATED SYSTEM PROMPT')
+        #print(self.system_prompt)
+        #print('END')
         self.messages[0]["content"] = self.system_prompt
 
     def _get_color(self):
@@ -73,6 +73,7 @@ class Agent:
         return response
 
     def print_messages(self):
+        return
         print(f'Agent {self.color}{self.name}{RESET}:')
         for message in self.messages:
             print(f"Role: {message['role']}")
@@ -97,7 +98,7 @@ class Agent:
             print(f"{self.color}{self.name}{RESET}: Arguments: {arguments}")
 
             result = function_map[tool_call.function.name](**arguments)
-            print(f"{self.color}{self.name}{RESET}: Result: {result}")
+            #print(f"{self.color}{self.name}{RESET}: Result: {result}")
 
             args_and_result = {
                 **arguments,
@@ -125,7 +126,7 @@ class Agent:
             self.messages.append({"role": "assistant", "tool_calls": tool_call_message})
             self.messages.append(function_call_result_message)
 
-            print('MESSAGES')
-            [print(x) for x in self.messages]
+            #print('TOOL CALL MESSAGES')
+            #self.print_messages()
 
         return self.invoke()

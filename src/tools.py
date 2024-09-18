@@ -49,9 +49,6 @@ def retrieve_content_from_question(question: str, school_name: str = None) -> st
     # Initialize the ChromaDB instance
     db = ChromaDB(path=CHROMA_DB_PATH, name='universities')
 
-    print('QUESTION:', question)
-    print('SCHOOL NAME:', school_name)
-
     # Initialize the RAG instance
     rag = RAG(db=db, top_k=3)
     documents = rag.retrieve(question, school_name)
@@ -61,16 +58,6 @@ def retrieve_content_from_question(question: str, school_name: str = None) -> st
 
     return context
 
-    # Construct the query
-    if school_name:
-        query = f"{question} at {school_name}"
-    else:
-        query = question
-
-    # Generate a response using RAG
-    response = rag.generate(query)
-
-    return response
 
 function_map = {
     "retrieve_content_from_question": retrieve_content_from_question

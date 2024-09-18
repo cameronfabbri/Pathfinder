@@ -36,26 +36,6 @@ def type_text(text, char_speed=0.03, sentence_pause=0.5):
     
     placeholder.markdown(full_text)
 
-def _type_text(text, speed=0.025):
-    """
-    Type text letter by letter
-
-    Args:
-        text (str): The text to type
-        speed (float): The speed of the typing
-    Returns:
-        None
-    """
-    # Create a placeholder for the text
-    placeholder = st.empty()
-
-    # Type text letter by letter
-    typed_text = ""
-    for letter in text:
-        typed_text += letter
-        placeholder.markdown(typed_text)
-        time.sleep(speed) 
-
 
 def process_user_input(prompt):
     counselor_agent = st.session_state.counselor_agent
@@ -63,41 +43,73 @@ def process_user_input(prompt):
 
     counselor_agent.add_message("user", prompt)
     counselor_response = counselor_agent.invoke()
+    print('COUNSELOR RESPONSE')
+    print(counselor_response)
+    print('END\n')
 
-    if counselor_response.choices[0].message.tool_calls:
-        counselor_response = counselor_agent.handle_tool_call(counselor_response)
-    else:
+    counselor_response_str = counselor_response.choices[0].message.content
+    counselor_response_json = utils.parse_json(counselor_response_str)
+
+    recipient = counselor_response_json.get("recipient")
+    counselor_message = counselor_response_json.get("message")
+    print('COUNSELOR MESSAGE')
+    print(counselor_message)
+    print('END\n')
+    #counselor_agent.add_message("assistant", counselor_response_str)
+
+    if recipient == "suny":
+        st.chat_message('assistant').write('Contacting SUNY Agent...')
+        st.session_state.counselor_suny_messages.append({"role": "counselor", "content": counselor_message})
+        suny_agent.add_message("user", counselor_message)
+        print('SUNY AGENT MESSAGES')
+        suny_agent.print_messages()
+        print('END\n')
+        suny_response = suny_agent.invoke()
+
+        if suny_response.choices[0].message.tool_calls:
+            suny_response = suny_agent.handle_tool_call(suny_response)
+
+        #print('SUNY RESPONSE')
+        #print(suny_response)
+
+        suny_response_str = utils.format_for_json(suny_response.choices[0].message.content)
+        st.session_state.counselor_suny_messages.append({"role": "suny", "content": suny_response_str})
+        suny_agent.add_message("assistant", suny_response_str)
+
+        # Add the suny response to the counselor agent and invoke it so it rewords it
+        #counselor_agent.add_message("assistant", '{"recipient": "user", "message": ' + suny_response_str + '}')
+        counselor_agent.add_message("assistant", 'SUNY Agent responded with the following information:\n' + suny_response_str + '}')
+        #st.session_state.user_messages.append({"role": "assistant", "content": suny_response_str})
+        counselor_response = counselor_agent.invoke()
+
+        #counselor_agent.print_messages()
+        #print('Counselor response')
+        #print(counselor_response)
+        #print('END\n')
+
         counselor_response_str = counselor_response.choices[0].message.content
         counselor_response_json = utils.parse_json(counselor_response_str)
-
-        recipient = counselor_response_json.get("recipient")
         counselor_message = counselor_response_json.get("message")
 
+        # The response from the suny agent is added to the list of messages for
+        # the counselor agent, and then we invoke the counselor agent so it
+        # rephrases the information from the suny agent. We then want to replace
+        # the information from the suny agent with the response from the
+        # counselor agent.
+        counselor_agent.delete_last_message()
         counselor_agent.add_message("assistant", counselor_response_str)
-
-        if recipient == "suny":
-            st.chat_message('assistant').write('Contacting SUNY Agent...')
-            st.session_state.counselor_suny_messages.append({"role": "counselor", "content": counselor_message})
-            suny_agent.add_message("user", counselor_message)
-            suny_response = suny_agent.invoke()
-
-            if suny_response.choices[0].message.tool_calls:
-                suny_response = suny_agent.handle_tool_call(suny_response)
-
-            print('SUNY RESPONSE')
-            print(suny_response)
-
-            suny_response_str = utils.format_for_json(suny_response.choices[0].message.content)
-            st.session_state.counselor_suny_messages.append({"role": "suny", "content": suny_response_str})
-            suny_agent.add_message("assistant", suny_response_str)
-
-            counselor_agent.add_message("assistant", '{"recipient": "user", "message": ' + suny_response_str + '}')
-            counselor_response = counselor_agent.invoke()
-            counselor_response_str = counselor_response.choices[0].message.content
-            counselor_response_json = utils.parse_json(counselor_response_str)
-            counselor_message = counselor_response_json.get("message")
-
+        #print('message:', counselor_message)
+        #counselor_agent.add_message("assistant", counselor_message)
         st.session_state.user_messages.append({"role": "assistant", "content": counselor_message})
+    else:
+        print('Adding message to counselor agent inside else')
+        print('message:', counselor_message)
+        counselor_agent.add_message("assistant", counselor_message)
+        st.session_state.user_messages.append({"role": "assistant", "content": counselor_message})
+
+
+    #print('Adding message to user messages')
+    #print('message:', counselor_message)
 
 
 def get_student_info(user: User) -> dict:
