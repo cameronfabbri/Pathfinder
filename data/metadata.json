@@ -48,5 +48,17 @@
     },
     "pdf_files": [],
     "other_files": []
+  },
+  "SUNY Broome": {
+    "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/www1.sunybroome.edu/programs",
+    "processing_instructions": {
+      "file_extensions": [".html"],
+      "include_in_path": [""]
+    },
+    "pdf_files": [
+      "/Users/cameronfabbri/Projects/system_data/suny/www1.sunybroome.edu/wp-content/uploads/2024/08/2425_student_handbook.pdf",
+      "/Users/cameronfabbri/Projects/system_data/suny/www1.sunybroome.edu/wp-content/uploads/2024/01/suny_broome_fast_facts_fall_2023-1.pdf"
+    ],
+    "other_files": []
   }
 }
