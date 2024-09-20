@@ -4,6 +4,8 @@ File describing the database with additional functions for interacting with the 
 
 import sqlite3
 import chromadb
+
+from typing import Any, Dict, List
 from chromadb.config import DEFAULT_TENANT, DEFAULT_DATABASE, Settings
 
 import src.assessment as assessment
@@ -78,8 +80,8 @@ def get_bot_strengths(user):
 
 def insert_user_responses(user_id, responses):
     """
-    Insert the user responses into the user_responses table.
-
+    Insert the responses to the assessment test into the user_responses table.
+    
     Args:
         user_id (int): The ID of the user.
         responses (dict): The user responses.
@@ -151,7 +153,7 @@ def create_user_tables():
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
-                login_number INTEGER NOT NULL,
+                session_id INTEGER NOT NULL,
                 salt TEXT NOT NULL,
                 hashed_password TEXT NOT NULL
             )
@@ -192,23 +194,26 @@ def create_user_tables():
 
 def create_chat_tables():
     """
-    Creates the tables for the chat.
+    Creates tables for chat history, counselor-SUNY interactions, and chat summaries.
     """
     with get_db_connection() as conn:
         cursor = conn.cursor()
 
-        # Create chat history table
+        # Table to store user-counselor-suny interactions
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS chat_history (
+            CREATE TABLE IF NOT EXISTS conversation_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
+                session_id INTEGER NOT NULL,
+                sender TEXT NOT NULL, -- user, counselor, or suny_agent
+                recipient TEXT NOT NULL, -- user, counselor, or suny_agent
                 message TEXT NOT NULL,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
         ''')
 
-        # Create chat summary table
+        # Chat summaries for user-counselor conversation
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS chat_summary (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -218,6 +223,7 @@ def create_chat_tables():
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
         ''')
+
         conn.commit()
 
 
@@ -321,14 +327,75 @@ class ChromaDB:
             database=DEFAULT_DATABASE,
         )
 
-        self.collection = self.client.get_or_create_collection(name=name, metadata={"hnsw:space": distance_metric})
+        self.collection = self.client.get_or_create_collection(
+            name=name, metadata={"hnsw:space": distance_metric}
+        )
 
-    def add_document(self, content, doc_id: str, user_id=None):
-        
-        if user_id:
-            metadata = {"access": "private", "user_id": user_id}
+    @staticmethod
+    def sanitize_metadata(metadata: dict) -> dict:
+        def sanitize_value(value: Any) -> str:
+            if isinstance(value, (str, int, float, bool)):
+                return value
+            elif value is None:
+                return ''
+            else:
+                return str(value)
+
+        return {key: sanitize_value(value) for key, value in metadata.items()}
+
+    def insert_if_not_exists(self, content: str, doc_id: str, metadata: Dict[Any, Any]) -> bool:
+        """
+        Insert a document into the collection if it does not already exist.
+
+        Args:
+            content (str): The content of the document.
+            doc_id (str): The ID of the document.
+            metadata (dict): The metadata of the document.
+        Returns:
+            bool: True if the document was added, False otherwise.
+        """
+        if not self.document_exists(doc_id):
+            sanitized_metadata = self.sanitize_metadata(metadata)
+            self.add_document(content=content, doc_id=doc_id, metadata=sanitized_metadata)
+            return True
         else:
-            metadata = {"access": "public"}
+            print(f"Document {doc_id} already exists.")
+        return False
+
+    def document_exists(self, doc_id: str) -> bool:
+        """
+        Check if a document exists in the collection.
+
+        Args:
+            doc_id (str): The ID of the document to check.
+        Returns:
+            bool: True if the document exists, False otherwise.
+        """
+        results = self.collection.get(ids=[doc_id], include=['metadatas'])
+        return len(results['ids']) > 0
+
+    def add_document(
+            self, content, doc_id: str, metadata: dict = None, user_id=None, verbose=False) -> None:
+        """
+        Add a document to the collection.
+
+        Args:
+            content (str): The content of the document.
+            doc_id (str): The ID of the document.
+            metadata (dict): The metadata of the document.
+            user_id (int): The ID of the user.
+            verbose (bool): Whether to print verbose output.
+        Returns:
+            None
+        """
+        if metadata is None:
+            metadata = {}
+
+        if user_id:
+            metadata["access"] = "private"
+            metadata["user_id"] = user_id
+        else:
+            metadata["access"] = "public"
          
         # Add document to ChromaDB
         self.collection.add(
@@ -336,5 +403,59 @@ class ChromaDB:
             documents=[content],  # Document content
             metadatas=[metadata],  # Access control metadata
         )
-        print(f"Document added successfully with ID: {doc_id}")
+        if verbose:
+            print(f"Document added successfully with ID: {doc_id}")
 
+    def get_document_by_id(self, doc_id: str):
+        """
+        Retrieve a document from the collection by its doc_id.
+
+        Args:
+            doc_id (str): The ID of the document to retrieve.
+        Returns:
+            dict: A dictionary containing the document's content, metadata, and embeddings (if available).
+                  Returns None if the document is not found.
+        """
+        try:
+            result = self.collection.get(
+                ids=[doc_id],
+                include=['documents', 'metadatas', 'embeddings']
+            )
+            if result['ids']:
+                return {
+                    'id': result['ids'][0],
+                    'document': result['documents'][0] if result['documents'] else None,
+                    'metadata': result['metadatas'][0] if result['metadatas'] else None,
+                    #'embedding': result['embeddings'][0] if result['embeddings'] else None
+                }
+            else:
+                return None
+        except Exception as e:
+            print(f"{doc_id} not found: {e}")
+            return ''
+
+    def query(self, query_text: str, top_k: int = 5) -> List[Dict[str, Any]]:
+        """
+        Query the collection to retrieve the most similar documents to the query text.
+
+        Args:
+            query_text (str): The text to query.
+            top_k (int): The number of top results to return.
+
+        Returns:
+            List[Dict[str, Any]]: A list of documents with their content, metadata, and distances.
+        """
+        results = self.collection.query(
+            query_texts=[query_text],
+            n_results=top_k,
+            include=['documents', 'metadatas', 'distances']
+        )
+
+        documents = []
+        for i in range(len(results['documents'][0])):
+            documents.append({
+                'document': results['documents'][0][i],
+                'metadata': results['metadatas'][0][i],
+                'distance': results['distances'][0][i],
+            })
+        return documents

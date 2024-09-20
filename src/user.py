@@ -5,10 +5,10 @@ from src.database import execute_query, get_db_connection
 
 
 class User:
-    def __init__(self, user_id, username, login_number):
+    def __init__(self, user_id, username, session_id):
         self.user_id = user_id
         self.username = username
-        self.login_number = login_number
+        self.session_id = session_id
         self.load_user_info() 
 
     def __str__(self):
@@ -20,7 +20,7 @@ class User:
             f"Extracurriculars: {self.extracurriculars}\nCareer Aspirations: {self.career_aspirations}\nPreferred Major: {self.preferred_major}\n" +
             f"Clifton Strengths: {self.clifton_strengths}\nPersonality Test Results: {self.personality_test_results}\n" +
             f"Address: {self.address}\nCity: {self.city}\nState: {self.state}\nZip Code: {self.zip_code}\n" +
-            f"Intended College: {self.intended_college}\nIntended Major: {self.intended_major}\nLogin Number: {self.login_number}"
+            f"Intended College: {self.intended_college}\nIntended Major: {self.intended_major}\nSession ID: {self.session_id}"
         )
         return user_info_str
 

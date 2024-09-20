@@ -15,10 +15,12 @@ sys.path.insert(0, project_root)
 
 from src import utils
 from src import prompts
+from src import personas
 from src.agent import Agent
 from src.tools import suny_tools
-from src.run_tools import get_student_info, get_chat_summary_from_db, logout
+from src.constants import UNIVERSITY_MAPPING
 from src.database import get_top_strengths, get_bot_strengths
+from src.run_tools import get_student_info, get_chat_summary_from_db, logout
 from src.interfaces import streamlit_login, display_student_info, main_chat_interface, counselor_suny_chat_interface, first_time_user_page, display_counselor_options
 
 
@@ -33,11 +35,15 @@ def main():
     if user:
 
         # TODO - this should check the database, not the session state
-        if user.login_number == 0 and 'first_time_completed' not in st.session_state:
+        if user.session_id == 0 and 'first_time_completed' not in st.session_state:
             first_time_user_page()
-        elif 'counselor_chosen' not in st.session_state:
-            display_counselor_options()
+        #elif 'counselor_chosen' not in st.session_state:
+        #    display_counselor_options()
         else:
+
+            # TODO - remove after testing
+            st.session_state.counselor_persona = 'David - The Mentor'
+
             col1, col2, col3 = st.columns([1,1,1])
             with col3:
                 if st.button("Logout"):
@@ -52,19 +58,18 @@ def main():
                 client = OpenAI(api_key=os.getenv("PATHFINDER_OPENAI_API_KEY"))
                 counselor_system_prompt = prompts.COUNSELOR_SYSTEM_PROMPT + student_info_str
 
-                top_strengths = get_top_strengths(user)
-                bot_strengths = get_bot_strengths(user)
-                strengths_prompt = '**Strengths from Assessment:**\n'
-                for theme, score, strength_level in top_strengths:
-                    strengths_prompt += f"{theme}: {score} ({strength_level})\n"
+                #top_strengths = get_top_strengths(user)
+                #bot_strengths = get_bot_strengths(user)
+                #strengths_prompt = '**Strengths from Assessment:**\n'
+                #for theme, score, strength_level in top_strengths:
+                #    strengths_prompt += f"{theme}: {score} ({strength_level})\n"
 
-                weaknesses_prompt = '\n\n**Weaknesses from Assessment:**\n'
-                for theme, score, strength_level in bot_strengths:
-                    weaknesses_prompt += f"{theme}: {score} ({strength_level})\n"
+                #weaknesses_prompt = '\n\n**Weaknesses from Assessment:**\n'
+                #for theme, score, strength_level in bot_strengths:
+                #    weaknesses_prompt += f"{theme}: {score} ({strength_level})\n"
 
-                counselor_system_prompt += '\n\n' + strengths_prompt + weaknesses_prompt
+                #counselor_system_prompt += '\n\n' + strengths_prompt + weaknesses_prompt
 
-                from src import personas
                 if st.session_state.counselor_persona == 'David - The Mentor':
                     persona_prompt = personas.DAVID + '\n\n' + personas.DAVID_TRAITS
                 elif st.session_state.counselor_persona == 'Emma - The Strategist':
@@ -74,8 +79,8 @@ def main():
 
                 counselor_system_prompt = counselor_system_prompt.replace('PERSONA', persona_prompt)
 
-                print('COUNSELOR SYSTEM PROMPT')
-                print(counselor_system_prompt)
+                #print('COUNSELOR SYSTEM PROMPT')
+                #print(counselor_system_prompt)
 
                 st.session_state.counselor_agent = Agent(
                     client,
@@ -85,20 +90,26 @@ def main():
                     system_prompt=counselor_system_prompt,
                     json_mode=True
                 )
+
+                suny_system_prompt = prompts.SUNY_SYSTEM_PROMPT + '\n'
+                for name in UNIVERSITY_MAPPING.values():
+                    suny_system_prompt += name + '\n'
+
                 st.session_state.suny_agent = Agent(
                     client,
                     name="SUNY",
                     tools=suny_tools,
-                    model='gpt-4o-2024-08-06',
-                    system_prompt=prompts.SUNY_SYSTEM_PROMPT
+                    model='gpt-4o-mini',
+                    system_prompt=suny_system_prompt
                 )
 
-                #log_messages('counselor', st.session_state.counselor_agent.messages)
-                #log_messages('suny', st.session_state.suny_agent.messages)
-            
             if "user_messages" not in st.session_state:
-                if user.login_number == 0:
-                    first_message = prompts.WELCOME_MESSAGE
+                print('USER MESSAGES NOT IN SESSION STATE')
+                if user.session_id == 0:
+                    print('Setting first message')
+                    first_message = utils.parse_json(
+                        st.session_state.counselor_agent.invoke().choices[0].message.content
+                    )['message']
                 else:
                     try:
                         first_message = get_chat_summary_from_db(client)
@@ -106,6 +117,7 @@ def main():
                         print('\nNo chat summary found in database, did you quit without logging out?\n')
                         first_message = prompts.WELCOME_MESSAGE
                 st.session_state.user_messages = [{"role": "assistant", "content": first_message}]
+                print('set user_messages')
             
             if "counselor_suny_messages" not in st.session_state:
                 st.session_state.counselor_suny_messages = []

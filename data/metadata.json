@@ -1,0 +1,64 @@
+{
+  "SUNY Adirondack": {
+    "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/sunyacc.smartcatalogiq.com/en/23-24/college-catalog/",
+    "processing_instructions": {
+      "file_extensions": [".html"],
+      "include_in_path": [""]
+    },
+    "pdf_files": [],
+    "other_files": []
+  },
+  "University at Albany": {
+    "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/www.albany.edu",
+    "processing_instructions": {
+      "file_extensions": [".html"],
+      "include_in_path": ["programs"]
+    },
+    "pdf_files": [],
+    "other_files": []
+  },
+  "Alfred University": {
+    "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/www.alfred.edu/academics/undergrad-majors-minors/",
+    "processing_instructions": {
+        "file_extensions": [".html"],
+        "include_in_path": [""]
+    },
+    "pdf_files": [
+      "/Users/cameronfabbri/Projects/system_data/suny/www.alfred.edu/academics/undergrad-majors-minors/_docs/catalog/alfred-university-undergraduate-catalog-2022-2023.pdf",
+      "Users/cameronfabbri/Projects/system_data/suny/www.alfred.edu/about/institutional-research/_docs/fact-book-may-2024.pdf"
+    ]
+  },
+  "Alfred State College": {
+    "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/catalog.alfredstate.edu/",
+    "processing_instructions": {
+        "file_extensions": [".html"],
+        "include_in_path": ["current"],
+        "exclude_from_path": ["courses-by-code"]
+    },
+    "pdf_files": [
+      "/Users/cameronfabbri/Projects/system_data/suny/catalog.alfredstate.edu/current/catalog.pdf",
+      "catalog.alfredstate.edu/current/archive/AlfredState2024-25.pdf"
+    ]
+  },
+  "Binghamton University": {
+    "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/www.binghamton.edu/apps/academics/program",
+    "processing_instructions": {
+      "file_extensions": [".html"],
+      "include_in_path": [""]
+    },
+    "pdf_files": [],
+    "other_files": []
+  },
+  "SUNY Broome": {
+    "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/www1.sunybroome.edu/programs",
+    "processing_instructions": {
+      "file_extensions": [".html"],
+      "include_in_path": [""]
+    },
+    "pdf_files": [
+      "/Users/cameronfabbri/Projects/system_data/suny/www1.sunybroome.edu/wp-content/uploads/2024/08/2425_student_handbook.pdf",
+      "/Users/cameronfabbri/Projects/system_data/suny/www1.sunybroome.edu/wp-content/uploads/2024/01/suny_broome_fast_facts_fall_2023-1.pdf"
+    ],
+    "other_files": []
+  }
+}

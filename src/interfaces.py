@@ -17,6 +17,9 @@ from src.utils import dict_to_str, parse_json
 from src.database import execute_query, get_db_connection
 from src.database import insert_user_responses, insert_strengths, get_top_strengths, get_bot_strengths
 from src.run_tools import process_user_input, get_student_info, update_student_info, process_transcript, type_text
+from src.constants import SYSTEM_DATA_DIR
+
+opj = os.path.join
 
 
 def main_chat_interface():
@@ -29,20 +32,15 @@ def main_chat_interface():
         # Add in the first message to the counselor agent if it's not already there
         if {"role": "assistant", "content": first_message} not in st.session_state.counselor_agent.messages:
             st.session_state.counselor_agent.add_message("assistant", first_message)
+            print('Added first message to counselor agent')
 
     chat_container = st.container()
 
+    st.session_state.counselor_agent.print_messages()
     prompt = st.chat_input("Type your message here...")
     
     # Display chat messages in the container
-    #pdf_path = '/Users/cameronfabbri/canton/www.canton.edu/media/pdf/campus_map.pdf'
     with chat_container:
-        #with open(pdf_path, "rb") as pdf_file:
-        #    pdf_content = pdf_file.read()
-        #pdf_viewer(pdf_content, width=1000, height=700)
-        #for msg in st.session_state.user_messages:
-        #    content = msg.get('content').replace('\n', ' ')
-        #    st.chat_message(msg["role"]).write(content)
         for msg in st.session_state.user_messages:
             if isinstance(msg, dict) and 'role' in msg and 'content' in msg:
                 if isinstance(msg['content'], str):
@@ -50,9 +48,9 @@ def main_chat_interface():
             else:
                 print(f"Debug: Skipping invalid message format: {msg}")
 
-    # Process the user input
     if prompt:
-        # Add user message to chat history
+
+        # Add user message to session
         st.session_state.user_messages.append({"role": "user", "content": prompt})
 
         # Process user input and get response
@@ -62,8 +60,8 @@ def main_chat_interface():
         # Force a rerun to display the new messages
         st.rerun()
 
-    print('Messages since update:', st.session_state.messages_since_update)
-    if st.session_state.messages_since_update > 2:
+    #print('Messages since update:', st.session_state.messages_since_update)
+    if st.session_state.messages_since_update > 200000000:
         st.session_state.messages_since_update = 0
         print('Updating student info...')
         current_student_info = get_student_info(st.session_state.user)
@@ -246,11 +244,11 @@ def display_counselor_options():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.image("system_data/counselors/david.jpg", width=150)
+        st.image(opj(SYSTEM_DATA_DIR, 'counselors/david.jpg'), width=150)
     with col2:
-        st.image("system_data/counselors/emma.jpg", width=150)
+        st.image(opj(SYSTEM_DATA_DIR, 'counselors/emma.jpg'), width=150)
     with col3:
-        st.image("system_data/counselors/liam.jpg", width=150)
+        st.image(opj(SYSTEM_DATA_DIR, 'counselors/liam.jpg'), width=150)
 
     def on_counselor_select():
         if st.session_state.counselor_select != st.session_state.previous_counselor:
@@ -299,22 +297,20 @@ def streamlit_login():
     if "user" not in st.session_state:
 
         # Temp while testing
-        username = 'cameron'
-        password = 'fabbri'
+        #username = 'cameron'
+        #password = 'fabbri'
 
-        user = login(username, password)
-        if user:
+        #user = login(username, password)
+        user = None
+        if user is not None:
             st.session_state.user = user
             st.success("Login successful")
             return user
-        else:
-            st.error("Automatic login failed. Please contact support.")
-        return st.session_state.user
 
         placeholder = st.empty()
         with placeholder.form("login"):
             st.markdown("#### Enter your credentials")
-            email = st.text_input("Email")
+            username = st.text_input("Username")
             password = st.text_input("Password", type="password")
             submit = st.form_submit_button("Login")
 

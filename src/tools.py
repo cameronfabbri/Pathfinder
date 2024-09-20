@@ -3,29 +3,13 @@
 
 import os
 
+from src.rag import RAG
 from src.database import ChromaDB
+from src.constants import CHROMA_DB_PATH
 
 opj = os.path.join
 
 suny_tools = [
-    {
-        "type": "function",
-        "function": {
-            "name": "show_campus_map",
-            "description": "Display the campus map of the chosen SUNY school. Call this if a user asks to see the campus map.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "school_name": {
-                        "type": "string",
-                        "description": "The name of the SUNY school.",
-                    },
-                },
-                "required": ["school_name"],
-                "additionalProperties": False,
-            },
-        }
-    },
     {
         "type": "function",
         "function": {
@@ -36,7 +20,11 @@ suny_tools = [
                 "properties": {
                     "question": {
                         "type": "string",
-                        "description": "The user's question about SUNY schools or programs. Reformat this to be a question.",
+                        "description": "The user's question about SUNY schools or programs.",
+                    },
+                    "school_name": {
+                        "type": "string",
+                        "description": "The name of the SUNY school. Only include this if the user's question is about a specific school. If it is not, do not include it.",
                     },
                 },
                 "required": ["question"],
@@ -47,42 +35,30 @@ suny_tools = [
 ]
 
 
-def retrieve_content_from_question(question):
+def retrieve_content_from_question(question: str, school_name: str = None) -> str:
     """
+    Retrieve relevant content from the database based on the user's question.
 
+    Args:
+        question (str): The user's question about SUNY schools or programs.
+        school_name (str, optional): The name of the SUNY school. Only include this if the user's question is about a specific school.
+
+    Returns:
+        str: The generated response.
     """
+    # Initialize the ChromaDB instance
+    db = ChromaDB(path=CHROMA_DB_PATH, name='universities')
 
-    name = 'www.canton.edu'
-    path = opj('system_data', 'chromadb')
-    db = ChromaDB(path, name)
-    results = db.collection.query(
-        query_texts=[question],
-        n_results=1
-    )
-    content = results['documents'][0][0]
+    # Initialize the RAG instance
+    rag = RAG(db=db, top_k=3)
+    documents = rag.retrieve(question, school_name)
 
-    return content
+    # Format the retrieved documents to include in the prompt
+    context = rag.format_documents(documents)
 
-    client = OpenAI(api_key=os.getenv("PATHFINDER_OPENAI_API_KEY"))
-    system_prompt = 'You are a helpful assistant that can answer questions about the given document.'
-    agent = Agent(client, 'Agent', None, system_prompt, model='gpt-4o', json_mode=False)
-
-    prompt = '**Question:**\n'
-    prompt += question + '\n\n'
-    prompt += '**Document:**\n' + content
-
-    agent.add_message('user', prompt)
-
-    print('Question:', question)
-    response = agent.invoke()
-    print('Answer:', response.choices[0].message.content)
-
-
-def show_campus_map(school_name: str):
-    return f"Here is the campus map for {school_name}"
+    return context
 
 
 function_map = {
-    "show_campus_map": show_campus_map,
     "retrieve_content_from_question": retrieve_content_from_question
 }
