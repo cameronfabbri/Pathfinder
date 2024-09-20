@@ -11,7 +11,7 @@ sys.path.insert(0, project_root)
 import pickle
 
 from src import prompts
-from src.auth import login
+from src.auth import login, signup
 from src.assessment import answers
 from src.utils import dict_to_str, parse_json
 from src.database import execute_query, get_db_connection
@@ -294,37 +294,58 @@ def display_counselor_options():
 
 
 def streamlit_login():
+    """
+    Handles user login and signup using Streamlit interface.
+    """
     if "user" not in st.session_state:
-
-        # Temp while testing
-        #username = 'cameron'
-        #password = 'fabbri'
-
-        #user = login(username, password)
         user = None
-        if user is not None:
-            st.session_state.user = user
-            st.success("Login successful")
-            return user
+        login_placeholder = st.empty()
 
-        placeholder = st.empty()
-        with placeholder.form("login"):
-            st.markdown("#### Enter your credentials")
-            username = st.text_input("Username")
-            password = st.text_input("Password", type="password")
-            submit = st.form_submit_button("Login")
+        # Create tabs for Login and Signup
+        login_tab, signup_tab = st.tabs(["Login", "Sign Up"])
 
-        if submit:
-            user = login(username, password)
-            if user:
-                st.session_state.user = user
-                placeholder.empty()
-                st.success("Login successful")
-                return user
-            else:
-                st.error("Login failed")
-        return None
-    return st.session_state.user
+        with login_tab:
+            with st.form("login_form"):
+                st.markdown("#### Login")
+                username = st.text_input("Username")
+                password = st.text_input("Password", type="password")
+                login_submit = st.form_submit_button("Login")
+
+            if login_submit:
+                user = login(username, password)
+                if user:
+                    st.session_state.user = user
+                    login_placeholder.empty()
+                    st.success("Login successful")
+                    st.rerun()
+                else:
+                    st.error("Login failed")
+
+        with signup_tab:
+            with st.form("signup_form"):
+                st.markdown("#### Sign Up")
+                first_name = st.text_input("First Name")
+                last_name = st.text_input("Last Name")
+                age = st.number_input("Age", min_value=1, max_value=100)
+                gender = st.selectbox("Gender", options=["Male", "Female", "Other"])
+                new_username = st.text_input("Choose a Username")
+                new_password = st.text_input("Choose a Password", type="password")
+                signup_submit = st.form_submit_button("Sign Up")
+
+            if signup_submit:
+                if first_name and last_name and new_username and new_password:
+                    user = signup(first_name, last_name, age, gender, new_username, new_password)
+                    if user:
+                        st.session_state.user = user
+                        login_placeholder.empty()
+                        st.success("Sign up successful. You are now logged in.")
+                        st.rerun()
+                    else:
+                        st.error("Sign up failed. Username may already exist.")
+                else:
+                    st.error("Please fill in all fields to sign up.")
+
+    return st.session_state.user if "user" in st.session_state else None
 
 
 def counselor_suny_chat_interface():

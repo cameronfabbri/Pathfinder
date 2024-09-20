@@ -35,7 +35,7 @@ def main():
     if user:
 
         # TODO - this should check the database, not the session state
-        if user.session_id == 0 and 'first_time_completed' not in st.session_state:
+        if 0:#user.session_id == 0 and 'first_time_completed' not in st.session_state:
             first_time_user_page()
         #elif 'counselor_chosen' not in st.session_state:
         #    display_counselor_options()
@@ -115,7 +115,7 @@ def main():
                         first_message = get_chat_summary_from_db(client)
                     except:
                         print('\nNo chat summary found in database, did you quit without logging out?\n')
-                        first_message = prompts.WELCOME_MESSAGE
+                        first_message = f"Hello {user.username}, welcome back to the chat!"
                 st.session_state.user_messages = [{"role": "assistant", "content": first_message}]
                 print('set user_messages')
             

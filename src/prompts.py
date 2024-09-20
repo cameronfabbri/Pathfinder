@@ -156,11 +156,6 @@ This summary will be used in the next chat to pick up where this chat left off.
 
 _a = 'When the user is done with the chat, you will call the summarize_chat tool to summarize the chat.'
 
-WELCOME_MESSAGE = """
-Welcome to the SUNY college planning chatbot! I'm here to help you explore your options and make informed decisions about your future.
-First, please upload your transcript. From there we will go through a series of questions to create a personalized profile for you.
-"""
-
 WELCOME_BACK_PROMPT = """Reword the following summary from your last conversation with the student and use it as a transition to start a new conversation.
 
 **Rules:**
