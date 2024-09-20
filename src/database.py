@@ -80,8 +80,8 @@ def get_bot_strengths(user):
 
 def insert_user_responses(user_id, responses):
     """
-    Insert the user responses into the user_responses table.
-
+    Insert the responses to the assessment test into the user_responses table.
+    
     Args:
         user_id (int): The ID of the user.
         responses (dict): The user responses.
@@ -153,7 +153,7 @@ def create_user_tables():
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
-                login_number INTEGER NOT NULL,
+                session_id INTEGER NOT NULL,
                 salt TEXT NOT NULL,
                 hashed_password TEXT NOT NULL
             )
@@ -194,23 +194,26 @@ def create_user_tables():
 
 def create_chat_tables():
     """
-    Creates the tables for the chat.
+    Creates tables for chat history, counselor-SUNY interactions, and chat summaries.
     """
     with get_db_connection() as conn:
         cursor = conn.cursor()
 
-        # Create chat history table
+        # Table to store user-counselor-suny interactions
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS chat_history (
+            CREATE TABLE IF NOT EXISTS conversation_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
+                session_id INTEGER NOT NULL,
+                sender TEXT NOT NULL, -- user, counselor, or suny_agent
+                recipient TEXT NOT NULL, -- user, counselor, or suny_agent
                 message TEXT NOT NULL,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
         ''')
 
-        # Create chat summary table
+        # Chat summaries for user-counselor conversation
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS chat_summary (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -220,6 +223,7 @@ def create_chat_tables():
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
         ''')
+
         conn.commit()
 
 

@@ -40,14 +40,7 @@ def main_chat_interface():
     prompt = st.chat_input("Type your message here...")
     
     # Display chat messages in the container
-    #pdf_path = '/Users/cameronfabbri/canton/www.canton.edu/media/pdf/campus_map.pdf'
     with chat_container:
-        #with open(pdf_path, "rb") as pdf_file:
-        #    pdf_content = pdf_file.read()
-        #pdf_viewer(pdf_content, width=1000, height=700)
-        #for msg in st.session_state.user_messages:
-        #    content = msg.get('content').replace('\n', ' ')
-        #    st.chat_message(msg["role"]).write(content)
         for msg in st.session_state.user_messages:
             if isinstance(msg, dict) and 'role' in msg and 'content' in msg:
                 if isinstance(msg['content'], str):
@@ -55,9 +48,9 @@ def main_chat_interface():
             else:
                 print(f"Debug: Skipping invalid message format: {msg}")
 
-    # Process the user input
     if prompt:
-        # Add user message to chat history
+
+        # Add user message to session
         st.session_state.user_messages.append({"role": "user", "content": prompt})
 
         # Process user input and get response
@@ -304,22 +297,20 @@ def streamlit_login():
     if "user" not in st.session_state:
 
         # Temp while testing
-        username = 'cameron'
-        password = 'fabbri'
+        #username = 'cameron'
+        #password = 'fabbri'
 
-        user = login(username, password)
-        if user:
+        #user = login(username, password)
+        user = None
+        if user is not None:
             st.session_state.user = user
             st.success("Login successful")
             return user
-        else:
-            st.error("Automatic login failed. Please contact support.")
-        return st.session_state.user
 
         placeholder = st.empty()
         with placeholder.form("login"):
             st.markdown("#### Enter your credentials")
-            email = st.text_input("Email")
+            username = st.text_input("Username")
             password = st.text_input("Password", type="password")
             submit = st.form_submit_button("Login")
 

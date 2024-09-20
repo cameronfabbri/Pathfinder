@@ -8,20 +8,88 @@ import subprocess
 
 opj = os.path.join
 
+BLUE = "\033[94m"
+GREEN = "\033[92m"
+ORANGE = "\033[93m"
+RESET = "\033[0m"
 
-def count_tokens(text: str) -> int:
-    """Returns the number of tokens in a text string."""
-    encoding = tiktoken.get_encoding("cl100k_base")
+# Cost in dollars per million tokens - https://openai.com/api/pricing/
+COST_PER_MILLION_TOKENS = {
+    'gpt-4o': (5.0, 15.0),
+    'gpt-4o-2024-08-06': (2.5, 10.0),
+    'gpt-4o-2024-05-13': (5.0, 15.0),
+    'gpt-4o-mini': (0.150, 0.60),
+    'gpt-4o-mini-2024-07-18': (0.150, 0.60),
+    'o1-preview': (15.0, 60.0)
+}
+
+EMBEDDING_COST_PER_MILLION_TOKENS = {
+    'text-embedding-3-small': 0.020,
+    'text-embedding-3-large': 0.130,
+    'ada v2': 0.10
+}
+
+
+def count_tokens(text: str, model: str = 'cl100k_base') -> int:
+    """
+    Count the tokens in the text using tiktoken.
+
+    Args:
+        text (str): The text to count the tokens for.
+        model (str): The model to use. Defaults to 'cl100k_base'.
+    Returns:
+        int: The number of tokens in the text.
+    """
+    encoding = tiktoken.get_encoding(model)
     return len(encoding.encode(text))
 
 
-def embedding_cost(num_tokens: int) -> float:
-    """Calculate the cost of embedding tokens."""
-    cost_per_million_tokens = 0.020
+def get_cost(input_text: str, output_text: str, model: str) -> float:
+    """
+    Get the cost of the input and output text.
+
+    Args:
+        input_text (str): The input text.
+        output_text (str): The output text.
+        model (str): The model to use.
+    Returns:
+        float: The cost of the input and output text.
+    """
+    input_cost_per_million, output_cost_per_million = COST_PER_MILLION_TOKENS[model]
+    input_tokens = count_tokens(input_text)
+    output_tokens = count_tokens(output_text)
+
+    # Convert the cost per million tokens to the actual cost for the number of tokens
+    total_input_cost = (input_tokens / 1_000_000) * input_cost_per_million
+    total_output_cost = (output_tokens / 1_000_000) * output_cost_per_million
+
+    # Return the total cost
+    return total_input_cost + total_output_cost
+
+
+def get_embedding_cost(num_tokens: int, model: str) -> float:
+    """
+    Calculate the cost of embedding tokens.
+
+    Args:
+        num_tokens (int): The number of tokens to embed.
+        model (str): The model to use.
+    Returns:
+        float: The cost of the embedding.
+    """
+    cost_per_million_tokens = EMBEDDING_COST_PER_MILLION_TOKENS[model]
     return (num_tokens / 1_000_000) * cost_per_million_tokens
 
 
-import re
+def get_color(name: str):
+    if name.lower() == "user":
+        return BLUE
+    elif name.lower() == "counselor":
+        return GREEN
+    elif name.lower() == "suny":
+        return ORANGE
+    return ""
+
 
 def chunk_pages(
         pages: list[str],

@@ -2,14 +2,9 @@
 """
 
 import json
-from src.tools import function_map
-from src.logger import log_messages
 
-# Add these color constants at the top of the file
-BLUE = "\033[94m"
-GREEN = "\033[92m"
-ORANGE = "\033[93m"
-RESET = "\033[0m"
+from src.tools import function_map
+from src.utils import get_color, RESET
 
 
 def format_content(content):
@@ -32,37 +27,31 @@ class Agent:
         self.json_mode = json_mode
         self.temperature = temperature
         self.messages = [{"role": "system", "content": self.system_prompt}]
-        self.color = self._get_color()
+        self.color = get_color(self.name)
 
-    def update_system_prompt(self, new_prompt):
+    def update_system_prompt(self, new_prompt: str) -> None:
+        """
+        Update the system prompt.
+
+        Args:
+            new_prompt (str): The new system prompt.
+        Returns:
+            None
+        """
         self.system_prompt = new_prompt
-        #print('UPDATED SYSTEM PROMPT')
-        #print(self.system_prompt)
-        #print('END')
         self.messages[0]["content"] = self.system_prompt
 
-    def _get_color(self):
-        if self.name.lower() == "user":
-            return BLUE
-        elif self.name.lower() == "counselor":
-            return GREEN
-        elif self.name.lower() == "suny":
-            return ORANGE
-        return ""
-
-    def add_message(self, role, content):
+    def add_message(self, role: str, content: str) -> None:
         self.messages.append({"role": role, "content": content})
 
-    def delete_last_message(self):
+    def delete_last_message(self) -> None:
         if len(self.messages) > 1:
             self.messages.pop()
 
-    def invoke(self):
+    def invoke(self) -> str:
+        """ Call the model and return the response. """
 
-        # Log messages before invoking the API
-        log_messages(self.name, self.messages)
-
-        response = self.client.chat.completions.create(
+        return self.client.chat.completions.create(
             model=self.model,
             messages=self.messages,
             tools=self.tools,
@@ -70,10 +59,7 @@ class Agent:
             temperature=self.temperature
         )
 
-        return response
-
-    def print_messages(self):
-        return
+    def print_messages(self) -> None:
         print(f'Agent {self.color}{self.name}{RESET}:')
         for message in self.messages:
             print(f"Role: {message['role']}")
@@ -98,7 +84,6 @@ class Agent:
             print(f"{self.color}{self.name}{RESET}: Arguments: {arguments}")
 
             result = function_map[tool_call.function.name](**arguments)
-            #print(f"{self.color}{self.name}{RESET}: Result: {result}")
 
             args_and_result = {
                 **arguments,
@@ -125,8 +110,5 @@ class Agent:
 
             self.messages.append({"role": "assistant", "tool_calls": tool_call_message})
             self.messages.append(function_call_result_message)
-
-            #print('TOOL CALL MESSAGES')
-            #self.print_messages()
 
         return self.invoke()

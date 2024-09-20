@@ -19,8 +19,8 @@ from src import personas
 from src.agent import Agent
 from src.tools import suny_tools
 from src.constants import UNIVERSITY_MAPPING
-from src.run_tools import get_student_info, get_chat_summary_from_db, logout
 from src.database import get_top_strengths, get_bot_strengths
+from src.run_tools import get_student_info, get_chat_summary_from_db, logout
 from src.interfaces import streamlit_login, display_student_info, main_chat_interface, counselor_suny_chat_interface, first_time_user_page, display_counselor_options
 
 
@@ -35,7 +35,7 @@ def main():
     if user:
 
         # TODO - this should check the database, not the session state
-        if user.login_number == 0 and 'first_time_completed' not in st.session_state:
+        if user.session_id == 0 and 'first_time_completed' not in st.session_state:
             first_time_user_page()
         #elif 'counselor_chosen' not in st.session_state:
         #    display_counselor_options()
@@ -94,8 +94,7 @@ def main():
                 suny_system_prompt = prompts.SUNY_SYSTEM_PROMPT + '\n'
                 for name in UNIVERSITY_MAPPING.values():
                     suny_system_prompt += name + '\n'
-                #print('SUNY SYSTEM PROMPT')
-                #print(suny_system_prompt)
+
                 st.session_state.suny_agent = Agent(
                     client,
                     name="SUNY",
@@ -104,14 +103,10 @@ def main():
                     system_prompt=suny_system_prompt
                 )
 
-                #log_messages('counselor', st.session_state.counselor_agent.messages)
-                #log_messages('suny', st.session_state.suny_agent.messages)
-            
             if "user_messages" not in st.session_state:
                 print('USER MESSAGES NOT IN SESSION STATE')
-                if user.login_number == 0:
+                if user.session_id == 0:
                     print('Setting first message')
-                    #first_message = prompts.WELCOME_MESSAGE
                     first_message = utils.parse_json(
                         st.session_state.counselor_agent.invoke().choices[0].message.content
                     )['message']
