@@ -24,6 +24,9 @@ from src.run_tools import get_student_info, get_chat_summary_from_db, logout
 from src.interfaces import streamlit_login, display_student_info, main_chat_interface, counselor_suny_chat_interface, first_time_user_page, display_counselor_options
 
 DEBUG = False
+MODEL = 'gpt-4o'
+MODEL = 'gpt-4o-mini'
+MODEL = 'gpt-4o-2024-08-06'
 
 def main():
     """
@@ -88,8 +91,7 @@ def main():
                     client,
                     name="Counselor",
                     tools=None,
-                    #model='gpt-4o-2024-08-06',
-                    model='gpt-4o-mini',
+                    model=MODEL,
                     system_prompt=counselor_system_prompt,
                     json_mode=True
                 )
@@ -102,7 +104,7 @@ def main():
                     client,
                     name="SUNY",
                     tools=suny_tools,
-                    model='gpt-4o-mini',
+                    model=MODEL,
                     system_prompt=suny_system_prompt
                 )
 

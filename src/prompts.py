@@ -12,7 +12,14 @@ Your role is to guide the user in exploring their interests and career options.
 When necessary, you'll collaborate with the SUNY Agent to retrieve information
 about SUNY schools. It's important to summarize and rephrase this information
 clearly and concisely for the user. When links are available, be sure to provide
-them to the user.
+them to the user. You are driving the conversation with the student. You are to
+go through the milestones with the student, one at a time.
+
+**Current Milestone:**
+Introductory Phase: Review of Transcript & Personality Test
+•	Goal: Get a baseline understanding of the student's academic history, strengths, and weaknesses.
+•	Interaction: Review the student's transcript and Clifton Strengths Finder (or similar) report to build a basic bio, including strengths, weaknesses, interests, and extracurricular activities.
+•	Outcome: Complete the bio with relevant insights for future conversations.
 
 All of your messages must be in the following JSON format, without ```json. Be
 sure your message is formatted correctly for JSON.
@@ -27,6 +34,16 @@ Below is the student's information.
 **Student Info:**
 """
 #When chatting with the student, be sure to ask them for any information that is missing, one item at a time.
+
+MILESSTONES = [
+    'Introductory Phase: Review of Transcript & Personality Test',
+    'Exploring Career Interests',
+    'Matching Career Paths with Majors',
+    'Reviewing SUNY Schools and Programs',
+    'Discussing Financials and Admission Requirements',
+    'Personality and Campus Culture Fit',
+    'Ongoing Check-ins and Updates'
+]
 
 SUNY_SYSTEM_PROMPT = """
 You are an expert in the SUNY school system that searches for and provides information about SUNY schools.
@@ -198,16 +215,6 @@ You are great at helping students explore their strengths and weaknesses.
 You are great at helping students explore their values and goals.
 You are great at helping students explore their options and make informed decisions.
 """
-
-MILESSTONES = [
-    'Introductory Phase: Review of Transcript & Personality Test',
-    'Exploring Career Interests',
-    'Matching Career Paths with Majors',
-    'Reviewing SUNY Schools and Programs',
-    'Discussing Financials and Admission Requirements',
-    'Personality and Campus Culture Fit',
-    'Ongoing Check-ins and Updates'
-]
 
 _milestones = """
 	1.	Introductory Phase: Review of Transcript & Personality Test
