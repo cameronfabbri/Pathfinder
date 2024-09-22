@@ -60,7 +60,8 @@ class Agent:
         )
 
     def print_messages(self) -> None:
-        print(f'Agent {self.color}{self.name}{RESET}:')
+        print('\n', 100 * '=', '\n')
+        print(f'Agent {self.color}{self.name}{RESET} Messages:')
         for message in self.messages:
             print(f"Role: {message['role']}")
             if 'content' in message and message['content'] is not None:
@@ -75,7 +76,7 @@ class Agent:
             if 'tool_call_id' in message:
                 print(f"Tool Call ID: {message['tool_call_id']}")
             print('-' * 40)
-        print('\n', 40 * '-', '\n')
+        print('\n', 100 * '=', '\n')
 
     def handle_tool_call(self, response):
         for tool_call in response.choices[0].message.tool_calls:

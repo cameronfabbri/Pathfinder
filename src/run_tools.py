@@ -251,7 +251,22 @@ def summarize_chat():
         st.session_state.counselor_agent.add_message("user", prompts.SUMMARY_PROMPT)
         response = st.session_state.counselor_agent.invoke()
         st.session_state.counselor_agent.delete_last_message()
+        """
+        from src.agent import Agent
+        client = OpenAI(api_key=os.getenv("PATHFINDER_OPENAI_API_KEY"))
+        agent = Agent(
+            client,
+            name="Agent",
+            tools=None,
+            model='gpt-4o-mini',
+            system_prompt="You are a helpful assistant that summarizes the conversation. Do not include a title or any other formatting. Just the summary.",
+            json_mode=False
+        )
+        agent.add_message("user", prompts.SUMMARY_PROMPT)
+        response = agent.invoke()
+        """
         summary = response.choices[0].message.content
+        print('summary response', summary)
         summary = utils.parse_json(summary)['message']
 
         print("SUMMARY")

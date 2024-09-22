@@ -297,6 +297,25 @@ def initialize_db():
     create_chat_tables()
     create_assessment_tables()
 
+    # TODO - remove after testing
+    from src.auth import hash_password
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM users WHERE username = ?", ("test",))
+        if cursor.fetchone()[0] == 0:
+            salt, hashed_password = hash_password("test")
+
+            cursor.execute(
+                "INSERT INTO users (username, session_id, salt, hashed_password) VALUES (?, ?, ?, ?)", 
+                ("test", -1, salt.decode('latin1'), hashed_password)
+            )
+            #cursor.execute("INSERT INTO users (username, session_id, salt, hashed_password) VALUES (?, ?, ?, ?)", ("test", 0, salt, hashed_password))
+            user_vars = '(user_id, first_name, last_name, age, gender, ethnicity, high_school, high_school_grad_year, address, city, state, zip_code)'
+            user_vals = (1, 'Cameron', 'Fabbri', 16, 'Male', 'None', 'Northport High School', 2024, '123 Main St', 'Northport', 'New York', 11768)
+            cursor.execute(f"INSERT INTO students {user_vars} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", user_vals)
+            conn.commit()
+    # End of TODO
+
     with get_db_connection() as conn:
         cursor = conn.cursor()
         

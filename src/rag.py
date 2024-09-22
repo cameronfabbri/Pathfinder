@@ -1,9 +1,8 @@
 """
+RAG (Retrieval Augmented Generation) class for retrieving and formatting documents from a ChromaDB instance.
 """
 
-import os
-from openai import OpenAI
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 
 from src.database import ChromaDB
 from src.constants import CHROMA_DB_PATH
@@ -15,7 +14,6 @@ class RAG:
         Initialize the RAG (Retrieval Augmented Generation) class.
 
         Args:
-            agent (Agent): An instance of the Agent class.
             db (ChromaDB): An instance of the ChromaDB class.
             top_k (int): The number of top documents to retrieve for context.
         """
@@ -43,7 +41,7 @@ class RAG:
             where=where
         )
 
-    def format_documents(self, documents: List[Dict[str, Any]]) -> str:
+    def format_documents(self, documents: List[Dict[str, Any]]) -> Tuple[str, List[str]]:
         """
         Format the retrieved documents into a string to be included in the prompt.
 
@@ -51,14 +49,13 @@ class RAG:
             documents (List[Dict[str, Any]]): The retrieved documents.
 
         Returns:
-            str: The formatted documents.
+            Tuple[str, List[str]]: The formatted documents and the document IDs.
         """
 
         print('Retrieved Documents:')
         [print(x) for x in documents['ids'][0]]
         print('-' * 100)
         content_doc_ids = []
-        #content_doc_ids = documents['ids'][0]
         for doc_id in documents['ids'][0]:
 
             # Document is a full HTML page
@@ -99,38 +96,6 @@ class RAG:
             if 'page_number' in doc['metadata'].keys():
                 content += 'Page Number: ' + str(doc['metadata']['page_number']) + '\n'
             content += doc['document'] + '\n\n'
-        return content
 
+        return content, content_doc_ids
 
-def main():
-
-    # Initialize the ChromaDB instance
-    db = ChromaDB(path=CHROMA_DB_PATH, name='universities')
-
-    # Initialize the Agent instance
-    client = OpenAI(api_key=os.getenv("PATHFINDER_OPENAI_API_KEY"))
-    agent = Agent(
-        client=client,
-        name='assistant',
-        tools=None,
-        system_prompt="You are a helpful assistant.",
-        model='gpt-4',
-        json_mode=False,
-        temperature=0.7
-    )
-
-    # Initialize the RAG instance
-    #rag = RAG(agent=agent, db=db, top_k=3)
-
-    # Generate a response using RAG
-    #query = "What undergraduate programs are offered at the University of Albany?\n\n"
-    #query = 'For the school of art and design at Alfred University, what are the portfolio requirements for applying?'
-    #query = 'For the school of art and design, what are the portfolio requirements for applying?'
-    #query = 'What coursework is required for a Chinese Studies major at Binghamton University?'
-    #response = rag.generate(query)
-
-    #print("Assistant's Response:")
-    #print(response)
-
-if __name__ == "__main__": 
-    main()

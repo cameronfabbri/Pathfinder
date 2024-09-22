@@ -11,7 +11,7 @@ sys.path.insert(0, project_root)
 import pickle
 
 from src import prompts
-from src.auth import login
+from src.auth import login, signup
 from src.assessment import answers
 from src.utils import dict_to_str, parse_json
 from src.database import execute_query, get_db_connection
@@ -25,6 +25,8 @@ opj = os.path.join
 def main_chat_interface():
     st.title("💬 User-Counselor Chat")
     st.caption("🚀 Chat with your SUNY counselor")
+
+    st.session_state.counselor_agent.print_messages()
 
     if len(st.session_state.user_messages) == 1:
         first_message = st.session_state.user_messages[0]["content"]
@@ -60,19 +62,13 @@ def main_chat_interface():
         # Force a rerun to display the new messages
         st.rerun()
 
-    #print('Messages since update:', st.session_state.messages_since_update)
-    if st.session_state.messages_since_update > 200000000:
+    if st.session_state.messages_since_update > 10:
         st.session_state.messages_since_update = 0
-        print('Updating student info...')
         current_student_info = get_student_info(st.session_state.user)
         current_student_info_str = dict_to_str(current_student_info, format=False)
-        print('CURRENT STUDENT INFO')
-        print(current_student_info_str)
         new_info_prompt = prompts.UPDATE_INFO_PROMPT
         new_info_prompt += f"\n**Student's Current Information:**\n{current_student_info_str}\n\n"
         new_info_prompt += f"**Conversation History:**\n{st.session_state.user_messages}\n\n"
-        print('NEW INFO PROMPT')
-        print(new_info_prompt, '\n')
         response = st.session_state.counselor_agent.client.chat.completions.create(
             model='gpt-4o-2024-08-06',
             messages=[
@@ -81,10 +77,6 @@ def main_chat_interface():
             temperature=0.0,
             response_format={"type": "json_object"}
         ).choices[0].message.content
-
-        print('\n')
-        print('UPDATE INFO RESPONSE')
-        print(response, '\n')
 
         response_json = parse_json(response)
         for key, value in response_json.items():
@@ -95,7 +87,7 @@ def main_chat_interface():
 
         # Update the counselor agent's system prompt
         student_info = get_student_info(st.session_state.user)
-        student_info_str = dict_to_str(current_student_info, format=False)
+        student_info_str = dict_to_str(student_info, format=False)
         st.session_state.counselor_agent.update_system_prompt(prompts.COUNSELOR_SYSTEM_PROMPT + student_info_str)
 
         st.rerun()
@@ -294,37 +286,58 @@ def display_counselor_options():
 
 
 def streamlit_login():
+    """
+    Handles user login and signup using Streamlit interface.
+    """
     if "user" not in st.session_state:
-
-        # Temp while testing
-        #username = 'cameron'
-        #password = 'fabbri'
-
-        #user = login(username, password)
         user = None
-        if user is not None:
-            st.session_state.user = user
-            st.success("Login successful")
-            return user
+        login_placeholder = st.empty()
 
-        placeholder = st.empty()
-        with placeholder.form("login"):
-            st.markdown("#### Enter your credentials")
-            username = st.text_input("Username")
-            password = st.text_input("Password", type="password")
-            submit = st.form_submit_button("Login")
+        # Create tabs for Login and Signup
+        login_tab, signup_tab = st.tabs(["Login", "Sign Up"])
 
-        if submit:
-            user = login(username, password)
-            if user:
-                st.session_state.user = user
-                placeholder.empty()
-                st.success("Login successful")
-                return user
-            else:
-                st.error("Login failed")
-        return None
-    return st.session_state.user
+        with login_tab:
+            with st.form("login_form"):
+                st.markdown("#### Login")
+                username = st.text_input("Username", value='test')
+                password = st.text_input("Password", type="password", value='test')
+                login_submit = st.form_submit_button("Login")
+
+            if login_submit:
+                user = login(username, password)
+                if user:
+                    st.session_state.user = user
+                    login_placeholder.empty()
+                    st.success("Login successful")
+                    st.rerun()
+                else:
+                    st.error("Login failed")
+
+        with signup_tab:
+            with st.form("signup_form"):
+                st.markdown("#### Sign Up")
+                first_name = st.text_input("First Name")
+                last_name = st.text_input("Last Name")
+                age = st.number_input("Age", min_value=1, max_value=100)
+                gender = st.selectbox("Gender", options=["Male", "Female", "Other"])
+                new_username = st.text_input("Choose a Username")
+                new_password = st.text_input("Choose a Password", type="password")
+                signup_submit = st.form_submit_button("Sign Up")
+
+            if signup_submit:
+                if first_name and last_name and new_username and new_password:
+                    user = signup(first_name, last_name, age, gender, new_username, new_password)
+                    if user:
+                        st.session_state.user = user
+                        login_placeholder.empty()
+                        st.success("Sign up successful. You are now logged in.")
+                        st.rerun()
+                    else:
+                        st.error("Sign up failed. Username may already exist.")
+                else:
+                    st.error("Please fill in all fields to sign up.")
+
+    return st.session_state.user if "user" in st.session_state else None
 
 
 def counselor_suny_chat_interface():
