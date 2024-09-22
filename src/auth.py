@@ -45,6 +45,7 @@ def login(username: str, password: str) -> User:
             if hashed_password == stored_hashed_password:
                 print(f"Login successful! Welcome, {username}!")
                 print(f"Your user ID is {user_id}\n")
+                print('Executing update query...')
                 cursor.execute("UPDATE users SET session_id = session_id + 1 WHERE username=?", (username,))
                 conn.commit()
             else:

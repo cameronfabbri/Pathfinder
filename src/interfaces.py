@@ -26,6 +26,8 @@ def main_chat_interface():
     st.title("💬 User-Counselor Chat")
     st.caption("🚀 Chat with your SUNY counselor")
 
+    st.session_state.counselor_agent.print_messages()
+
     if len(st.session_state.user_messages) == 1:
         first_message = st.session_state.user_messages[0]["content"]
 
@@ -60,19 +62,13 @@ def main_chat_interface():
         # Force a rerun to display the new messages
         st.rerun()
 
-    #print('Messages since update:', st.session_state.messages_since_update)
-    if st.session_state.messages_since_update > 200000000:
+    if st.session_state.messages_since_update > 10:
         st.session_state.messages_since_update = 0
-        print('Updating student info...')
         current_student_info = get_student_info(st.session_state.user)
         current_student_info_str = dict_to_str(current_student_info, format=False)
-        print('CURRENT STUDENT INFO')
-        print(current_student_info_str)
         new_info_prompt = prompts.UPDATE_INFO_PROMPT
         new_info_prompt += f"\n**Student's Current Information:**\n{current_student_info_str}\n\n"
         new_info_prompt += f"**Conversation History:**\n{st.session_state.user_messages}\n\n"
-        print('NEW INFO PROMPT')
-        print(new_info_prompt, '\n')
         response = st.session_state.counselor_agent.client.chat.completions.create(
             model='gpt-4o-2024-08-06',
             messages=[
@@ -81,10 +77,6 @@ def main_chat_interface():
             temperature=0.0,
             response_format={"type": "json_object"}
         ).choices[0].message.content
-
-        print('\n')
-        print('UPDATE INFO RESPONSE')
-        print(response, '\n')
 
         response_json = parse_json(response)
         for key, value in response_json.items():
@@ -95,7 +87,7 @@ def main_chat_interface():
 
         # Update the counselor agent's system prompt
         student_info = get_student_info(st.session_state.user)
-        student_info_str = dict_to_str(current_student_info, format=False)
+        student_info_str = dict_to_str(student_info, format=False)
         st.session_state.counselor_agent.update_system_prompt(prompts.COUNSELOR_SYSTEM_PROMPT + student_info_str)
 
         st.rerun()
@@ -307,8 +299,8 @@ def streamlit_login():
         with login_tab:
             with st.form("login_form"):
                 st.markdown("#### Login")
-                username = st.text_input("Username")
-                password = st.text_input("Password", type="password")
+                username = st.text_input("Username", value='test')
+                password = st.text_input("Password", type="password", value='test')
                 login_submit = st.form_submit_button("Login")
 
             if login_submit:

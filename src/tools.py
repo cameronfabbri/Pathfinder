@@ -42,9 +42,8 @@ def retrieve_content_from_question(question: str, school_name: str = None) -> st
     Args:
         question (str): The user's question about SUNY schools or programs.
         school_name (str, optional): The name of the SUNY school. Only include this if the user's question is about a specific school.
-
     Returns:
-        str: The generated response.
+        str: The formatted documents.
     """
     # Initialize the ChromaDB instance
     db = ChromaDB(path=CHROMA_DB_PATH, name='universities')
@@ -54,9 +53,7 @@ def retrieve_content_from_question(question: str, school_name: str = None) -> st
     documents = rag.retrieve(question, school_name)
 
     # Format the retrieved documents to include in the prompt
-    context = rag.format_documents(documents)
-
-    return context
+    return rag.format_documents(documents)
 
 
 function_map = {

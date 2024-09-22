@@ -23,8 +23,13 @@ from src.database import get_top_strengths, get_bot_strengths
 from src.run_tools import get_student_info, get_chat_summary_from_db, logout
 from src.interfaces import streamlit_login, display_student_info, main_chat_interface, counselor_suny_chat_interface, first_time_user_page, display_counselor_options
 
+DEBUG = False
 
 def main():
+    """
+    Main function to run the Streamlit app
+    `streamlit run scripts/run.py`
+    """
     st.set_page_config(page_title="SUNY Counselor Chat", page_icon="💬", layout="wide")
 
     if 'messages_since_update' not in st.session_state:
@@ -35,7 +40,7 @@ def main():
     if user:
 
         # TODO - this should check the database, not the session state
-        if 0:#user.session_id == 0 and 'first_time_completed' not in st.session_state:
+        if user.session_id == -1:# and 'first_time_completed' not in st.session_state:
             first_time_user_page()
         #elif 'counselor_chosen' not in st.session_state:
         #    display_counselor_options()
@@ -44,8 +49,8 @@ def main():
             # TODO - remove after testing
             st.session_state.counselor_persona = 'David - The Mentor'
 
-            col1, col2, col3 = st.columns([1,1,1])
-            with col3:
+            col1, col2 = st.columns([6, 1])
+            with col2:
                 if st.button("Logout"):
                     logout()
 
@@ -79,14 +84,12 @@ def main():
 
                 counselor_system_prompt = counselor_system_prompt.replace('PERSONA', persona_prompt)
 
-                #print('COUNSELOR SYSTEM PROMPT')
-                #print(counselor_system_prompt)
-
                 st.session_state.counselor_agent = Agent(
                     client,
                     name="Counselor",
                     tools=None,
-                    model='gpt-4o-2024-08-06',
+                    #model='gpt-4o-2024-08-06',
+                    model='gpt-4o-mini',
                     system_prompt=counselor_system_prompt,
                     json_mode=True
                 )
@@ -104,12 +107,14 @@ def main():
                 )
 
             if "user_messages" not in st.session_state:
-                print('USER MESSAGES NOT IN SESSION STATE')
+                print('user.session_id:', user.session_id)
                 if user.session_id == 0:
-                    print('Setting first message')
-                    first_message = utils.parse_json(
-                        st.session_state.counselor_agent.invoke().choices[0].message.content
-                    )['message']
+                    if not DEBUG:
+                        first_message = utils.parse_json(
+                            st.session_state.counselor_agent.invoke().choices[0].message.content
+                        )['message']
+                    else:
+                        first_message = prompts.DEBUG_FIRST_MESSAGE.replace('NAME', user.username)
                 else:
                     try:
                         first_message = get_chat_summary_from_db(client)
@@ -117,18 +122,19 @@ def main():
                         print('\nNo chat summary found in database, did you quit without logging out?\n')
                         first_message = f"Hello {user.username}, welcome back to the chat!"
                 st.session_state.user_messages = [{"role": "assistant", "content": first_message}]
-                print('set user_messages')
+                st.session_state.counselor_agent.add_message("assistant", first_message)
             
             if "counselor_suny_messages" not in st.session_state:
                 st.session_state.counselor_suny_messages = []
 
-            user_chat_column, counselor_suny_chat_column = st.columns(2)
+            #user_chat_column, counselor_suny_chat_column = st.columns(2)
 
-            with user_chat_column:
+            #with user_chat_column:
+            with col1:
                 main_chat_interface()
 
-            with counselor_suny_chat_column:
-                counselor_suny_chat_interface()
+            #with counselor_suny_chat_column:
+            #   counselor_suny_chat_interface()
 
     else:
         st.error("Please log in to continue")
