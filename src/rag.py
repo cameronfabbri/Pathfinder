@@ -60,15 +60,18 @@ class RAG:
 
             # Document is a full HTML page
             if '.pdf' not in doc_id and 'chunk' not in doc_id:
-                content_doc_ids.append(doc_id)
+                if doc_id not in content_doc_ids:
+                    content_doc_ids.append(doc_id)
 
             # Chunk of an HTML file
             elif '.pdf' not in doc_id and 'chunk' in doc_id:
-                content_doc_ids.append(doc_id.split('-chunk')[0])
+                if doc_id.split('-chunk')[0] not in content_doc_ids:
+                    content_doc_ids.append(doc_id.split('-chunk')[0])
 
             # Full PDF page
             elif '.pdf' in doc_id and 'chunk' not in doc_id:
-                content_doc_ids.append(doc_id)
+                if doc_id not in content_doc_ids:
+                    content_doc_ids.append(doc_id)
 
             # Chunk of a pdf page - we want to get the whole page(s)
             elif '.pdf' in doc_id and 'chunk' in doc_id:
@@ -82,20 +85,32 @@ class RAG:
                 if start_page != end_page:
                     doc_id1 = doc_id_base + '-page-' + start_page
                     doc_id2 = doc_id_base + '-page-' + end_page
-                    content_doc_ids.append(doc_id1)
-                    content_doc_ids.append(doc_id2)
+                    if doc_id1 not in content_doc_ids:
+                        content_doc_ids.append(doc_id1)
+                    if doc_id2 not in content_doc_ids:
+                        content_doc_ids.append(doc_id2)
                 else:
                     doc_id1 = doc_id_base + '-page-' + start_page
-                    content_doc_ids.append(doc_id1)
+                    if doc_id1 not in content_doc_ids:
+                        content_doc_ids.append(doc_id1)
+
+        print('CONTENT DOC IDS:')
+        [print(x) for x in content_doc_ids]
+        print('\n-\n')
 
         content = ''
         for x in content_doc_ids:
             doc = self.db.get_document_by_id(x)
-            if 'filepath' in doc['metadata'].keys():
-                content += 'Filepath: ' + doc['metadata']['filepath'] + '\n'
+            #if 'filepath' in doc['metadata'].keys():
+            #    content += 'Filepath: ' + doc['metadata']['filepath'] + '\n'
+            if 'url' in doc['metadata'].keys():
+                content += 'URL: ' + doc['metadata']['url'] + '\n'
             if 'page_number' in doc['metadata'].keys():
                 content += 'Page Number: ' + str(doc['metadata']['page_number']) + '\n'
             content += doc['document'] + '\n\n'
+
+        print('CONTENT:')
+        print(content)
 
         return content, content_doc_ids
 
