@@ -6,9 +6,21 @@ import sqlite3
 import chromadb
 
 from typing import Any, Dict, List
+from contextlib import contextmanager
 from chromadb.config import DEFAULT_TENANT, DEFAULT_DATABASE, Settings
 
 import src.assessment as assessment
+
+#@contextmanager
+def get_db_connection() -> sqlite3.Connection:
+    """
+    Returns a connection to the database.
+    """
+    conn = sqlite3.connect('users.db')
+    conn.row_factory = sqlite3.Row
+    return conn
+    #yield conn
+    #conn.close()
 
 
 def execute_query(query, args=None) -> list | None:
@@ -35,14 +47,7 @@ def execute_query(query, args=None) -> list | None:
         return None
 
 
-def get_db_connection():
-    """
-    Returns a connection to the database.
-    """
-    return sqlite3.connect('users.db')
-
-
-def get_top_strengths(user):
+def get_top_strengths(user_id):
     """
     Get the top 5 strengths for the user.
     """
@@ -57,11 +62,11 @@ def get_top_strengths(user):
             WHERE theme_results.user_id = ?
             ORDER BY theme_results.total_score DESC
             LIMIT 5
-        ''', (user.user_id,))
+        ''', (user_id,))
         return cursor.fetchall()
 
 
-def get_bot_strengths(user):
+def get_bot_strengths(user_id):
     """
     Get the bottom 5 strengths for the user.
     """
@@ -74,7 +79,7 @@ def get_bot_strengths(user):
             WHERE theme_results.user_id = ?
             ORDER BY theme_results.total_score ASC
             LIMIT 5
-        ''', (user.user_id,))
+        ''', (user_id,))
         return cursor.fetchall()
 
 
@@ -161,11 +166,15 @@ def create_user_tables():
 
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS students (
+                user_id INTEGER NOT NULL,
                 first_name TEXT,
                 last_name TEXT,
                 email TEXT,
                 phone_number TEXT,
-                user_id INTEGER NOT NULL,
+                address TEXT,
+                city TEXT,
+                state TEXT,
+                zip_code TEXT,
                 age INTEGER,
                 gender TEXT,
                 ethnicity TEXT,
@@ -178,14 +187,10 @@ def create_user_tables():
                 extracurriculars TEXT,
                 career_aspirations TEXT,
                 preferred_major TEXT,
-                strengths TEXT,
-                personality_test_results TEXT,
-                address TEXT,
-                city TEXT,
-                state TEXT,
-                zip_code TEXT,
-                intended_college TEXT,
-                intended_major TEXT,
+                other_majors TEXT,
+                top_school TEXT,
+                safety_school TEXT,
+                other_schools TEXT,
                 FOREIGN KEY (user_id) REFERENCES users (id)
             );
         ''')

@@ -62,15 +62,20 @@ def main_chat_interface():
         # Force a rerun to display the new messages
         st.rerun()
 
-    if st.session_state.messages_since_update > 10:
+    si = get_student_info(st.session_state.user.user_id).values()
+    nsi = None in si or 'None' in si
+    print('messages_since_update:', st.session_state.messages_since_update)
+    print('nsi:', nsi)
+    if st.session_state.messages_since_update > 3 and nsi:
+        print('Updating student info...')
         st.session_state.messages_since_update = 0
-        current_student_info = get_student_info(st.session_state.user)
+        current_student_info = get_student_info(st.session_state.user.user_id)
         current_student_info_str = dict_to_str(current_student_info, format=False)
         new_info_prompt = prompts.UPDATE_INFO_PROMPT
         new_info_prompt += f"\n**Student's Current Information:**\n{current_student_info_str}\n\n"
         new_info_prompt += f"**Conversation History:**\n{st.session_state.user_messages}\n\n"
         response = st.session_state.counselor_agent.client.chat.completions.create(
-            model='gpt-4o-2024-08-06',
+            model='gpt-4o-mini',
             messages=[
                 {"role": "assistant", "content": new_info_prompt},
             ],
@@ -83,17 +88,17 @@ def main_chat_interface():
             if key in current_student_info:
                 current_student_info[key] = value
         
-        update_student_info(st.session_state.user, current_student_info)
+        update_student_info(st.session_state.user.user_id, current_student_info)
 
         # Update the counselor agent's system prompt
-        student_info = get_student_info(st.session_state.user)
+        student_info = get_student_info(st.session_state.user.user_id)
         student_info_str = dict_to_str(student_info, format=False)
         st.session_state.counselor_agent.update_system_prompt(prompts.COUNSELOR_SYSTEM_PROMPT + student_info_str)
 
         st.rerun()
 
 
-def display_student_info(user):
+def display_student_info(user_id: int):
     st.sidebar.title("Student Information")
 
     # Add custom CSS for text wrapping
@@ -106,33 +111,18 @@ def display_student_info(user):
         </style>
     """, unsafe_allow_html=True)
 
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(f"SELECT * FROM students WHERE user_id='{user.user_id}';")
-        student_info = cursor.fetchone()
+    #with get_db_connection() as conn:
+    #    cursor = conn.cursor()
+    #    cursor.execute(f"SELECT * FROM students WHERE user_id='{user.user_id}';")
+    #    student_info = cursor.fetchone()
+    student_info = get_student_info(user_id)
  
     if student_info:
-        info_dict = {
-            'Name': f"{student_info[0]} {student_info[1]}",
-            'Age': student_info[5],
-            'Gender': student_info[6],
-            'Ethnicity': student_info[7],
-            'High School': student_info[8],
-            'Graduation Year': student_info[9],
-            'GPA': student_info[10],
-            'Favorite Subjects': student_info[13],
-            'Extracurriculars': student_info[14],
-            'Career Aspirations': student_info[15],
-            'Preferred Major': student_info[16],
-            'Intended College': student_info[23],
-            'Intended Major': student_info[24]
-        }
-        
-        for key, value in info_dict.items():
+        for key, value in student_info.items():
             st.sidebar.text(f"{key}: {value}")
         
-    top_strengths = get_top_strengths(user)
-    bot_strengths = get_bot_strengths(user)
+    top_strengths = get_top_strengths(user_id)
+    bot_strengths = get_bot_strengths(user_id)
 
     # Display Strengths
     st.sidebar.markdown("---")

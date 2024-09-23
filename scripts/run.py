@@ -42,11 +42,11 @@ def main():
 
     if user:
 
-        # TODO - this should check the database, not the session state
-        if user.session_id == -1:# and 'first_time_completed' not in st.session_state:
+        top_strengths = get_top_strengths(user.user_id)
+        bot_strengths = get_bot_strengths(user.user_id)
+
+        if not top_strengths:
             first_time_user_page()
-        #elif 'counselor_chosen' not in st.session_state:
-        #    display_counselor_options()
         else:
 
             # TODO - remove after testing
@@ -58,25 +58,23 @@ def main():
                     logout()
 
             st.sidebar.success(f"Logged in as: {user.username}")
-            display_student_info(user)
+            display_student_info(user.user_id)
 
-            student_info_str = utils.dict_to_str(get_student_info(user), format=False)
+            student_info_str = utils.dict_to_str(get_student_info(user.user_id), format=False)
 
             if "counselor_agent" not in st.session_state:
                 client = OpenAI(api_key=os.getenv("PATHFINDER_OPENAI_API_KEY"))
                 counselor_system_prompt = prompts.COUNSELOR_SYSTEM_PROMPT + student_info_str
 
-                #top_strengths = get_top_strengths(user)
-                #bot_strengths = get_bot_strengths(user)
-                #strengths_prompt = '**Strengths from Assessment:**\n'
-                #for theme, score, strength_level in top_strengths:
-                #    strengths_prompt += f"{theme}: {score} ({strength_level})\n"
+                strengths_prompt = '**Strengths from Assessment:**\n'
+                for theme, score, strength_level in top_strengths:
+                    strengths_prompt += f"{theme}: {score} ({strength_level})\n"
 
-                #weaknesses_prompt = '\n\n**Weaknesses from Assessment:**\n'
-                #for theme, score, strength_level in bot_strengths:
-                #    weaknesses_prompt += f"{theme}: {score} ({strength_level})\n"
+                weaknesses_prompt = '\n\n**Weaknesses from Assessment:**\n'
+                for theme, score, strength_level in bot_strengths:
+                    weaknesses_prompt += f"{theme}: {score} ({strength_level})\n"
 
-                #counselor_system_prompt += '\n\n' + strengths_prompt + weaknesses_prompt
+                counselor_system_prompt += '\n\n' + strengths_prompt + weaknesses_prompt
 
                 if st.session_state.counselor_persona == 'David - The Mentor':
                     persona_prompt = personas.DAVID + '\n\n' + personas.DAVID_TRAITS
@@ -129,14 +127,8 @@ def main():
             if "counselor_suny_messages" not in st.session_state:
                 st.session_state.counselor_suny_messages = []
 
-            #user_chat_column, counselor_suny_chat_column = st.columns(2)
-
-            #with user_chat_column:
             with col1:
                 main_chat_interface()
-
-            #with counselor_suny_chat_column:
-            #   counselor_suny_chat_interface()
 
     else:
         st.error("Please log in to continue")

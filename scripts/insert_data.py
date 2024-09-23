@@ -312,6 +312,13 @@ def insert_pdf_files(db: ChromaDB, university_name: str, pdf_files: list[str], d
             'filepath': path,
         }
 
+        url = get_html_url(path)
+        if url is None:
+            print(f"Warning: No corresponding web page found for {path}")
+            with open('missing_html_urls.txt', 'a') as f:
+                f.write(path + '\n')
+            continue
+
         # Insert each page as a separate document before chunking
         for page_num, page_text in enumerate(pages):
             page_num += 1
@@ -367,10 +374,14 @@ def get_doc_id_from_path(path: str) -> str:
         str: The document id.
     """
     doc_id = path.split(UNIVERSITY_DATA_DIR)[-1]
-    doc_id = doc_id.replace(os.sep, '-')
-    if doc_id.startswith('-'):
+    if doc_id.startswith(os.sep):
         doc_id = doc_id[1:]
     return doc_id
+
+    #doc_id = doc_id.replace(os.sep, '-')
+    #if doc_id.startswith('-'):
+    #    doc_id = doc_id[1:]
+    #return doc_id
 
 
 def insert_html_files(
@@ -385,6 +396,7 @@ def insert_html_files(
         db (ChromaDB): The database to insert the documents into.
         university_name (str): The name of the university.
         html_files (list[str]): The list of html files to insert.
+        debug (bool): Run in debug mode.
     Returns:
         None
     """
@@ -434,7 +446,6 @@ def insert_html_files(
                 db.insert_if_not_exists(chunk['text'], chunk_id, chunk['metadata'])
             else:
                 print(f"[DEBUG] Inserted chunk: {chunk_id}")
-
 
 
 def get_html_url(file_path: str) -> str | None:
@@ -522,15 +533,6 @@ def main(data_dir: str | None, debug: bool):
         if files['pdf_files']:
             print('Inserting PDF files for', university_name, '...')
             insert_pdf_files(db, university_name, files['pdf_files'], debug)
-
-    question = 'Does SUNY Potsdam offer a degree in Music?'
-    #question = 'What coursework is involved in a music degree at the crane school of music?'
-    #question = 'What does the third semester of a Agribusiness Management major look like?'
-    #question = 'What are the admission requirements for Engineering Science majors?'
-    #question = 'Can you tell me about the nursing program?'
-    #question = 'Which SUNY schools offer a degreen in Applied Behavior Analysis Studies?'
-    #ask_question(db, question)
-
 
 
 if __name__ == '__main__':

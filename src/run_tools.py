@@ -1,6 +1,7 @@
 """
 """
 import os
+import re
 import sys
 import time
 import streamlit as st
@@ -13,10 +14,10 @@ sys.path.insert(0, project_root)
 from src import utils
 from src import prompts
 from src.user import User
+from src.database import get_db_connection
 from src.pdf_tools import parse_pdf_with_llama
 from src.database import ChromaDB, execute_query
 
-import re
 
 def type_text(text, char_speed=0.03, sentence_pause=0.5):
     placeholder = st.empty()
@@ -36,8 +37,6 @@ def type_text(text, char_speed=0.03, sentence_pause=0.5):
     
     placeholder.markdown(full_text)
 
-
-from src.database import get_db_connection
 
 def store_conversation(conversation_id, user_id, agent_type, message):
     """
@@ -160,52 +159,32 @@ def process_user_input(prompt):
     log_message(st.session_state.user.user_id, st.session_state.user.session_id, 'counselor', 'user', counselor_message)
 
 
-def get_student_info(user: User) -> dict:
+def get_student_info(user_id: int) -> dict:
     """
-    Get the login number and student info from the database
+    Get the student info from the database
 
     Args:
-        user (User): The user object
-
+        user_id (int): The user ID
     Returns:
-        student_info_dict (dict): The student info
+        student_info (dict): The student info
     """
-
-    student_info = execute_query("SELECT * FROM students WHERE user_id=?;", (user.user_id,))[0]
-
-    return {
-        'first_name': student_info[0],
-        'last_name': student_info[1],
-        #'email': student_info[2],
-        #'phone_number': student_info[3],
-        #'user_id': student_info[4],
-        'age': student_info[5],
-        'gender': student_info[6],
-        'ethnicity': student_info[7],
-        'high_school': student_info[8],
-        'high_school_grad_year': student_info[9],
-        'gpa': student_info[10],
-        #'sat_score': student_info[11],
-        #'act_score': student_info[12],
-        'favorite_subjects': student_info[13],
-        'extracurriculars': student_info[14],
-        'career_aspirations': student_info[15],
-        'preferred_major': student_info[16],
-        'address': student_info[19],
-        'city': student_info[20],
-        'state': student_info[21],
-        'zip_code': student_info[22],
-        'intended_college': student_info[23],
-        'intended_major': student_info[24],
-    }
+    try:
+        student_info = execute_query("SELECT * FROM students WHERE user_id=?", (user_id,))
+        if student_info:
+            return dict(student_info[0])
+        else:
+            return {}
+    except Exception as e:
+        print(f"Error retrieving student info: {e}")
+        return {}
 
 
-def update_student_info(user: User, student_info: dict):
+def update_student_info(user_id: int, student_info: dict):
     """
     Update the student info in the database
 
     Args:
-        user (User): The user object
+        user_id (int): The user ID
         student_info (dict): The student info
     Returns:
         None
@@ -214,8 +193,8 @@ def update_student_info(user: User, student_info: dict):
     print('QUERY')
     print(query)
     print('ARGS')
-    print(tuple(list(student_info.values()) + [st.session_state.user.user_id]))
-    execute_query(query, tuple(list(student_info.values()) + [st.session_state.user.user_id]))
+    print(tuple(list(student_info.values()) + [user_id]))
+    execute_query(query, tuple(list(student_info.values()) + [user_id]))
 
 
 def process_transcript(uploaded_file):
