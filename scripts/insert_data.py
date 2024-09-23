@@ -6,6 +6,7 @@ import re
 import fitz
 import json
 import click
+import requests
 
 from tqdm import tqdm
 from openai import OpenAI
@@ -134,7 +135,6 @@ def process_university(db: ChromaDB, university_dir: str) -> None:
         model='gpt-4o',
         json_mode=True
     )
-
 
 
 def remove_overlap(docs):
@@ -391,6 +391,13 @@ def insert_html_files(
 
     for path in tqdm(html_files):
 
+        url = get_html_url(path)
+        if url is None:
+            print(f"Warning: No corresponding web page found for {path}")
+            with open('missing_html_urls.txt', 'a') as f:
+                f.write(path + '\n')
+            continue
+
         doc_id = get_doc_id_from_path(path)
 
         with open(path, 'r') as f:
@@ -408,6 +415,7 @@ def insert_html_files(
         metadata['filepath'] = path
         metadata['university'] = university_name
         metadata['type'] = 'html'
+        metadata['url'] = url
         if not debug:
             db.insert_if_not_exists(text, doc_id, metadata)
         else:
@@ -421,10 +429,56 @@ def insert_html_files(
             chunk['metadata']['filepath'] = path
             chunk['metadata']['university'] = university_name
             chunk['metadata']['type'] = 'html'
+            chunk['metadata']['url'] = url
             if not debug:
                 db.insert_if_not_exists(chunk['text'], chunk_id, chunk['metadata'])
             else:
                 print(f"[DEBUG] Inserted chunk: {chunk_id}")
+
+
+
+def get_html_url(file_path: str) -> str | None:
+    """
+    Try and get the URL of the HTML file
+     
+    Args:
+        file_path (str): The local path to the HTML file.
+    Returns:
+        str: The valid URL (with or without .html) or None.
+    """
+    
+    # Extract base URL from the file path by removing the root directory and file extension
+    base_url = file_path.split(UNIVERSITY_DATA_DIR)[1].replace('.html', '')
+    if base_url.startswith('/'):
+        base_url = base_url[1:]
+
+    base_url = 'https://' + base_url
+
+    variants = [
+        base_url.rstrip('/index') + '/',
+        base_url,
+        base_url + '.html',
+        base_url + '/index.html',
+        base_url + '/index.php',
+        base_url + '/index.php.html',
+        base_url.rstrip('/index'),
+    ]
+
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
+        'Referer': base_url,
+        'Accept-Language': 'en-US,en;q=0.9',
+    }
+
+    for variant in variants:
+        try:
+            response = requests.get(variant, headers=headers)
+            if response.status_code == 200:
+                return variant
+        except requests.exceptions.RequestException:
+            pass
+
+    return None
 
 
 @click.command()
@@ -462,12 +516,12 @@ def main(data_dir: str | None, debug: bool):
             else:
                 print(f"Warning: Root directory not specified for {university_name}")
 
-        if files['pdf_files']:
-            print('Inserting PDF files for', university_name, '...')
-            insert_pdf_files(db, university_name, files['pdf_files'], debug)
         if files['html_files']:
             print('Inserting HTML files for', university_name, '...')
             insert_html_files(db, university_name, files['html_files'], debug)
+        if files['pdf_files']:
+            print('Inserting PDF files for', university_name, '...')
+            insert_pdf_files(db, university_name, files['pdf_files'], debug)
 
     question = 'Does SUNY Potsdam offer a degree in Music?'
     #question = 'What coursework is involved in a music degree at the crane school of music?'
