@@ -25,51 +25,42 @@ class User:
         return user_info_str
 
     def load_user_info(self):
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM students WHERE user_id=?", (self.user_id,))
-            result = cursor.fetchone()
-            if result:
-                (
-                    self.first_name, self.last_name, self.email, self.phone_number, _,
-                    self.age, self.gender, self.ethnicity, self.high_school,
-                    self.high_school_grad_year, self.gpa, self.sat_score, self.act_score,
-                    self.favorite_subjects, self.extracurriculars, self.career_aspirations,
-                    self.preferred_major, self.clifton_strengths, self.personality_test_results,
-                    self.address, self.city, self.state, self.zip_code, self.intended_college,
-                    self.intended_major
-                ) = result
-            else:
-                print(f"No student information found for user ID {self.user_id}")
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM students WHERE user_id=?", (self.user_id,))
+        result = cursor.fetchone()
+        if result:
+            (
+                self.first_name, self.last_name, self.email, self.phone_number, _,
+                self.age, self.gender, self.ethnicity, self.high_school,
+                self.high_school_grad_year, self.gpa, self.sat_score, self.act_score,
+                self.favorite_subjects, self.extracurriculars, self.career_aspirations,
+                self.preferred_major, self.clifton_strengths, self.personality_test_results,
+                self.address, self.city, self.state, self.zip_code, self.intended_college,
+                self.intended_major
+            ) = result
+        else:
+            print(f"No student information found for user ID {self.user_id}")
 
     def get_user_info(self):
         return self.__str__()
 
     def save(self):
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                UPDATE students SET 
-                    first_name = ?, last_name = ?, email = ?, phone_number = ?, age = ?, gpa = ?, 
-                    sat_score = ?, act_score = ?, favorite_subjects = ?, career_aspirations = ?,
-                    high_school = ?, high_school_grad_year = ?, ethnicity = ?, 
-                    clifton_strengths = ?, personality_test_results = ?, address = ?, 
-                    city = ?, state = ?, zip_code = ?, intended_college = ?, intended_major = ?
-                WHERE user_id = ?
-            ''', (self.first_name, self.last_name, self.email, self.phone_number, self.age, 
-                self.gpa, self.sat_score, self.act_score, self.favorite_subjects, 
-                self.career_aspirations, self.high_school, self.high_school_grad_year, self.ethnicity, 
-                self.clifton_strengths, self.personality_test_results, self.address, 
-                self.city, self.state, self.zip_code, self.intended_college, self.intended_major, self.user_id
-                )
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE students SET 
+                first_name = ?, last_name = ?, email = ?, phone_number = ?, age = ?, gpa = ?, 
+                sat_score = ?, act_score = ?, favorite_subjects = ?, career_aspirations = ?,
+                high_school = ?, high_school_grad_year = ?, ethnicity = ?, 
+                clifton_strengths = ?, personality_test_results = ?, address = ?, 
+                city = ?, state = ?, zip_code = ?, intended_college = ?, intended_major = ?
+            WHERE user_id = ?
+        ''', (self.first_name, self.last_name, self.email, self.phone_number, self.age, 
+            self.gpa, self.sat_score, self.act_score, self.favorite_subjects, 
+            self.career_aspirations, self.high_school, self.high_school_grad_year, self.ethnicity, 
+            self.clifton_strengths, self.personality_test_results, self.address, 
+            self.city, self.state, self.zip_code, self.intended_college, self.intended_major, self.user_id
             )
-            conn.commit()
-
-    def add_chat_history(self, message):
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("INSERT INTO chat_history (user_id, message) VALUES (?, ?)", 
-                        (self.user_id, message))
-            conn.commit()
-
-
+        )
+        conn.commit()

@@ -9,6 +9,9 @@ from typing import Any, Dict, List
 from contextlib import contextmanager
 from chromadb.config import DEFAULT_TENANT, DEFAULT_DATABASE, Settings
 
+import logging
+from functools import lru_cache
+
 import src.assessment as assessment
 
 #@contextmanager
@@ -17,6 +20,18 @@ def get_db_connection() -> sqlite3.Connection:
     Returns a connection to the database.
     """
     conn = sqlite3.connect('users.db')
+    conn.row_factory = sqlite3.Row
+    return conn
+    #yield conn
+    #conn.close()
+
+
+@lru_cache(maxsize=None)
+def get_db_connection() -> sqlite3.Connection:
+    """
+    Returns a connection to the database.
+    """
+    conn = sqlite3.connect('users.db', check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
     #yield conn
@@ -34,16 +49,17 @@ def execute_query(query, args=None) -> list | None:
         The result of the query | None if error
     """
     try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            if args is not None:
-                cursor.execute(query, args)
-            else:
-                cursor.execute(query)
-            out = cursor.fetchall()
-            return out
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        if args:
+            cursor.execute(query, args)
+        else:
+            cursor.execute(query)
+        result = cursor.fetchall()
+        conn.commit()
+        return result
     except Exception as e:
-        print(f"Error executing query: {e}")
+        logging.error(f"Error executing query: {e}")
         return None
 
 
@@ -51,36 +67,36 @@ def get_top_strengths(user_id):
     """
     Get the top 5 strengths for the user.
     """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
+    conn = get_db_connection()
+    cursor = conn.cursor()
         
-        # Fetch Strengths data
-        cursor.execute('''
-            SELECT themes.theme_name, theme_results.total_score, theme_results.strength_level
-            FROM theme_results
-            JOIN themes ON theme_results.theme_id = themes.theme_id
-            WHERE theme_results.user_id = ?
-            ORDER BY theme_results.total_score DESC
-            LIMIT 5
-        ''', (user_id,))
-        return cursor.fetchall()
+    # Fetch Strengths data
+    cursor.execute('''
+        SELECT themes.theme_name, theme_results.total_score, theme_results.strength_level
+        FROM theme_results
+        JOIN themes ON theme_results.theme_id = themes.theme_id
+        WHERE theme_results.user_id = ?
+        ORDER BY theme_results.total_score DESC
+        LIMIT 5
+    ''', (user_id,))
+    return cursor.fetchall()
 
 
 def get_bot_strengths(user_id):
     """
     Get the bottom 5 strengths for the user.
     """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT themes.theme_name, theme_results.total_score, theme_results.strength_level
-            FROM theme_results
-            JOIN themes ON theme_results.theme_id = themes.theme_id
-            WHERE theme_results.user_id = ?
-            ORDER BY theme_results.total_score ASC
-            LIMIT 5
-        ''', (user_id,))
-        return cursor.fetchall()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT themes.theme_name, theme_results.total_score, theme_results.strength_level
+        FROM theme_results
+        JOIN themes ON theme_results.theme_id = themes.theme_id
+        WHERE theme_results.user_id = ?
+        ORDER BY theme_results.total_score ASC
+        LIMIT 5
+    ''', (user_id,))
+    return cursor.fetchall()
 
 
 def insert_user_responses(user_id, responses):
@@ -93,20 +109,20 @@ def insert_user_responses(user_id, responses):
     Returns:
         None
     """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-        # Insert user responses into the user_responses table
-        for statement, score in responses.items():
-            cursor.execute("SELECT question_id FROM questions WHERE statement=?", (statement,))
-            question_id = cursor.fetchone()[0]
+    # Insert user responses into the user_responses table
+    for statement, score in responses.items():
+        cursor.execute("SELECT question_id FROM questions WHERE statement=?", (statement,))
+        question_id = cursor.fetchone()[0]
             
-            cursor.execute(
+        cursor.execute(
                 "INSERT INTO user_responses (user_id, question_id, response) VALUES (?, ?, ?)", 
-                (user_id, question_id, score)
-            )
+            (user_id, question_id, score)
+        )
 
-        conn.commit()
+    conn.commit()
 
 
 def insert_strengths(user_id, strengths):
@@ -119,179 +135,178 @@ def insert_strengths(user_id, strengths):
     Returns:
         None
     """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-        # Insert Strengths scores into the theme_results table
-        for theme, score in strengths.items():
-            cursor.execute("SELECT theme_id FROM themes WHERE theme_name=?", (theme,))
-            theme_id = cursor.fetchone()[0]
-            
-            # Determine strength level based on the score
-            if score >= 13:
-                strength_level = 'Strong strength'
-            elif score >= 10:
-                strength_level = 'Moderate strength'
-            elif score >= 7:
-                strength_level = 'Developing strength'
-            else:
-                strength_level = 'Potential for growth'
+    # Insert Strengths scores into the theme_results table
+    for theme, score in strengths.items():
+        cursor.execute("SELECT theme_id FROM themes WHERE theme_name=?", (theme,))
+        theme_id = cursor.fetchone()[0]
+        
+        # Determine strength level based on the score
+        if score >= 13:
+            strength_level = 'Strong strength'
+        elif score >= 10:
+            strength_level = 'Moderate strength'
+        elif score >= 7:
+            strength_level = 'Developing strength'
+        else:
+            strength_level = 'Potential for growth'
 
-            print(f"User ID: {user_id}, Theme ID: {theme_id}, Score: {score}, Strength Level: {strength_level}")
-            cursor.execute(
-                "INSERT INTO theme_results (user_id, theme_id, total_score, strength_level) VALUES (?, ?, ?, ?)", 
-                (user_id, theme_id, score, strength_level)
-            )
+        print(f"User ID: {user_id}, Theme ID: {theme_id}, Score: {score}, Strength Level: {strength_level}")
+        cursor.execute(
+            "INSERT INTO theme_results (user_id, theme_id, total_score, strength_level) VALUES (?, ?, ?, ?)", 
+            (user_id, theme_id, score, strength_level)
+        )
 
-        conn.commit()
+    conn.commit()
 
 
 def create_user_tables():
     """
     Creates the tables for the users.
     """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-        # Create users table
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                session_id INTEGER NOT NULL,
-                salt TEXT NOT NULL,
-                hashed_password TEXT NOT NULL
-            )
-        ''')
+    # Create users table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            session_id INTEGER NOT NULL,
+            hashed_password TEXT NOT NULL
+        )
+    ''')
 
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS students (
-                user_id INTEGER NOT NULL,
-                first_name TEXT,
-                last_name TEXT,
-                email TEXT,
-                phone_number TEXT,
-                address TEXT,
-                city TEXT,
-                state TEXT,
-                zip_code TEXT,
-                age INTEGER,
-                gender TEXT,
-                ethnicity TEXT,
-                high_school TEXT,
-                high_school_grad_year INTEGER,
-                gpa REAL,
-                sat_score INTEGER,
-                act_score INTEGER,
-                favorite_subjects TEXT,
-                extracurriculars TEXT,
-                career_aspirations TEXT,
-                preferred_major TEXT,
-                other_majors TEXT,
-                top_school TEXT,
-                safety_school TEXT,
-                other_schools TEXT,
-                FOREIGN KEY (user_id) REFERENCES users (id)
-            );
-        ''')
-        conn.commit()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS students (
+            user_id INTEGER NOT NULL,
+            first_name TEXT,
+            last_name TEXT,
+            email TEXT,
+            phone_number TEXT,
+            address TEXT,
+            city TEXT,
+            state TEXT,
+            zip_code TEXT,
+            age INTEGER,
+            gender TEXT,
+            ethnicity TEXT,
+            high_school TEXT,
+            high_school_grad_year INTEGER,
+            gpa REAL,
+            sat_score INTEGER,
+            act_score INTEGER,
+            favorite_subjects TEXT,
+            extracurriculars TEXT,
+            career_aspirations TEXT,
+            preferred_major TEXT,
+            other_majors TEXT,
+            top_school TEXT,
+            safety_school TEXT,
+            other_schools TEXT,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        );
+    ''')
+    conn.commit()
 
 
 def create_chat_tables():
     """
     Creates tables for chat history, counselor-SUNY interactions, and chat summaries.
     """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-        # Table to store user-counselor-suny interactions
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS conversation_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                session_id INTEGER NOT NULL,
-                sender TEXT NOT NULL, -- user, counselor, or suny_agent
-                recipient TEXT NOT NULL, -- user, counselor, or suny_agent
-                message TEXT NOT NULL,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id)
-            )
-        ''')
+    # Table to store user-counselor-suny interactions
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS conversation_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            session_id INTEGER NOT NULL,
+            sender TEXT NOT NULL, -- user, counselor, or suny_agent
+            recipient TEXT NOT NULL, -- user, counselor, or suny_agent
+            message TEXT NOT NULL,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    ''')
 
-        # Chat summaries for user-counselor conversation
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS chat_summary (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                summary TEXT NOT NULL,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id)
-            )
-        ''')
+    # Chat summaries for user-counselor conversation
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS chat_summary (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            summary TEXT NOT NULL,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    ''')
 
-        conn.commit()
+    conn.commit()
 
 
 def create_assessment_tables():
     """
     Creates the tables for the assessment.
     """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-        # Table to store the four key domains
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS domains (
-                domain_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                domain_name TEXT NOT NULL
-            );
-        ''')
+    # Table to store the four key domains
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS domains (
+            domain_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            domain_name TEXT NOT NULL
+        );
+    ''')
 
-        # Table to store the 34 Strengths themes
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS themes (
-                theme_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                domain_id INTEGER NOT NULL,
-                theme_name TEXT NOT NULL,
-                FOREIGN KEY (domain_id) REFERENCES domains(domain_id)
-            );
-        ''')
+    # Table to store the 34 Strengths themes
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS themes (
+            theme_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            domain_id INTEGER NOT NULL,
+            theme_name TEXT NOT NULL,
+            FOREIGN KEY (domain_id) REFERENCES domains(domain_id)
+        );
+    ''')
 
-        # Table to store questions/statements for each theme
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS questions (
-                question_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                theme_id INTEGER NOT NULL,
-                statement TEXT NOT NULL,
-                FOREIGN KEY (theme_id) REFERENCES themes(theme_id)
-            );
-        ''')
+    # Table to store questions/statements for each theme
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS questions (
+            question_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            theme_id INTEGER NOT NULL,
+            statement TEXT NOT NULL,
+            FOREIGN KEY (theme_id) REFERENCES themes(theme_id)
+        );
+    ''')
 
-        # Table to store user responses
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS user_responses (
-                response_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                question_id INTEGER NOT NULL,
-                response INTEGER CHECK(response BETWEEN 1 AND 5),
-                FOREIGN KEY (user_id) REFERENCES users(user_id),
-                FOREIGN KEY (question_id) REFERENCES questions(question_id)
-            );
-        ''')
+    # Table to store user responses
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_responses (
+            response_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            question_id INTEGER NOT NULL,
+            response INTEGER CHECK(response BETWEEN 1 AND 5),
+            FOREIGN KEY (user_id) REFERENCES users(user_id),
+            FOREIGN KEY (question_id) REFERENCES questions(question_id)
+        );
+    ''')
 
-        # Table to store results per theme
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS theme_results (
-                result_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                theme_id INTEGER NOT NULL,
-                total_score INTEGER CHECK(total_score BETWEEN 3 AND 15),
-                strength_level TEXT,
-                FOREIGN KEY (user_id) REFERENCES users(user_id),
-                FOREIGN KEY (theme_id) REFERENCES themes(theme_id)
-            );
-        ''')
-        conn.commit()
+    # Table to store results per theme
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS theme_results (
+            result_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            theme_id INTEGER NOT NULL,
+            total_score INTEGER CHECK(total_score BETWEEN 3 AND 15),
+            strength_level TEXT,
+            FOREIGN KEY (user_id) REFERENCES users(user_id),
+            FOREIGN KEY (theme_id) REFERENCES themes(theme_id)
+        );
+    ''')
+    conn.commit()
 
 
 def initialize_db():
@@ -304,35 +319,34 @@ def initialize_db():
 
     # TODO - remove after testing
     from src.auth import hash_password
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM users WHERE username = ?", ("test",))
-        if cursor.fetchone()[0] == 0:
-            salt, hashed_password = hash_password("test")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM users WHERE username = ?", ("test",))
+    if cursor.fetchone()[0] == 0:
+        hashed_password = hash_password("test")
 
-            cursor.execute(
-                "INSERT INTO users (username, session_id, salt, hashed_password) VALUES (?, ?, ?, ?)", 
-                ("test", -1, salt.decode('latin1'), hashed_password)
-            )
-            #cursor.execute("INSERT INTO users (username, session_id, salt, hashed_password) VALUES (?, ?, ?, ?)", ("test", 0, salt, hashed_password))
-            user_vars = '(user_id, first_name, last_name, age, gender, ethnicity, high_school, high_school_grad_year, address, city, state, zip_code)'
-            user_vals = (1, 'Cameron', 'Fabbri', 16, 'Male', 'None', 'Northport High School', 2024, '123 Main St', 'Northport', 'New York', 11768)
-            cursor.execute(f"INSERT INTO students {user_vars} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", user_vals)
-            conn.commit()
+        cursor.execute(
+            "INSERT INTO users (username, session_id, hashed_password) VALUES (?, ?, ?)", 
+            ("test", -1, hashed_password)
+        )
+        user_vars = '(user_id, first_name, last_name, age, gender, ethnicity, high_school, high_school_grad_year, address, city, state, zip_code)'
+        user_vals = (1, 'Cameron', 'Fabbri', 16, 'Male', 'None', 'Northport High School', 2024, '123 Main St', 'Northport', 'New York', 11768)
+        cursor.execute(f"INSERT INTO students {user_vars} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", user_vals)
+        conn.commit()
     # End of TODO
 
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
+    conn = get_db_connection()
+    cursor = conn.cursor()
         
-        # Check if domains table is empty
-        cursor.execute("SELECT COUNT(*) FROM domains")
-        if cursor.fetchone()[0] == 0:
-            cursor.executemany("INSERT INTO domains (domain_name) VALUES (?)", assessment.domains)
-            cursor.executemany("INSERT INTO themes (domain_id, theme_name) VALUES (?, ?)", assessment.themes)
-            cursor.executemany("INSERT INTO questions (theme_id, statement) VALUES (?, ?)", assessment.questions)
-            print("Assessment data initialized successfully.")
-        else:
-            print("Assessment data already exists. Skipping initialization.")
+    # Check if domains table is empty
+    cursor.execute("SELECT COUNT(*) FROM domains")
+    if cursor.fetchone()[0] == 0:
+        cursor.executemany("INSERT INTO domains (domain_name) VALUES (?)", assessment.domains)
+        cursor.executemany("INSERT INTO themes (domain_id, theme_name) VALUES (?, ?)", assessment.themes)
+        cursor.executemany("INSERT INTO questions (theme_id, statement) VALUES (?, ?)", assessment.questions)
+        print("Assessment data initialized successfully.")
+    else:
+        print("Assessment data already exists. Skipping initialization.")
 
 
 class ChromaDB:
