@@ -59,23 +59,26 @@ class Agent:
             temperature=self.temperature
         )
 
-    def print_messages(self) -> None:
+    def print_messages(self, verbose: bool = False) -> None:
         print('\n', 100 * '=', '\n')
         print(f'Agent {self.color}{self.name}{RESET} Messages:')
-        for message in self.messages:
-            print(f"Role: {message['role']}")
-            if 'content' in message and message['content'] is not None:
-                print("Content:")
-                formatted_content = format_content(message['content'])
-                print(f"{formatted_content}\n")
-            if 'tool_calls' in message:
-                print("Tool Calls:")
-                for tool_call in message['tool_calls']:
-                    print(f"Tool: {tool_call['function']['name']}")
-                    print(f"Arguments: {format_content(tool_call['function']['arguments'])}\n")
-            if 'tool_call_id' in message:
-                print(f"Tool Call ID: {message['tool_call_id']}")
-            print('-' * 40)
+        if verbose:
+            [print(x, '\n') for x in self.messages]
+        else:
+            for message in self.messages:
+                print(f"Role: {message['role']}")
+                if 'content' in message and message['content'] is not None:
+                    print("Content:")
+                    formatted_content = format_content(message['content'])
+                    print(f"{formatted_content}\n")
+                if 'tool_calls' in message:
+                    print("Tool Calls:")
+                    for tool_call in message['tool_calls']:
+                        print(f"Tool: {tool_call['function']['name']}")
+                        print(f"Arguments: {format_content(tool_call['function']['arguments'])}\n")
+                if 'tool_call_id' in message:
+                    print(f"Tool Call ID: {message['tool_call_id']}")
+                print('-' * 40)
         print('\n', 100 * '=', '\n')
 
     def handle_tool_call(self, response):
@@ -84,11 +87,11 @@ class Agent:
             arguments = json.loads(tool_call.function.arguments)
             print(f"{self.color}{self.name}{RESET}: Arguments: {arguments}")
 
-            result = function_map[tool_call.function.name](**arguments)
+            function_result = function_map[tool_call.function.name](**arguments)
 
             args_and_result = {
                 **arguments,
-                "result": result
+                "result": function_result
             }
 
             # Message containing the arguments and result of the tool call
@@ -112,4 +115,4 @@ class Agent:
             self.messages.append({"role": "assistant", "tool_calls": tool_call_message})
             self.messages.append(function_call_result_message)
 
-        return self.invoke()
+        return function_result, self.invoke()

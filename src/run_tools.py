@@ -128,7 +128,7 @@ def process_user_input(prompt):
         suny_response = suny_agent.invoke()
 
         if suny_response.choices[0].message.tool_calls:
-            suny_response = suny_agent.handle_tool_call(suny_response)
+            _, suny_response = suny_agent.handle_tool_call(suny_response)
 
         suny_response_str = utils.format_for_json(suny_response.choices[0].message.content)
         st.session_state.counselor_suny_messages.append({"role": "suny", "content": suny_response_str})
