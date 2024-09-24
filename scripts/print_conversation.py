@@ -18,26 +18,26 @@ def fetch_conversation_history(user_id: int | None = None, session_id: int | Non
     Returns:
         list: A list of conversation messages.
     """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        if user_id and session_id:
-            cursor.execute("""
-                SELECT user_id, sender, recipient, message, session_id, timestamp FROM conversation_history
-                WHERE user_id = ? AND session_id = ?
-                ORDER BY timestamp ASC
-            """, (user_id, session_id))
-        elif user_id:
-            cursor.execute("""
-                SELECT user_id, sender, recipient, message, session_id, timestamp FROM conversation_history
-                WHERE user_id = ?
-                ORDER BY timestamp ASC
-            """, (user_id,))
-        else:
-            cursor.execute("""
-                SELECT user_id, sender, recipient, message, session_id, timestamp FROM conversation_history
-                ORDER BY timestamp ASC
-            """)
-        conversation_history = cursor.fetchall()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if user_id and session_id:
+        cursor.execute("""
+            SELECT user_id, sender, recipient, message, session_id, timestamp FROM conversation_history
+            WHERE user_id = ? AND session_id = ?
+            ORDER BY timestamp ASC
+        """, (user_id, session_id))
+    elif user_id:
+        cursor.execute("""
+            SELECT user_id, sender, recipient, message, session_id, timestamp FROM conversation_history
+            WHERE user_id = ?
+            ORDER BY timestamp ASC
+        """, (user_id,))
+    else:
+        cursor.execute("""
+            SELECT user_id, sender, recipient, message, session_id, timestamp FROM conversation_history
+            ORDER BY timestamp ASC
+        """)
+    conversation_history = cursor.fetchall()
     return conversation_history
 
 

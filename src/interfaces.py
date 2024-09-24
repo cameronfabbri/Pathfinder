@@ -16,7 +16,7 @@ from src.assessment import answers
 from src.utils import dict_to_str, parse_json
 from src.database import execute_query, get_db_connection
 from src.database import insert_user_responses, insert_strengths, get_top_strengths, get_bot_strengths
-from src.run_tools import process_user_input, get_student_info, update_student_info, process_transcript, type_text
+from src.run_tools import process_user_input, get_student_info, update_student_info, process_uploaded_file, type_text
 from src.constants import SYSTEM_DATA_DIR
 
 opj = os.path.join
@@ -66,7 +66,7 @@ def main_chat_interface():
     nsi = None in si or 'None' in si
     print('messages_since_update:', st.session_state.messages_since_update)
     print('nsi:', nsi)
-    if st.session_state.messages_since_update > 3 and nsi:
+    if st.session_state.messages_since_update > 2 and nsi:
         print('Updating student info...')
         st.session_state.messages_since_update = 0
         current_student_info = get_student_info(st.session_state.user.user_id)
@@ -111,10 +111,6 @@ def display_student_info(user_id: int):
         </style>
     """, unsafe_allow_html=True)
 
-    #with get_db_connection() as conn:
-    #    cursor = conn.cursor()
-    #    cursor.execute(f"SELECT * FROM students WHERE user_id='{user.user_id}';")
-    #    student_info = cursor.fetchone()
     student_info = get_student_info(user_id)
  
     if student_info:
@@ -137,13 +133,15 @@ def display_student_info(user_id: int):
 
     # Add transcript upload button to sidebar
     st.sidebar.markdown("---")  # Add a separator
-    st.sidebar.subheader("Upload Transcript")
+    st.sidebar.subheader("Upload File")
     uploaded_file = st.sidebar.file_uploader("Choose a file", type=["csv", "xlsx", "pdf", "txt"])
     if uploaded_file is not None:
-        process_transcript(uploaded_file)
+        if st.sidebar.button("Process File"):
+            process_uploaded_file(uploaded_file)
+            st.sidebar.success("File processed successfully!")
 
 
-def first_time_user_page():
+def assessment_page():
     responses_file = 'saved_responses.pkl'
 
     st.title("Welcome to SUNY Counselor Chat!")
@@ -213,7 +211,6 @@ def first_time_user_page():
         insert_user_responses(st.session_state.user.user_id, user_responses)
         insert_strengths(st.session_state.user.user_id, theme_scores)
 
-        st.session_state.first_time_completed = True
         st.rerun()
 
 
@@ -279,55 +276,53 @@ def streamlit_login():
     """
     Handles user login and signup using Streamlit interface.
     """
-    if "user" not in st.session_state:
-        user = None
-        login_placeholder = st.empty()
+    login_placeholder = st.empty()
 
-        # Create tabs for Login and Signup
-        login_tab, signup_tab = st.tabs(["Login", "Sign Up"])
+    # Create tabs for Login and Signup
+    login_tab, signup_tab = st.tabs(["Login", "Sign Up"])
 
-        with login_tab:
-            with st.form("login_form"):
-                st.markdown("#### Login")
-                username = st.text_input("Username", value='test')
-                password = st.text_input("Password", type="password", value='test')
-                login_submit = st.form_submit_button("Login")
+    with login_tab:
+        with st.form("login_form"):
+            st.markdown("#### Login")
+            username = st.text_input("Username", value='test')
+            password = st.text_input("Password", type="password", value='test')
+            login_submit = st.form_submit_button("Login")
 
-            if login_submit:
-                user = login(username, password)
+        if login_submit:
+            user = login(username, password)
+            if user:
+                st.session_state.user = user
+                login_placeholder.empty()
+                st.success("Login successful")
+                st.rerun()
+            else:
+                st.error("Login failed")
+
+    with signup_tab:
+        with st.form("signup_form"):
+            st.markdown("#### Sign Up")
+            first_name = st.text_input("First Name")
+            last_name = st.text_input("Last Name")
+            age = st.number_input("Age", min_value=1, max_value=100)
+            gender = st.selectbox("Gender", options=["Male", "Female", "Other"])
+            new_username = st.text_input("Choose a Username")
+            new_password = st.text_input("Choose a Password", type="password")
+            signup_submit = st.form_submit_button("Sign Up")
+
+        if signup_submit:
+            if first_name and last_name and new_username and new_password:
+                user = signup(first_name, last_name, age, gender, new_username, new_password)
                 if user:
                     st.session_state.user = user
                     login_placeholder.empty()
-                    st.success("Login successful")
+                    st.success("Sign up successful. You are now logged in.")
                     st.rerun()
                 else:
-                    st.error("Login failed")
+                    st.error("Sign up failed. Username may already exist.")
+            else:
+                st.error("Please fill in all fields to sign up.")
 
-        with signup_tab:
-            with st.form("signup_form"):
-                st.markdown("#### Sign Up")
-                first_name = st.text_input("First Name")
-                last_name = st.text_input("Last Name")
-                age = st.number_input("Age", min_value=1, max_value=100)
-                gender = st.selectbox("Gender", options=["Male", "Female", "Other"])
-                new_username = st.text_input("Choose a Username")
-                new_password = st.text_input("Choose a Password", type="password")
-                signup_submit = st.form_submit_button("Sign Up")
-
-            if signup_submit:
-                if first_name and last_name and new_username and new_password:
-                    user = signup(first_name, last_name, age, gender, new_username, new_password)
-                    if user:
-                        st.session_state.user = user
-                        login_placeholder.empty()
-                        st.success("Sign up successful. You are now logged in.")
-                        st.rerun()
-                    else:
-                        st.error("Sign up failed. Username may already exist.")
-                else:
-                    st.error("Please fill in all fields to sign up.")
-
-    return st.session_state.user if "user" in st.session_state else None
+    return st.session_state.user
 
 
 def counselor_suny_chat_interface():
