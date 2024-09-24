@@ -1,9 +1,13 @@
 """
 """
 import os
+import re
 import sys
 import time
+import sqlite3
 import streamlit as st
+
+import logging
 
 from openai import OpenAI
 
@@ -12,11 +16,13 @@ sys.path.insert(0, project_root)
 
 from src import utils
 from src import prompts
-from src.user import User
+from src.database import get_db_connection
 from src.pdf_tools import parse_pdf_with_llama
 from src.database import ChromaDB, execute_query
 
-import re
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+
 
 def type_text(text, char_speed=0.03, sentence_pause=0.5):
     placeholder = st.empty()
@@ -37,52 +43,6 @@ def type_text(text, char_speed=0.03, sentence_pause=0.5):
     placeholder.markdown(full_text)
 
 
-from src.database import get_db_connection
-
-def store_conversation(conversation_id, user_id, agent_type, message):
-    """
-    Store a message in the conversation history.
-
-    Args:
-        conversation_id (int): The ID of the conversation.
-        user_id (int): The ID of the user.
-        agent_type (str): Type of agent (e.g., 'user', 'counselor', 'suny_agent').
-        message (str): The message content.
-    """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        print('conversation_id:', conversation_id)
-        print('user_id:', user_id)
-        print('agent_type:', agent_type)
-        print('message:', message)
-        cursor.execute('''
-            INSERT INTO conversation_history (conversation_id, user_id, agent_type, message)
-            VALUES (?, ?, ?, ?)
-        ''', (conversation_id, user_id, agent_type, message))
-        conn.commit()
-
-
-def create_new_conversation(user_id):
-    """
-    Start a new conversation for a user and return the conversation_id.
-
-    Args:
-        user_id (int): The user initiating the conversation.
-
-    Returns:
-        int: The conversation ID for the new conversation.
-    """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO conversation_history (user_id, agent_type, message)
-            VALUES (?, ?, ?)
-        ''', (user_id, 'user', 'Conversation started'))
-        conversation_id = cursor.lastrowid
-        conn.commit()
-    return conversation_id
-
-
 def log_message(user_id, session_id, sender, recipient, message):
     """
     Store a message in the conversation history.
@@ -93,13 +53,13 @@ def log_message(user_id, session_id, sender, recipient, message):
         recipient (str): The recipient of the message.
         message (str): The message content.
     """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO conversation_history (user_id, session_id, sender, recipient, message)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (user_id, session_id, sender, recipient, message))
-        conn.commit()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO conversation_history (user_id, session_id, sender, recipient, message)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (user_id, session_id, sender, recipient, message))
+    conn.commit()
 
 
 def process_user_input(prompt):
@@ -129,7 +89,7 @@ def process_user_input(prompt):
         suny_response = suny_agent.invoke()
 
         if suny_response.choices[0].message.tool_calls:
-            suny_response = suny_agent.handle_tool_call(suny_response)
+            _, suny_response = suny_agent.handle_tool_call(suny_response)
 
         suny_response_str = utils.format_for_json(suny_response.choices[0].message.content)
         st.session_state.counselor_suny_messages.append({"role": "suny", "content": suny_response_str})
@@ -160,73 +120,91 @@ def process_user_input(prompt):
     log_message(st.session_state.user.user_id, st.session_state.user.session_id, 'counselor', 'user', counselor_message)
 
 
-def get_student_info(user: User) -> dict:
+def get_student_info(user_id: int) -> dict:
     """
-    Get the login number and student info from the database
+    Get the student info from the database
 
     Args:
-        user (User): The user object
-
+        user_id (int): The user ID
     Returns:
-        student_info_dict (dict): The student info
+        student_info (dict): The student info
     """
-
-    student_info = execute_query("SELECT * FROM students WHERE user_id=?;", (user.user_id,))[0]
-
-    return {
-        'first_name': student_info[0],
-        'last_name': student_info[1],
-        #'email': student_info[2],
-        #'phone_number': student_info[3],
-        #'user_id': student_info[4],
-        'age': student_info[5],
-        'gender': student_info[6],
-        'ethnicity': student_info[7],
-        'high_school': student_info[8],
-        'high_school_grad_year': student_info[9],
-        'gpa': student_info[10],
-        #'sat_score': student_info[11],
-        #'act_score': student_info[12],
-        'favorite_subjects': student_info[13],
-        'extracurriculars': student_info[14],
-        'career_aspirations': student_info[15],
-        'preferred_major': student_info[16],
-        'address': student_info[19],
-        'city': student_info[20],
-        'state': student_info[21],
-        'zip_code': student_info[22],
-        'intended_college': student_info[23],
-        'intended_major': student_info[24],
-    }
+    try:
+        student_info = execute_query("SELECT * FROM students WHERE user_id=?", (user_id,))
+        if student_info:
+            return dict(student_info[0])
+        else:
+            return {}
+    except Exception as e:
+        print(f"Error retrieving student info: {e}")
+        return {}
 
 
-def update_student_info(user: User, student_info: dict):
+def update_student_info(user_id: int, student_info: dict):
     """
     Update the student info in the database
 
     Args:
-        user (User): The user object
+        user_id (int): The user ID
         student_info (dict): The student info
     Returns:
         None
     """
-    query = f"UPDATE students SET {', '.join([f'{key}=?' for key in student_info])} WHERE user_id=?"
-    print('QUERY')
-    print(query)
-    print('ARGS')
-    print(tuple(list(student_info.values()) + [st.session_state.user.user_id]))
-    execute_query(query, tuple(list(student_info.values()) + [st.session_state.user.user_id]))
+
+    # Define a whitelist of allowed columns to update
+    allowed_columns = {
+        'first_name', 'last_name', 'email', 'phone_number', 'address',
+        'city', 'state', 'zip_code', 'age', 'gender', 'ethnicity',
+        'high_school', 'high_school_grad_year', 'gpa', 'sat_score',
+        'act_score', 'favorite_subjects', 'extracurriculars',
+        'career_aspirations', 'preferred_major', 'other_majors',
+        'top_school', 'safety_school', 'other_schools'
+    }
+
+    # Filter student_info to include only allowed columns
+    filtered_info = {key: value for key, value in student_info.items() if key in allowed_columns}
+
+    if not filtered_info:
+        logging.info("No valid fields to update.")
+        return
+
+    # Build the SET part of the query with placeholders
+    set_clause = ', '.join([f"{key}=?" for key in filtered_info.keys()])
+
+    # The SQL query with parameter placeholders
+    query = f"UPDATE students SET {set_clause} WHERE user_id=?"
+
+    # Prepare the parameters tuple
+    parameters = tuple(filtered_info.values()) + (user_id,)
+
+    # Execute the query using a safe method
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, parameters)
+        conn.commit()
+        logging.info(f"Student info updated successfully for user_id: {user_id}")
+    except sqlite3.Error as e:
+        logging.error(f"An error occurred while updating student info: {e}")
 
 
-def process_transcript(uploaded_file):
+def process_uploaded_file(uploaded_file):
     upload_dir = 'uploads'
     os.makedirs(upload_dir, exist_ok=True)
-    file_path = os.path.join(upload_dir, uploaded_file.name)
-    with open(file_path, "wb") as f:
+
+    filename, extension = os.path.splitext(os.path.basename(uploaded_file.name))
+
+    filepath = os.path.join(upload_dir, filename + extension)
+    idx = 0
+    while os.path.exists(filepath):
+        filepath = os.path.join(upload_dir, filename + f'_{idx}' + extension)
+        idx += 1
+
+    with open(filepath, "wb") as f:
         f.write(uploaded_file.getvalue())
 
     # Process the transcript using parse_pdf_with_llama
-    transcript_text = parse_pdf_with_llama(file_path)
+    transcript_text = parse_pdf_with_llama(filepath)
 
     # Insert into chromadb
     db = ChromaDB(path='./chroma_data')

@@ -112,31 +112,6 @@ def generate_questions(agent: Agent, chunk: dict) -> list[str]:
     return json.loads(questions)['questions']
 
 
-def process_university(db: ChromaDB, university_dir: str) -> None:
-    """
-    Process a university directory and insert its documents into the database
-    """
-
-    catalogues_path = opj(university_dir, 'catalogues.txt')
-
-    with open(catalogues_path, 'r') as f:
-        filepaths = f.readlines()
-    filepaths = [fp.strip() for fp in filepaths]
-
-    print(f'Inserting {len(filepaths)} catalogues for {university_dir}')
-
-    university_name = UNIVERSITY_MAPPING[os.path.basename(university_dir)]
-
-    agent = Agent(
-        OpenAI(api_key=os.getenv("PATHFINDER_OPENAI_API_KEY")),
-        'Agent',
-        None,
-        QUESTION_SYSTEM_PROMPT,
-        model='gpt-4o',
-        json_mode=True
-    )
-
-
 def remove_overlap(docs):
     """
     Remove overlapping content from a list of document chunks.
@@ -312,6 +287,13 @@ def insert_pdf_files(db: ChromaDB, university_name: str, pdf_files: list[str], d
             'filepath': path,
         }
 
+        url = get_html_url(path)
+        if url is None:
+            print(f"Warning: No corresponding web page found for {path}")
+            with open('missing_html_urls.txt', 'a') as f:
+                f.write(path + '\n')
+            continue
+
         # Insert each page as a separate document before chunking
         for page_num, page_text in enumerate(pages):
             page_num += 1
@@ -367,10 +349,14 @@ def get_doc_id_from_path(path: str) -> str:
         str: The document id.
     """
     doc_id = path.split(UNIVERSITY_DATA_DIR)[-1]
-    doc_id = doc_id.replace(os.sep, '-')
-    if doc_id.startswith('-'):
+    if doc_id.startswith(os.sep):
         doc_id = doc_id[1:]
     return doc_id
+
+    #doc_id = doc_id.replace(os.sep, '-')
+    #if doc_id.startswith('-'):
+    #    doc_id = doc_id[1:]
+    #return doc_id
 
 
 def insert_html_files(
@@ -385,6 +371,7 @@ def insert_html_files(
         db (ChromaDB): The database to insert the documents into.
         university_name (str): The name of the university.
         html_files (list[str]): The list of html files to insert.
+        debug (bool): Run in debug mode.
     Returns:
         None
     """
@@ -436,7 +423,6 @@ def insert_html_files(
                 print(f"[DEBUG] Inserted chunk: {chunk_id}")
 
 
-
 def get_html_url(file_path: str) -> str | None:
     """
     Try and get the URL of the HTML file
@@ -483,10 +469,22 @@ def get_html_url(file_path: str) -> str | None:
 
 @click.command()
 @click.option('--data_dir', '-d', type=str, default=None, help='University directory to process')
+@click.option('--general_data_dir', '-gd', type=str, default=None, help='General data directory to process')
 @click.option('--debug', is_flag=True, default=False, help='Run in debug mode')
-def main(data_dir: str | None, debug: bool):
+def main(data_dir: str | None, general_data_dir: str | None, debug: bool):
+
+    if general_data_dir is not None and data_dir is not None:
+        print("Error: Cannot specify both data_dir and general_data_dir")
+        exit(1)
 
     db = ChromaDB(CHROMA_DB_PATH, 'universities')
+
+    if general_data_dir is not None:
+        selected_files = [opj(general_data_dir, x) for x in os.listdir(general_data_dir)]
+
+        print(selected_files)
+        exit()
+
 
     with open(METADATA_PATH, 'r') as f:
         metadata = json.load(f)
@@ -522,15 +520,6 @@ def main(data_dir: str | None, debug: bool):
         if files['pdf_files']:
             print('Inserting PDF files for', university_name, '...')
             insert_pdf_files(db, university_name, files['pdf_files'], debug)
-
-    question = 'Does SUNY Potsdam offer a degree in Music?'
-    #question = 'What coursework is involved in a music degree at the crane school of music?'
-    #question = 'What does the third semester of a Agribusiness Management major look like?'
-    #question = 'What are the admission requirements for Engineering Science majors?'
-    #question = 'Can you tell me about the nursing program?'
-    #question = 'Which SUNY schools offer a degreen in Applied Behavior Analysis Studies?'
-    #ask_question(db, question)
-
 
 
 if __name__ == '__main__':

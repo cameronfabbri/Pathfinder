@@ -1,100 +1,123 @@
 """
 """
 
-import os
-import hashlib
-import streamlit as st
+import bcrypt
+import logging
+import sqlite3
 
-from src.database import get_db_connection, initialize_db
 from src.user import User
+from src.database import get_db_connection, initialize_db
 
 
-def hash_password(password, salt=None):
-    if not salt:
-        salt = os.urandom(16)
-    
-    # Hash the password with the salt using SHA-256
-    hashed_pw = hashlib.sha256(salt + password.encode()).hexdigest()
-    return salt, hashed_pw
+
+def hash_password(password: str) -> str:
+    """
+    Hashes a password using bcrypt.
+
+    Args:
+        password (str): The plaintext password.
+
+    Returns:
+        str: The hashed password.
+    """
+    # Generate a salt and hash the password
+    hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    # Return the hashed password as a string
+    return hashed_pw.decode('utf-8')
 
 
 def login(username: str, password: str) -> User:
     """
-    Function to check if user exists, or create new one if they don't
-    """
+    Authenticate a user.
 
+    Args:
+        username (str): The username.
+        password (str): The plaintext password.
+
+    Returns:
+        User: The authenticated user object or None if authentication fails.
+    """
     initialize_db()
 
-    with get_db_connection() as conn:
+    try:
+        conn = get_db_connection()
         cursor = conn.cursor()
-    
-        # Check if the username exists
-        cursor.execute("SELECT id, salt, hashed_password FROM users WHERE username=?", (username,))
+
+        # Fetch the hashed password from the database
+        cursor.execute("SELECT id, session_id, hashed_password FROM users WHERE username=?", (username,))
         result = cursor.fetchone()
 
         if result:
-            # If user exists, check the password
-            user_id, stored_salt, stored_hashed_password = result
+            user_id, session_id, stored_hashed_password = result
 
-            # Convert stored salt from string back to bytes
-            stored_salt = stored_salt.encode('latin1')
-            
-            # Hash the entered password with the stored salt
-            _, hashed_password = hash_password(password, stored_salt)
-            
-            if hashed_password == stored_hashed_password:
-                print(f"Login successful! Welcome, {username}!")
-                print(f"Your user ID is {user_id}\n")
-                print('Executing update query...')
+            # Verify the entered password against the stored hashed password
+            if bcrypt.checkpw(password.encode('utf-8'), stored_hashed_password.encode('utf-8')):
+                # Update session_id
                 cursor.execute("UPDATE users SET session_id = session_id + 1 WHERE username=?", (username,))
                 conn.commit()
+                return User(user_id, username, session_id + 1)
             else:
-                print("Incorrect password.")
-        
-        cursor.execute("SELECT session_id FROM users WHERE username=?", (username,))
-        session_id = cursor.fetchone()[0]
-        return User(user_id, username, session_id)
+                logging.warning(f"Incorrect password for user: {username}")
+        else:
+            logging.warning(f"User not found: {username}")
+    except sqlite3.Error as e:
+        logging.error(f"Database error during login for user {username}: {e}")
+    except Exception as e:
+        logging.error(f"Unexpected error during login for user {username}: {e}")
+    return None
 
 
 def signup(first_name: str, last_name: str, age: int, gender: str, username: str, password: str) -> User:
     """
-    Function to create a new user and student in the database
+    Register a new user and create corresponding student information.
 
     Args:
-        first_name (str): The first name of the student
-        last_name (str): The last name of the student
-        age (int): The age of the student
-        gender (str): The gender of the student
-        username (str): The username of the student
-        password (str): The password of the student
-    Returns:
-        User: The user object
-    """
+        first_name (str): First name.
+        last_name (str): Last name.
+        age (int): Age.
+        gender (str): Gender.
+        username (str): Desired username.
+        password (str): Desired password.
 
+    Returns:
+        User: The newly created user object or None if signup fails.
+    """
     initialize_db()
 
-    with get_db_connection() as conn:
+    try:
+        conn = get_db_connection()
         cursor = conn.cursor()
 
-        salt, hashed_password = hash_password(password)
+        # Check if username already exists
+        cursor.execute("SELECT id FROM users WHERE username=?", (username,))
+        if cursor.fetchone():
+            logging.warning(f"Username already exists: {username}")
+            return None
+
+        hashed_password = hash_password(password)
+
         cursor.execute(
-            "INSERT INTO users (username, session_id, salt, hashed_password) VALUES (?, ?, ?, ?)", 
-            (username, 0, salt.decode('latin1'), hashed_password)
+            "INSERT INTO users (username, session_id, hashed_password) VALUES (?, ?, ?)",
+            (username, 0, hashed_password)
         )
         conn.commit()
 
-        cursor.execute("SELECT id, session_id, salt, hashed_password FROM users WHERE username=?", (username,))
+        cursor.execute("SELECT id, session_id FROM users WHERE username=?", (username,))
         result = cursor.fetchone()
-        user_id = result[0]
-        session_id = result[1]
+        user_id, session_id = result
 
-        user_vars = '(user_id, first_name, last_name, age, gender, ethnicity, high_school, high_school_grad_year, address, city, state, zip_code)'
-        user_vals = (user_id, first_name, last_name, age, gender, 'None', 'Northport High School', 2024, '123 Main St', 'Northport', 'New York', 11768)
-        cursor.execute(f"INSERT INTO students {user_vars} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", user_vals)
+        # Insert default student information
+        user_vars = '(user_id, first_name, last_name, age, gender)'
+        user_vals = (user_id, first_name, last_name, age, gender)
+        cursor.execute(f"INSERT INTO students {user_vars} VALUES (?, ?, ?, ?, ?)", user_vals)
         conn.commit()
-        print(f"User info created successfully!\n")
+        logging.info(f"User created successfully: {username}")
 
-        cursor.execute("SELECT session_id FROM users WHERE username=?", (username,))
-        session_id = cursor.fetchone()[0]
+        return User(user_id, username, session_id)
 
-    return User(user_id, username, session_id)
+    except sqlite3.Error as e:
+        logging.error(f"Database error during signup for user {username}: {e}")
+    except Exception as e:
+        logging.error(f"Unexpected error during signup for user {username}: {e}")
+
+    return None

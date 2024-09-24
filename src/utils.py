@@ -324,4 +324,4 @@ def parse_json(message):
     except:
         print('Could not parse message as JSON')
         print(message)
-        exit()
+        return message

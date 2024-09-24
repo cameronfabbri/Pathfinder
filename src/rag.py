@@ -20,19 +20,23 @@ class RAG:
         self.db = db
         self.top_k = top_k
 
-    def retrieve(self, query: str, school_name: str = None) -> List[Dict[str, Any]]:
+    def retrieve(self, query: str, school_name: str = None, doc_type: str = None) -> List[Dict[str, Any]]:
         """
         Retrieve relevant documents from the database using the query.
 
         Args:
             query (str): The user's query.
             school_name (str | None): The name of the school to retrieve documents for.
+            doc_type (str | None): The type of document to retrieve. Only include this if the user's question is about a specific type of document.
+            Valid values are 'html' or 'pdf'
         Returns:
             List[Dict[str, Any]]: A list of relevant documents with metadata.
         """
-        where = None
+        where = {}
         if school_name is not None:
-            where = {"university": school_name}
+            where['university'] = school_name
+        if doc_type is not None:
+            where['doc_type'] = doc_type
 
         return self.db.collection.query(
             query_texts=[query],
@@ -52,9 +56,9 @@ class RAG:
             Tuple[str, List[str]]: The formatted documents and the document IDs.
         """
 
-        print('Retrieved Documents:')
-        [print(x) for x in documents['ids'][0]]
-        print('-' * 100)
+        #print('Retrieved Documents:')
+        #[print(x) for x in documents['ids'][0]]
+        #print('-' * 100)
         content_doc_ids = []
         for doc_id in documents['ids'][0]:
 
@@ -94,9 +98,9 @@ class RAG:
                     if doc_id1 not in content_doc_ids:
                         content_doc_ids.append(doc_id1)
 
-        print('CONTENT DOC IDS:')
-        [print(x) for x in content_doc_ids]
-        print('\n-\n')
+        #print('CONTENT DOC IDS:')
+        #[print(x) for x in content_doc_ids]
+        #print('\n-\n')
 
         content = ''
         for x in content_doc_ids:
@@ -109,8 +113,8 @@ class RAG:
                 content += 'Page Number: ' + str(doc['metadata']['page_number']) + '\n'
             content += doc['document'] + '\n\n'
 
-        print('CONTENT:')
-        print(content)
+        #print('CONTENT:')
+        #print(content)
 
-        return content, content_doc_ids
+        return content#, content_doc_ids
 
