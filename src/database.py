@@ -179,6 +179,7 @@ def create_user_tables():
         )
     ''')
 
+    # TODO - separate SAT and ACT score into sub-test (math, reading, writing, etc.)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS students (
             user_id INTEGER NOT NULL,
