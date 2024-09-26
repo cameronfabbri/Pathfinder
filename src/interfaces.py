@@ -26,7 +26,7 @@ def main_chat_interface():
     st.title("💬 User-Counselor Chat")
     st.caption("🚀 Chat with your SUNY counselor")
 
-    st.session_state.counselor_agent.print_messages()
+    #st.session_state.counselor_agent.print_messages()
 
     if len(st.session_state.user_messages) == 1:
         first_message = st.session_state.user_messages[0]["content"]
@@ -38,7 +38,7 @@ def main_chat_interface():
 
     chat_container = st.container()
 
-    st.session_state.counselor_agent.print_messages()
+    #st.session_state.counselor_agent.print_messages()
     prompt = st.chat_input("Type your message here...")
     
     # Display chat messages in the container
@@ -136,12 +136,25 @@ def display_student_info(user_id: int):
     st.sidebar.subheader("Upload File")
     uploaded_file = st.sidebar.file_uploader("Choose a file", type=["csv", "xlsx", "pdf", "txt"])
     if uploaded_file is not None:
+        document_type = st.sidebar.selectbox("Select Document Type", ["Transcript", "SAT Score", "ACT Score", "Certification", "Other"])
         if st.sidebar.button("Process File"):
-            process_uploaded_file(uploaded_file)
+            process_uploaded_file(uploaded_file, document_type, user_id)
             st.sidebar.success("File processed successfully!")
+    """
+
+    st.subheader("Upload File")
+    uploaded_file = st.file_uploader("Choose a file", type=["csv", "xlsx", "pdf", "txt"])
+    if uploaded_file is not None:
+        document_type = st.selectbox("Select Document Type", ["Transcript", "SAT Score", "ACT Score", "Certification", "Other"])
+        if st.button("Process File"):
+            process_uploaded_file(uploaded_file, document_type, user_id)
+            st.success("File processed successfully!")
+    st.markdown("---")  # Add a separator
+    """
 
 
 def assessment_page():
+
     responses_file = 'saved_responses.pkl'
 
     st.title("Welcome to SUNY Counselor Chat!")
@@ -154,7 +167,7 @@ def assessment_page():
     user_responses = {}
 
     with st.form("strengths_form"):
-        submit = st.form_submit_button("Submit")
+        submit = st.form_submit_button("Submit BUTTON")
 
         # Fetch questions from the database
         questions = execute_query("SELECT themes.theme_name, questions.statement FROM questions JOIN themes ON questions.theme_id = themes.theme_id;")
@@ -203,13 +216,11 @@ def assessment_page():
         with open(responses_file, 'wb') as f:
             pickle.dump({'user_responses': user_responses, 'theme_scores': theme_scores}, f)
 
-        print('USER RESPONSES')
-        print(user_responses)
-        print('THEME SCORES')
-        print(theme_scores)
-
         insert_user_responses(st.session_state.user.user_id, user_responses)
         insert_strengths(st.session_state.user.user_id, theme_scores)
+
+        st.session_state.user.load_strengths_weaknesses()
+        st.session_state.user.load_assessment_responses()
 
         st.rerun()
 

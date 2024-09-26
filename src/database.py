@@ -14,17 +14,6 @@ from functools import lru_cache
 
 import src.assessment as assessment
 
-#@contextmanager
-def get_db_connection() -> sqlite3.Connection:
-    """
-    Returns a connection to the database.
-    """
-    conn = sqlite3.connect('users.db')
-    conn.row_factory = sqlite3.Row
-    return conn
-    #yield conn
-    #conn.close()
-
 
 @lru_cache(maxsize=None)
 def get_db_connection() -> sqlite3.Connection:
@@ -34,8 +23,6 @@ def get_db_connection() -> sqlite3.Connection:
     conn = sqlite3.connect('users.db', check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
-    #yield conn
-    #conn.close()
 
 
 def execute_query(query, args=None) -> list | None:
@@ -79,7 +66,16 @@ def get_top_strengths(user_id):
         ORDER BY theme_results.total_score DESC
         LIMIT 5
     ''', (user_id,))
-    return cursor.fetchall()
+    results = cursor.fetchall()
+    formatted_results = [
+        {
+            'theme_name': row['theme_name'],
+            'total_score': row['total_score'],
+            'strength_level': row['strength_level']
+        }
+        for row in results
+    ]
+    return formatted_results
 
 
 def get_bot_strengths(user_id):
@@ -116,9 +112,10 @@ def insert_user_responses(user_id, responses):
     for statement, score in responses.items():
         cursor.execute("SELECT question_id FROM questions WHERE statement=?", (statement,))
         question_id = cursor.fetchone()[0]
-            
+
+        #print('Inserted response:', statement, score)
         cursor.execute(
-                "INSERT INTO user_responses (user_id, question_id, response) VALUES (?, ?, ?)", 
+            "INSERT INTO user_responses (user_id, question_id, response) VALUES (?, ?, ?)", 
             (user_id, question_id, score)
         )
 
@@ -153,12 +150,23 @@ def insert_strengths(user_id, strengths):
         else:
             strength_level = 'Potential for growth'
 
-        print(f"User ID: {user_id}, Theme ID: {theme_id}, Score: {score}, Strength Level: {strength_level}")
+        #print(f"User ID: {user_id}, Theme ID: {theme_id}, Score: {score}, Strength Level: {strength_level}")
         cursor.execute(
             "INSERT INTO theme_results (user_id, theme_id, total_score, strength_level) VALUES (?, ?, ?, ?)", 
             (user_id, theme_id, score, strength_level)
         )
 
+    conn.commit()
+
+
+def update_document_text(user_id, document_id, text):
+    """
+    Update the extracted text for a document.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE user_documents SET extracted_text = ? WHERE document_id = ? AND user_id = ?", (text, document_id, user_id))
+    #cursor.execute("UPDATE user_documents SET processed = ? WHERE document_id = ? AND user_id = ?", (True, document_id, user_id))
     conn.commit()
 
 
@@ -169,7 +177,7 @@ def create_user_tables():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Create users table
+    # Create users table for authentication
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -179,7 +187,33 @@ def create_user_tables():
         )
     ''')
 
-    # TODO - separate SAT and ACT score into sub-test (math, reading, writing, etc.)
+    # Create user_documents table for user documents
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_documents (
+            document_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            document_type TEXT NOT NULL,
+            filename TEXT NOT NULL,
+            filepath TEXT NOT NULL,
+            upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            additional_info TEXT,
+            processed BOOLEAN DEFAULT FALSE,
+            extracted_text TEXT DEFAULT '',
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+    ''')
+
+    # Create student_bios table for summarized user info
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS student_bios (
+            user_id INTEGER PRIMARY KEY,
+            bio TEXT NOT NULL,
+            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+    ''')
+
+    # Create students table for user info
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS students (
             user_id INTEGER NOT NULL,

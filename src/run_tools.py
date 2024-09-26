@@ -20,6 +20,8 @@ from src.database import get_db_connection
 from src.pdf_tools import parse_pdf_with_llama
 from src.database import ChromaDB, execute_query
 
+opj = os.path.join
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
@@ -188,8 +190,18 @@ def update_student_info(user_id: int, student_info: dict):
         logging.error(f"An error occurred while updating student info: {e}")
 
 
-def process_uploaded_file(uploaded_file):
-    upload_dir = 'uploads'
+def process_uploaded_file(uploaded_file, document_type, user_id):
+    """
+    Process the uploaded file and add it to the database
+
+    Args:
+        uploaded_file (File): The uploaded file
+        document_type (str): The type of document
+        user_id (int): The user ID
+    Returns:
+        None
+    """
+    upload_dir = opj('uploads', str(user_id))
     os.makedirs(upload_dir, exist_ok=True)
 
     filename, extension = os.path.splitext(os.path.basename(uploaded_file.name))
@@ -204,11 +216,17 @@ def process_uploaded_file(uploaded_file):
         f.write(uploaded_file.getvalue())
 
     # Process the transcript using parse_pdf_with_llama
-    transcript_text = parse_pdf_with_llama(filepath)
+    transcript_text = '\n'.join([x.text for x in parse_pdf_with_llama(filepath)])
+
+    #client = utils.get_openai_client()
+    print('Document type:', document_type)
+
+
+    return transcript_text
 
     # Insert into chromadb
-    db = ChromaDB(path='./chroma_data')
-    db.add_document(transcript_text, doc_id=uploaded_file.name, user_id=st.session_state.user.user_id)
+    #db = ChromaDB(path='./chroma_data')
+    #db.add_document(transcript_text, doc_id=uploaded_file.name, user_id=st.session_state.user.user_id)
 
 
 def summarize_chat():
