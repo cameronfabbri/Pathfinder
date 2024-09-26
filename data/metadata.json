@@ -60,5 +60,16 @@
       "/Users/cameronfabbri/Projects/system_data/suny/www1.sunybroome.edu/wp-content/uploads/2024/01/suny_broome_fast_facts_fall_2023-1.pdf"
     ],
     "other_files": []
+  },
+  "SUNY Potsdam": {
+    "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/www.potsdam.edu/",
+    "processing_instructions": {
+      "file_extensions": [".html"],
+      "include_in_path": [""]
+    },
+    "pdf_files": [
+        "/Users/cameronfabbri/Projects/system_data/suny/www.potsdam.edu/sites/default/files/FinancialAidAssessmentPlan.pdf"
+    ],
+    "other_files": []
   }
 }
