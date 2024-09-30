@@ -6,7 +6,7 @@ import logging
 import sqlite3
 
 from src.user import User
-from src.database import get_db_connection, initialize_db
+from src.database import db_access as dba, db_setup as dbs
 
 
 
@@ -37,10 +37,10 @@ def login(username: str, password: str) -> User:
     Returns:
         User: The authenticated user object or None if authentication fails.
     """
-    initialize_db()
+    dbs.initialize_db()
 
     try:
-        conn = get_db_connection()
+        conn = dba.get_db_connection()
         cursor = conn.cursor()
 
         # Fetch the hashed password from the database
@@ -82,10 +82,10 @@ def signup(first_name: str, last_name: str, age: int, gender: str, username: str
     Returns:
         User: The newly created user object or None if signup fails.
     """
-    initialize_db()
+    dba.initialize_db()
 
     try:
-        conn = get_db_connection()
+        conn = dba.get_db_connection()
         cursor = conn.cursor()
 
         # Check if username already exists

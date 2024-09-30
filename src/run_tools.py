@@ -1,5 +1,7 @@
 """
 """
+# Cameron Fabbri
+
 import os
 import re
 import sys
@@ -16,9 +18,8 @@ sys.path.insert(0, project_root)
 
 from src import utils
 from src import prompts
-from src.database import get_db_connection
+from src.database import db_access as dba
 from src.pdf_tools import parse_pdf_with_llama
-from src.database import ChromaDB, execute_query
 
 opj = os.path.join
 
@@ -55,13 +56,24 @@ def log_message(user_id, session_id, sender, recipient, message):
         recipient (str): The recipient of the message.
         message (str): The message content.
     """
-    conn = get_db_connection()
+    conn = dba.get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO conversation_history (user_id, session_id, sender, recipient, message)
         VALUES (?, ?, ?, ?, ?)
     ''', (user_id, session_id, sender, recipient, message))
     conn.commit()
+
+
+def parse_counselor_response(response):
+
+    counselor_response_str = response.choices[0].message.content
+    counselor_response_json = utils.parse_json(counselor_response_str)
+
+    recipient = counselor_response_json.get("recipient")
+    counselor_message = counselor_response_json.get("message")
+
+    return recipient, counselor_message
 
 
 def process_user_input(prompt):
@@ -73,6 +85,12 @@ def process_user_input(prompt):
 
     counselor_agent.add_message("user", prompt)
     counselor_response = counselor_agent.invoke()
+
+    print('COUNSELOR MESSAGES')
+    counselor_agent.print_messages(True)
+
+    print('NEXT MESSAGE')
+    print(counselor_response)
 
     counselor_response_str = counselor_response.choices[0].message.content
     counselor_response_json = utils.parse_json(counselor_response_str)
@@ -115,79 +133,28 @@ def process_user_input(prompt):
         # counselor agent, which is why we delete the last message.
         counselor_agent.delete_last_message()
 
+    elif 0:#recipient == "system":
+        # Call update student bio function
+
+        # TODO - what if the student says something like "my gpa is a 3.4, which
+        # suny schools should I apply to?" Then this part won't work as expected
+        # because I'm now assuming the response is for the counselor to respond
+        # to the user.
+        print('recipient == system')
+        print('counselor_message:', counselor_message, '\n')
+
+        counselor_agent.add_message("assistant", counselor_message)
+        log_message(st.session_state.user.user_id, st.session_state.user.session_id, 'counselor', 'system', counselor_message)
+        recipient, counselor_message = parse_counselor_response(counselor_agent.invoke())
+        print('invoked()')
+        print('recipient:', recipient)
+        print('counselor_message:', counselor_message, '\n')
+
     counselor_agent.add_message("assistant", counselor_message)
     st.session_state.user_messages.append({"role": "assistant", "content": counselor_message})
 
     # Log the counselor message to the user
     log_message(st.session_state.user.user_id, st.session_state.user.session_id, 'counselor', 'user', counselor_message)
-
-
-def get_student_info(user_id: int) -> dict:
-    """
-    Get the student info from the database
-
-    Args:
-        user_id (int): The user ID
-    Returns:
-        student_info (dict): The student info
-    """
-    try:
-        student_info = execute_query("SELECT * FROM students WHERE user_id=?", (user_id,))
-        if student_info:
-            return dict(student_info[0])
-        else:
-            return {}
-    except Exception as e:
-        print(f"Error retrieving student info: {e}")
-        return {}
-
-
-def update_student_info(user_id: int, student_info: dict):
-    """
-    Update the student info in the database
-
-    Args:
-        user_id (int): The user ID
-        student_info (dict): The student info
-    Returns:
-        None
-    """
-
-    # Define a whitelist of allowed columns to update
-    allowed_columns = {
-        'first_name', 'last_name', 'email', 'phone_number', 'address',
-        'city', 'state', 'zip_code', 'age', 'gender', 'ethnicity',
-        'high_school', 'high_school_grad_year', 'gpa', 'sat_score',
-        'act_score', 'favorite_subjects', 'extracurriculars',
-        'career_aspirations', 'preferred_major', 'other_majors',
-        'top_school', 'safety_school', 'other_schools'
-    }
-
-    # Filter student_info to include only allowed columns
-    filtered_info = {key: value for key, value in student_info.items() if key in allowed_columns}
-
-    if not filtered_info:
-        logging.info("No valid fields to update.")
-        return
-
-    # Build the SET part of the query with placeholders
-    set_clause = ', '.join([f"{key}=?" for key in filtered_info.keys()])
-
-    # The SQL query with parameter placeholders
-    query = f"UPDATE students SET {set_clause} WHERE user_id=?"
-
-    # Prepare the parameters tuple
-    parameters = tuple(filtered_info.values()) + (user_id,)
-
-    # Execute the query using a safe method
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(query, parameters)
-        conn.commit()
-        logging.info(f"Student info updated successfully for user_id: {user_id}")
-    except sqlite3.Error as e:
-        logging.error(f"An error occurred while updating student info: {e}")
 
 
 def process_uploaded_file(uploaded_file, document_type, user_id):
@@ -290,7 +257,7 @@ def write_summary_to_db(summary):
     args = (st.session_state.user.user_id, summary)
     print('Query:', query)
     print('Args:', args)
-    res = execute_query(query, args)
+    res = dba.execute_query(query, args)
     print('Chat summary updated')
     print('Result:', res)
 
@@ -308,29 +275,3 @@ def logout():
     
     # Rerun the script to return to the login page
     st.rerun()
-
-
-def get_chat_summary_from_db(client: OpenAI) -> str:
-    """
-    Get the chat summary from the database
-
-    Args:
-        client (OpenAI): The OpenAI client
-    Returns:
-        summary (str): The chat summary
-    """
-
-    query = "SELECT summary FROM chat_summary WHERE user_id=? ORDER BY id DESC LIMIT 1;"
-
-    # [0][0] because the execute_query uses fetchall(), not fetchone()
-    summary = execute_query(query, (st.session_state.user.user_id,))[0][0]
-    prompt = prompts.WELCOME_BACK_PROMPT.format(summary=summary)
-    response = client.chat.completions.create(
-        model='gpt-4o-2024-08-06',
-        messages=[
-            {"role": "assistant", "content": prompt},
-        ],
-        temperature=0.0
-    )
-    first_message = response.choices[0].message.content
-    return first_message

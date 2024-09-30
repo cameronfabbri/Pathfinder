@@ -4,8 +4,8 @@
 import os
 
 from src.rag import RAG
-from src.database import ChromaDB
 from src.constants import CHROMA_DB_PATH
+from src.database.chroma_db import ChromaDB
 
 opj = os.path.join
 

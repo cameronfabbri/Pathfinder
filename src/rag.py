@@ -4,8 +4,7 @@ RAG (Retrieval Augmented Generation) class for retrieving and formatting documen
 
 from typing import List, Dict, Any, Tuple
 
-from src.database import ChromaDB
-from src.constants import CHROMA_DB_PATH
+from src.database.chroma_db import ChromaDB
 
 
 class RAG:

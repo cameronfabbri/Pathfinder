@@ -3,179 +3,134 @@
 
 from dataclasses import dataclass
 
-from src.database import get_db_connection
+from src.database import db_access as dba
 
-
-@dataclass
-class Document:
-    document_id: int
-    document_type: str
-    filename: str
-    filepath: str
-    upload_date: str
-    additional_info: str
-    processed: bool
-
-
-@dataclass
-class Strength:
-    theme_name: str
-    total_score: int
-    strength_level: str
+from src.database.db_setup import Document
 
 
 class User:
+    """
+    """
+
     def __init__(self, user_id, username, session_id):
+        """ Initializes the user object. """
         self.user_id = user_id
         self.username = username
         self.session_id = session_id
-        self.load_user_info()
-        self.load_strengths_weaknesses()
+
+        self.load_student_info()
+
+        # Loads top and bottom strengths
+        self.load_topbot_strengths()
+
+        # Loads assessment questions and responses
         self.load_assessment_responses()
-        self.load_user_documents()
 
-    def __str__(self):
+        # Loads the LLM generated summary of the user
+        # (doesn't exist on first login until assessment is completed)
+        self.summary = dba.load_user_summary(self.user_id)
 
-        # Format top strengths
-        top_strengths_str = "\n".join([
-            f"  - {row['theme_name']}: Score {row['total_score']}, Level: {row['strength_level']}"
-            for row in self.top_strengths
-        ]) if self.top_strengths else "None"
+        # Builds a summary of the user with information we want
+        self.build_student_profile()
 
-        # Format weaknesses
-        weaknesses_str = "\n".join([
-            f"  - {row['theme_name']}: Score {row['total_score']}, Level: {row['strength_level']}"
-            for row in self.weaknesses
-        ]) if self.weaknesses else "None"
+        # Loads uploaded documents
+        #self.load_user_documents()
 
-        # Format assessment responses
-        assessment_responses_str = "\n".join([
-            f"Question: {row['statement']}\nAnswer: {row['response']}"
-            for row in self.assessment_responses
-        ]) if self.assessment_responses else "None"
+        # Loads the LLM generated bio of the user
+        #self.load_user_bio()
 
-        user_info = [
-            f"First Name: {self.first_name}",
-            f"Last Name: {self.last_name}",
-            f"Email: {self.email}",
-            f"Phone Number: {self.phone_number}",
-            f"Address: {self.address}",
-            f"City: {self.city}",
-            f"State: {self.state}",
-            f"Zip Code: {self.zip_code}",
-            f"Age: {self.age}",
-            f"Gender: {self.gender}",
-            f"Ethnicity: {self.ethnicity}",
-            f"High School: {self.high_school}",
-            f"High School Graduation Year: {self.high_school_grad_year}",
-            f"GPA: {self.gpa}",
-            f"SAT Score: {self.sat_score}",
-            f"ACT Score: {self.act_score}",
-            f"Favorite Subjects: {self.favorite_subjects}",
-            f"Extracurriculars: {self.extracurriculars}",
-            f"Career Aspirations: {self.career_aspirations}",
-            f"Preferred Major: {self.preferred_major}",
-            f"Other Majors: {self.other_majors}",
-            f"Top School: {self.top_school}",
-            f"Safety School: {self.safety_school}",
-            f"Other Schools: {self.other_schools}",
-            f"Top Strengths:\n{top_strengths_str}",
-            f"Top Weaknesses:\n{weaknesses_str}",
-            #f"Assessment Responses:\n{assessment_responses_str}"
-        ]
-        return "\n".join(user_info)
+    def load_student_info(self):
+        """ Loads the `students` table - things like name, address, etc. """
+        self.student_info = dba.get_student_info(self.user_id)
+        #print('student_info:', self.student_info)
+        for key, value in self.student_info.items():
+            # TODO - maybe should write all of this out instead of using setattr
+            setattr(self, key, value)
 
-    def load_user_info(self):
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM students WHERE user_id=?", (self.user_id,))
-        result = cursor.fetchone()
-        if result:
-            columns = [column[0] for column in cursor.description]
-            for column_name, value in zip(columns, result):
-                setattr(self, column_name, value)
-        else:
-            print(f"No student information found for user ID {self.user_id}")
-
-    def load_user_documents(self):
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT document_id, document_type, filename, filepath, upload_date, additional_info, processed
-            FROM user_documents
-            WHERE user_id = ?
-        ''', (self.user_id,))
-        self.documents = [Document(**dict(row)) for row in cursor.fetchall()]
-
-    def add_document(self, document_type, filename, filepath, additional_info=None, processed=False):
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO user_documents (user_id, document_type, filename, filepath, additional_info, processed)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (self.user_id, document_type, filename, filepath, additional_info, processed))
-        conn.commit()
-
-        # Reload documents
-        self.load_user_documents()
-
-    def load_strengths_weaknesses(self):
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Load top strengths
-        cursor.execute('''
-            SELECT themes.theme_name, theme_results.total_score, theme_results.strength_level
-            FROM theme_results
-            JOIN themes ON theme_results.theme_id = themes.theme_id
-            WHERE theme_results.user_id = ?
-            ORDER BY theme_results.total_score DESC
-            LIMIT 5
-        ''', (self.user_id,))
-        self.top_strengths = [
-            {
-                'theme_name': row['theme_name'],
-                'total_score': row['total_score'],
-                'strength_level': row['strength_level']
-            }
-            for row in cursor.fetchall()
-        ]
-
-        # Load weaknesses (bottom strengths)
-        cursor.execute('''
-            SELECT themes.theme_name, theme_results.total_score, theme_results.strength_level
-            FROM theme_results
-            JOIN themes ON theme_results.theme_id = themes.theme_id
-            WHERE theme_results.user_id = ?
-            ORDER BY theme_results.total_score ASC
-            LIMIT 5
-        ''', (self.user_id,))
-        self.weaknesses = [
-            {
-                'theme_name': row['theme_name'],
-                'total_score': row['total_score'],
-                'strength_level': row['strength_level']
-            }
-            for row in cursor.fetchall()
-        ]
+    def load_topbot_strengths(self):
+        """ Loads the top strengths and weaknesses (bot strengths) of the user. """
+        self.top_strengths, self.bot_strengths = dba.get_topbot_strengths(self.user_id, k=5)
 
     def load_assessment_responses(self):
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT questions.statement, user_responses.response
-            FROM user_responses
-            JOIN questions ON user_responses.question_id = questions.question_id
-            WHERE user_responses.user_id = ?
-        ''', (self.user_id,))
-        self.assessment_responses = [
-            {
-                'statement': row['statement'],
-                'response': row['response']
-            }
-            for row in cursor.fetchall()
-        ]
+        """ Loads the assessment responses of the user. """
+        self.assessment_responses = dba.load_assessment_responses(self.user_id)
+        
+    def reload_all_data(self):
+        """ Reloads the user data from the database. """
+        self.load_student_info()
+        self.load_topbot_strengths()
+        self.load_assessment_responses()
+        self.summary = dba.load_user_summary(self.user_id)
+        self.build_student_profile()
 
-    def get_user_info(self):
-        return self.__str__()
+    def build_student_profile(self):
+        """
+        Builds a markdown formatted bio of the user specifically for the LLM to analyze.
+        """
+        # Personal Information
+        personal_info = f"""
+    # Student Profile
 
+    ## Personal Information
+    - **First Name:** {self.first_name or 'N/A'}
+    - **Last Name:** {self.last_name or 'N/A'}
+    - **Age:** {self.age or 'N/A'}
+    - **Gender:** {self.gender or 'N/A'}
+    - **City:** {self.city or 'N/A'}
+    - **State:** {self.state or 'N/A'}
+    """
+
+        # Academic Information
+        academic_info = f"""
+    ## Academic Information
+    - **High School:** {self.high_school or 'N/A'}
+    - **Graduation Year:** {self.high_school_grad_year or 'N/A'}
+    - **GPA:** {self.gpa or 'N/A'}
+    - **SAT Score:** {self.sat_score or 'N/A'}
+    - **ACT Score:** {self.act_score or 'N/A'}
+    - **Favorite Subjects:** {self.favorite_subjects or 'N/A'}
+    - **Extracurriculars:** {self.extracurriculars or 'N/A'}
+    """
+
+        # Career Aspirations
+        career_info = f"""
+    ## Career Aspirations
+    - **Desired Career:** {self.career_aspirations or 'N/A'}
+    - **Preferred Major:** {self.preferred_major or 'N/A'}
+    - **Other Majors of Interest:** {self.other_majors or 'N/A'}
+    """
+
+        # Assessment Results
+        top_strengths = ", ".join([s['theme_name'] for s in self.top_strengths]) if self.top_strengths else 'N/A'
+        bot_strengths = ", ".join([w['theme_name'] for w in self.bot_strengths]) if self.bot_strengths else 'N/A'
+
+        assessment_results = f"""
+    ## Assessment Results
+
+    ### Top Strengths
+    {top_strengths}
+
+    ### Areas for Improvement
+    {bot_strengths}
+    """
+
+        # Extracted Document Data
+        #documents_info = ""
+        #if self.documents:
+        #    documents_info += "\n## Extracted Document Data\n"
+        #    for doc in self.documents:
+        #        documents_info += f"- **{doc.document_type}:** {doc.filename}\n"
+        #        # If you have extracted text or data, include it here
+        #        if doc.extracted_text:
+        #            documents_info += f"  - **Extracted Info:** {doc.extracted_text}"
+        #else:
+        #    documents_info = "\n## Extracted Document Data\n- No documents uploaded."
+
+        # Summarized Bio (Generated by LLM)
+        #if hasattr(self, 'bio') and self.bio:
+        #    summarized_bio = f"\n## Summarized Bio\n\n{self.bio}"
+        #else:
+        #summarized_bio = "\n## Summarized Bio\n- Bio not available."
+
+        # Combine all sections
+        self.student_md_profile = personal_info + academic_info + career_info + assessment_results
