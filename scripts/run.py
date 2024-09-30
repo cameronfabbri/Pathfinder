@@ -6,8 +6,9 @@ import sys
 import streamlit as st
 
 from openai import OpenAI
-from streamlit_pdf_viewer import pdf_viewer
 from functools import lru_cache
+from cryptography.fernet import Fernet
+from werkzeug.utils import secure_filename
 
 # Added for streamlit
 # Need to run `streamlit scripts/run.py` to start the app
@@ -17,23 +18,35 @@ sys.path.insert(0, project_root)
 from src import utils
 from src import prompts
 from src import personas
-from src.agent import Agent
-from src.tools import suny_tools
-from src.constants import UNIVERSITY_MAPPING
-from src.database import get_top_strengths, get_bot_strengths
-from src.run_tools import get_student_info, get_chat_summary_from_db, logout
-from src.interfaces import streamlit_login, display_student_info, main_chat_interface, assessment_page
+from src import agent
+from src import tools
+from src import constants
+from src import run_tools as rt
+from src import interfaces as itf
+from src import pdf_tools as pdft
+from src.database import db_access as dba
 
 DEBUG = False
 #MODEL = 'gpt-4o'
-MODEL = 'gpt-4o-mini'
-#MODEL = 'gpt-4o-2024-08-06'
+#MODEL = 'gpt-4o-mini'
+MODEL = 'gpt-4o-2024-08-06'
+
+
+def generate_key():
+    return Fernet.generate_key()
+
+
+def encrypt_file(file_data: bytes, key: bytes) -> bytes:
+    f = Fernet(key)
+    return f.encrypt(file_data)
 
 
 def initialize_st_vars():
     """
     Initialize session state variables if they don't exist
     """
+    # TODO - remove after testing
+    st.session_state.counselor_persona = 'David - The Mentor'
 
     if 'messages_since_update' not in st.session_state:
         st.session_state.messages_since_update = 0
@@ -49,26 +62,25 @@ def initialize_st_vars():
         st.session_state.counselor_suny_messages = []
     if 'counselor_persona' not in st.session_state:
         st.session_state.counselor_persona = None
+    if 'documents_uploaded' not in st.session_state:
+        st.session_state.documents_uploaded = False
+    if 'uploaded_documents' not in st.session_state:
+        st.session_state.uploaded_documents = []
 
 
-@lru_cache(maxsize=None)
-def get_openai_client():
-    return OpenAI(api_key=os.getenv("PATHFINDER_OPENAI_API_KEY"))
+def initialize_counselor_agent(client: OpenAI, student_md_profile: str):
 
+    counselor_system_prompt = prompts.COUNSELOR_SYSTEM_PROMPT + student_md_profile
 
-def initialize_counselor_agent(client: OpenAI, student_info_str: str, top_strengths: list, bot_strengths: list):
+    #strengths_prompt = '**Strengths from Assessment:**\n'
+    #for theme, score, strength_level in top_strengths:
+    #    strengths_prompt += f"{theme}: {score} ({strength_level})\n"
 
-    counselor_system_prompt = prompts.COUNSELOR_SYSTEM_PROMPT + student_info_str
+    #weaknesses_prompt = '\n\n**Weaknesses from Assessment:**\n'
+    #for theme, score, strength_level in bot_strengths:
+    #    weaknesses_prompt += f"{theme}: {score} ({strength_level})\n"
 
-    strengths_prompt = '**Strengths from Assessment:**\n'
-    for theme, score, strength_level in top_strengths:
-        strengths_prompt += f"{theme}: {score} ({strength_level})\n"
-
-    weaknesses_prompt = '\n\n**Weaknesses from Assessment:**\n'
-    for theme, score, strength_level in bot_strengths:
-        weaknesses_prompt += f"{theme}: {score} ({strength_level})\n"
-
-    counselor_system_prompt += '\n\n' + strengths_prompt + weaknesses_prompt
+    #counselor_system_prompt += '\n\n' + strengths_prompt + weaknesses_prompt
 
     if st.session_state.counselor_persona == 'David - The Mentor':
         persona_prompt = personas.DAVID + '\n\n' + personas.DAVID_TRAITS
@@ -77,9 +89,14 @@ def initialize_counselor_agent(client: OpenAI, student_info_str: str, top_streng
     elif st.session_state.counselor_persona == 'Liam - The Explorer':
         persona_prompt = personas.LIAM + '\n\n' + personas.LIAM_TRAITS
 
-    counselor_system_prompt = counselor_system_prompt.replace('PERSONA', persona_prompt)
+    #counselor_system_prompt = counselor_system_prompt.replace('PERSONA', persona_prompt)
+    counselor_system_prompt = counselor_system_prompt.replace('{{persona}}', persona_prompt)
+    counselor_system_prompt = counselor_system_prompt.replace('{{student_md_profile}}', student_md_profile)
 
-    return Agent(
+    print('INIT COUNSELOR SYSTEM PROMPT:')
+    print(counselor_system_prompt)
+
+    return agent.Agent(
         client,
         name="Counselor",
         tools=None,
@@ -92,16 +109,98 @@ def initialize_counselor_agent(client: OpenAI, student_info_str: str, top_streng
 @lru_cache(maxsize=None)
 def initialize_suny_agent(client: OpenAI):
     suny_system_prompt = prompts.SUNY_SYSTEM_PROMPT + '\n'
-    for name in UNIVERSITY_MAPPING.values():
+    for name in constants.UNIVERSITY_MAPPING.values():
         suny_system_prompt += name + '\n'
 
-    return Agent(
+    return agent.Agent(
         client,
         name="SUNY",
-        tools=suny_tools,
+        tools=tools.suny_tools,
         model=MODEL,
         system_prompt=suny_system_prompt
     )
+
+
+def check_assessment_completed(user_id):
+    """
+    Check if the user has completed the assessment.
+    """
+    top_strengths = dba.get_top_strengths(user_id)
+    return bool(top_strengths)
+
+
+def document_upload_page():
+    st.title("Document Upload")
+
+    st.write("Please upload all required documents before continuing.")
+
+    # List of documents the user can upload
+    accepted_documents = ['Transcript', 'SAT Scores', 'ACT Scores', 'Certification']
+
+    # Document type selection
+    doc_type = st.selectbox("Select document type", accepted_documents)
+
+    # File uploader
+    uploaded_file = st.file_uploader(f"Upload {doc_type}", type=['pdf', 'docx', 'txt'], key="document_uploader")
+
+    # Add Document button
+    if st.button("Upload Document"):
+        if uploaded_file is not None:
+            st.session_state.uploaded_documents.append((doc_type, uploaded_file))
+            st.success(f"{doc_type} added successfully!")
+        else:
+            st.warning("Please select a file before adding.")
+
+    # Display added documents
+    if st.session_state.uploaded_documents:
+        st.subheader("Added Documents:")
+        for doc_type, file in st.session_state.uploaded_documents:
+            st.write(f"{doc_type}: {file.name}")
+
+    # Continue button
+    if st.button("Continue"):
+        st.session_state.documents_uploaded = True
+        if st.session_state.uploaded_documents:
+            for doc_type, file in st.session_state.uploaded_documents:
+                save_uploaded_file(st.session_state.user.user_id, doc_type, file)
+            
+            st.success("All documents uploaded successfully!")
+            st.session_state.uploaded_documents = []  # Clear the list after successful upload
+            st.rerun()
+
+
+def save_uploaded_file(user_id, document_type, uploaded_file):
+    # Create user-specific directory if it doesn't exist
+    user_folder = os.path.join('uploads', str(user_id))
+    os.makedirs(user_folder, exist_ok=True)
+
+    # Sanitize the file name
+    filename = secure_filename(uploaded_file.name)
+
+    # Generate a key (in practice, you'd want to store this securely)
+    #key = generate_key()
+
+    # Read the file data as bytes
+    file_data = uploaded_file.read()
+
+    # Encrypt the file data
+    #encrypted_data = encrypt_file(file_data, key)
+
+    filepath = os.path.join(user_folder, filename)# + '.encrypted')
+    with open(filepath, "wb") as f:
+        #f.write(encrypted_data)
+        f.write(file_data)
+
+    extracted_text = '\n'.join([x.text for x in pdft.parse_pdf_with_llama(filepath)])
+
+    # Update the database
+    st.session_state.user.add_document(
+        document_type, filename, filepath, extracted_text, processed=True
+    )
+
+    # Store the key securely (this is a placeholder - implement secure key storage)
+    #save_encryption_key(user_id, document_type, key)
+
 
 
 def main():
@@ -109,44 +208,57 @@ def main():
     Main function to run the Streamlit app
     `streamlit run scripts/run.py`
     """
+
     st.set_page_config(page_title="SUNY Counselor Chat", page_icon="💬", layout="wide")
 
     initialize_st_vars()
 
     if st.session_state.user is None:
-        st.session_state.user = streamlit_login()
+        st.session_state.user = itf.streamlit_login()
 
     if st.session_state.user:
 
-        top_strengths = get_top_strengths(st.session_state.user.user_id)
-        bot_strengths = get_bot_strengths(st.session_state.user.user_id)
-
-        if not top_strengths or not bot_strengths:
-            assessment_page()
+        if not st.session_state.user.top_strengths:
+            itf.assessment_page()
+            
+        #elif not st.session_state.documents_uploaded:
+        #    document_upload_page()
         else:
 
-            # TODO - remove after testing
-            st.session_state.counselor_persona = 'David - The Mentor'
+            st.session_state.user.reload_all_data()
+
+            #top_strengths = dba.get_top_strengths(st.session_state.user.user_id)
+            #bot_strengths = dba.get_bot_strengths(st.session_state.user.user_id)
+
+            #markdown = st.session_state.user.build_markdown()
+
+            #print('Documents uploaded:', st.session_state.user.documents)
+            #for document in st.session_state.user.documents:
+            #    if not document.processed:
+            #        print('Processing document:', document.filepath)
+            #        process_document(st.session_state.user.user_id, document)
 
             col1, col2 = st.columns([6, 1])
             with col2:
                 if st.button("Logout"):
-                    logout()
+                    rt.logout()
 
             st.sidebar.success(f"Logged in as: {st.session_state.user.username}")
-            display_student_info(st.session_state.user.user_id)
+            itf.display_student_info(st.session_state.user.user_id)
 
             if st.session_state.counselor_agent is None:
-                client = get_openai_client()
-                student_info_str = utils.dict_to_str(get_student_info(st.session_state.user.user_id), format=False)
-                st.session_state.counselor_agent = initialize_counselor_agent(client, student_info_str, top_strengths, bot_strengths)
+                client = utils.get_openai_client()
+                st.session_state.counselor_agent = initialize_counselor_agent(
+                    client, st.session_state.user.student_md_profile
+                )
 
             if st.session_state.suny_agent is None:
-                client = get_openai_client()
+                client = utils.get_openai_client()
                 st.session_state.suny_agent = initialize_suny_agent(client)
 
             if not st.session_state.user_messages:
                 if st.session_state.user.session_id == 0:
+
                     if not DEBUG:
                         first_message = utils.parse_json(
                             st.session_state.counselor_agent.invoke().choices[0].message.content
@@ -155,7 +267,7 @@ def main():
                         first_message = prompts.DEBUG_FIRST_MESSAGE.replace('NAME', st.session_state.user.username)
                 else:
                     try:
-                        first_message = get_chat_summary_from_db(st.session_state.user.user_id)
+                        first_message = dba.get_chat_summary_from_db(st.session_state.user.user_id)
                     except:
                         print('\nNo chat summary found in database, did you quit without logging out?\n')
                         first_message = f"Hello {st.session_state.user.username}, welcome back to the chat!"
@@ -166,7 +278,7 @@ def main():
                 st.session_state.counselor_suny_messages = []
 
             with col1:
-                main_chat_interface()
+                itf.main_chat_interface()
 
     else:
         st.error("Please log in to continue")

@@ -5,7 +5,7 @@ import sys
 import click
 from datetime import datetime
 
-from src.database import get_db_connection
+import src.database.db_access as dba
 from src.utils import get_color, RESET
 
 def fetch_conversation_history(user_id: int | None = None, session_id: int | None = None):
@@ -18,7 +18,7 @@ def fetch_conversation_history(user_id: int | None = None, session_id: int | Non
     Returns:
         list: A list of conversation messages.
     """
-    conn = get_db_connection()
+    conn = dba.get_db_connection()
     cursor = conn.cursor()
     if user_id and session_id:
         cursor.execute("""

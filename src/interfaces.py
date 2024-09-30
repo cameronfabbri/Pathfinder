@@ -10,13 +10,13 @@ sys.path.insert(0, project_root)
 
 import pickle
 
+from src import auth
+from src import agent
+from src import utils
 from src import prompts
-from src.auth import login, signup
+from src import run_tools as rt
 from src.assessment import answers
-from src.utils import dict_to_str, parse_json
-from src.database import execute_query, get_db_connection
-from src.database import insert_user_responses, insert_strengths, get_top_strengths, get_bot_strengths
-from src.run_tools import process_user_input, get_student_info, update_student_info, process_uploaded_file, type_text
+from src.database import db_access as dba
 from src.constants import SYSTEM_DATA_DIR
 
 opj = os.path.join
@@ -26,7 +26,7 @@ def main_chat_interface():
     st.title("💬 User-Counselor Chat")
     st.caption("🚀 Chat with your SUNY counselor")
 
-    st.session_state.counselor_agent.print_messages()
+    #st.session_state.counselor_agent.print_messages()
 
     if len(st.session_state.user_messages) == 1:
         first_message = st.session_state.user_messages[0]["content"]
@@ -38,7 +38,7 @@ def main_chat_interface():
 
     chat_container = st.container()
 
-    st.session_state.counselor_agent.print_messages()
+    #st.session_state.counselor_agent.print_messages()
     prompt = st.chat_input("Type your message here...")
     
     # Display chat messages in the container
@@ -56,21 +56,19 @@ def main_chat_interface():
         st.session_state.user_messages.append({"role": "user", "content": prompt})
 
         # Process user input and get response
-        process_user_input(prompt)
+        rt.process_user_input(prompt)
         st.session_state.messages_since_update += 1
 
         # Force a rerun to display the new messages
         st.rerun()
 
-    si = get_student_info(st.session_state.user.user_id).values()
+    si = st.session_state.user.student_info.values()
     nsi = None in si or 'None' in si
-    print('messages_since_update:', st.session_state.messages_since_update)
-    print('nsi:', nsi)
     if st.session_state.messages_since_update > 2 and nsi:
         print('Updating student info...')
         st.session_state.messages_since_update = 0
-        current_student_info = get_student_info(st.session_state.user.user_id)
-        current_student_info_str = dict_to_str(current_student_info, format=False)
+        current_student_info = dba.get_student_info(st.session_state.user.user_id)
+        current_student_info_str = utils.dict_to_str(current_student_info, format=False)
         new_info_prompt = prompts.UPDATE_INFO_PROMPT
         new_info_prompt += f"\n**Student's Current Information:**\n{current_student_info_str}\n\n"
         new_info_prompt += f"**Conversation History:**\n{st.session_state.user_messages}\n\n"
@@ -83,17 +81,24 @@ def main_chat_interface():
             response_format={"type": "json_object"}
         ).choices[0].message.content
 
-        response_json = parse_json(response)
+        response_json = utils.parse_json(response)
         for key, value in response_json.items():
             if key in current_student_info:
                 current_student_info[key] = value
         
-        update_student_info(st.session_state.user.user_id, current_student_info)
+        dba.update_student_info(st.session_state.user.user_id, current_student_info)
 
+        # Load new info into the user object
+        st.session_state.user.reload_all_data()
+        #student_info = dba.get_student_info(st.session_state.user.user_id)
+        #student_info_str = utils.dict_to_str(student_info, format=False)
+        #st.session_state.counselor_agent.update_system_prompt(prompts.COUNSELOR_SYSTEM_PROMPT + student_info_str)
         # Update the counselor agent's system prompt
-        student_info = get_student_info(st.session_state.user.user_id)
-        student_info_str = dict_to_str(student_info, format=False)
-        st.session_state.counselor_agent.update_system_prompt(prompts.COUNSELOR_SYSTEM_PROMPT + student_info_str)
+        st.session_state.counselor_agent.system_prompt = prompts.COUNSELOR_SYSTEM_PROMPT.replace(
+            '{{student_md_profile}}', st.session_state.user.student_md_profile
+        )
+        print('NEW COUNSELOR SYSTEM PROMPT:')
+        print(st.session_state.counselor_agent.system_prompt)
 
         st.rerun()
 
@@ -111,24 +116,24 @@ def display_student_info(user_id: int):
         </style>
     """, unsafe_allow_html=True)
 
-    student_info = get_student_info(user_id)
+    student_info = dba.get_student_info(user_id)
  
     if student_info:
         for key, value in student_info.items():
             st.sidebar.text(f"{key}: {value}")
         
-    top_strengths = get_top_strengths(user_id)
-    bot_strengths = get_bot_strengths(user_id)
+    #top_strengths = dba.get_top_strengths(user_id)
+    #bot_strengths = dba.get_bot_strengths(user_id)
 
     # Display Strengths
     st.sidebar.markdown("---")
     st.sidebar.subheader("Top 5 Strengths")
-    for theme, score, strength_level in top_strengths:
+    for theme, score, strength_level in st.session_state.user.top_strengths:
         st.sidebar.text(f"{theme}: {score} ({strength_level})")
 
     st.sidebar.markdown("---")
     st.sidebar.subheader("Top 5 Weaknesses")
-    for theme, score, strength_level in bot_strengths:
+    for theme, score, strength_level in st.session_state.user.bot_strengths:
         st.sidebar.text(f"{theme}: {score} ({strength_level})")
 
     # Add transcript upload button to sidebar
@@ -136,12 +141,25 @@ def display_student_info(user_id: int):
     st.sidebar.subheader("Upload File")
     uploaded_file = st.sidebar.file_uploader("Choose a file", type=["csv", "xlsx", "pdf", "txt"])
     if uploaded_file is not None:
+        document_type = st.sidebar.selectbox("Select Document Type", ["Transcript", "SAT Score", "ACT Score", "Certification", "Other"])
         if st.sidebar.button("Process File"):
-            process_uploaded_file(uploaded_file)
+            rt.process_uploaded_file(uploaded_file, document_type, user_id)
             st.sidebar.success("File processed successfully!")
+    """
+
+    st.subheader("Upload File")
+    uploaded_file = st.file_uploader("Choose a file", type=["csv", "xlsx", "pdf", "txt"])
+    if uploaded_file is not None:
+        document_type = st.selectbox("Select Document Type", ["Transcript", "SAT Score", "ACT Score", "Certification", "Other"])
+        if st.button("Process File"):
+            rt.process_uploaded_file(uploaded_file, document_type, user_id)
+            st.success("File processed successfully!")
+    st.markdown("---")  # Add a separator
+    """
 
 
 def assessment_page():
+
     responses_file = 'saved_responses.pkl'
 
     st.title("Welcome to SUNY Counselor Chat!")
@@ -154,10 +172,10 @@ def assessment_page():
     user_responses = {}
 
     with st.form("strengths_form"):
-        submit = st.form_submit_button("Submit")
+        submit = st.form_submit_button("Submit BUTTON")
 
         # Fetch questions from the database
-        questions = execute_query("SELECT themes.theme_name, questions.statement FROM questions JOIN themes ON questions.theme_id = themes.theme_id;")
+        questions = dba.execute_query("SELECT themes.theme_name, questions.statement FROM questions JOIN themes ON questions.theme_id = themes.theme_id;")
 
         # Group questions by theme
         theme_questions = {}
@@ -203,13 +221,44 @@ def assessment_page():
         with open(responses_file, 'wb') as f:
             pickle.dump({'user_responses': user_responses, 'theme_scores': theme_scores}, f)
 
-        print('USER RESPONSES')
-        print(user_responses)
-        print('THEME SCORES')
-        print(theme_scores)
+        # Insert user assessment responses into the database
+        dba.insert_user_responses(st.session_state.user.user_id, user_responses)
 
-        insert_user_responses(st.session_state.user.user_id, user_responses)
-        insert_strengths(st.session_state.user.user_id, theme_scores)
+        #  Insert strengths and weaknesses into the database
+        dba.insert_strengths(st.session_state.user.user_id, theme_scores)
+
+        # Load the assessment responses from the database into the user object
+        st.session_state.user.load_assessment_responses()
+
+        # Load the strengths and weaknesses from the database into the user object
+        st.session_state.user.load_topbot_strengths()
+
+        if 0:
+            # Insert summary into the database
+            prompt = '**Strengths Finders Assessment Test**\n'
+            for question, answer in st.session_state.user.assessment_responses:
+                prompt += f'{question}: {answer}\n'
+            response = agent.quick_call(
+                model='gpt-4o-mini',
+                system_prompt=prompts.SUMMARIZE_ASSESSMENT_PROMPT,
+                user_prompt=prompt,
+                json_mode=False
+            )
+        else:
+            response = prompts.TEMP_RESPONSE 
+
+        conn = dba.get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            'INSERT INTO student_summaries (user_id, summary) VALUES (?, ?)',
+            (st.session_state.user.user_id, response)
+        )
+        conn.commit()
+
+        #print('Response:', response)
+
+        # Reload all user data
+        st.session_state.user.reload_all_data()
 
         st.rerun()
 
@@ -289,7 +338,7 @@ def streamlit_login():
             login_submit = st.form_submit_button("Login")
 
         if login_submit:
-            user = login(username, password)
+            user = auth.login(username, password)
             if user:
                 st.session_state.user = user
                 login_placeholder.empty()
@@ -311,7 +360,7 @@ def streamlit_login():
 
         if signup_submit:
             if first_name and last_name and new_username and new_password:
-                user = signup(first_name, last_name, age, gender, new_username, new_password)
+                user = auth.signup(first_name, last_name, age, gender, new_username, new_password)
                 if user:
                     st.session_state.user = user
                     login_placeholder.empty()

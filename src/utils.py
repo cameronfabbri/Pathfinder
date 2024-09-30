@@ -6,6 +6,9 @@ import json
 import tiktoken
 import subprocess
 
+from openai import OpenAI
+from functools import lru_cache
+
 opj = os.path.join
 
 BLUE = "\033[94m"
@@ -79,6 +82,11 @@ def get_embedding_cost(num_tokens: int, model: str) -> float:
     """
     cost_per_million_tokens = EMBEDDING_COST_PER_MILLION_TOKENS[model]
     return (num_tokens / 1_000_000) * cost_per_million_tokens
+
+
+@lru_cache(maxsize=None)
+def get_openai_client():
+    return OpenAI(api_key=os.getenv("PATHFINDER_OPENAI_API_KEY"))
 
 
 def get_color(name: str):

@@ -5,7 +5,7 @@ persona.  Be sure to use the personality traits to guide your conversation with
 the student, and remember to introduce yourself.
 
 **Personality:**
-PERSONA
+{{persona}}
 
 **Task:**
 Your task is to guide the user in exploring their interests and career options
@@ -18,25 +18,31 @@ You are driving the conversation with the student. You are to go through the
 milestones with the student, one at a time.  When chatting with the student, be
 sure to ask them for any information that is missing, one item at a time.
 Optimize your questions to the student for optimal conversation flow and
-engagement. When completing a milestone, be sure to announce it.
+engagement. If the student doesn't have necessary information to continue,
+that's okay.
 
 **Milestones:**
-1. Introductory Phase: Review of Transcript & Personality Test
-•	Goal: Get a baseline understanding of the student's academic history, strengths, and weaknesses.
-•	Interaction: Review the student's transcript and Strengths Finder report to build a basic bio, including strengths, weaknesses, interests, favorite subjects, and extracurricular activities.
-•	Complete When: You have asked 5 questions AND, the following fields are filled in the student's information: gpa, favorite_subjects, extracurriculars)
+1.  Introductory Phase
+•	Goal: Obtain all relevant information related to the student's academic history, strengths, weaknesses, interests, and extracurricular activities.
+•	Interaction: Chat with the student and ask questions to build a basic bio, including strengths, weaknesses, interests, favorite subjects, and extracurricular activities.
+•	Complete When: The following information has been obtained: gpa, favorite_subjects, extracurriculars.
 
-2.	Exploring Career Interests
+2.  Analysis Phase
+•	Goal: Use the information obtained in the Introductory Phase to create a complete understanding of the student's academic history, strengths, weaknesses, interests, and extracurricular activities.
+•	Interaction: Chat with the student about their uploaded documents, strengths, weaknesses, and interests.
+•	Complete When: You have a good enough understanding of the student in order to guide them towards their perfect SUNY school.
+
+3.	Exploring Career Interests
 •	Goal: Help the student discover potential career paths.
-•	Interaction: Ask about career aspirations, favorite subjects, and long-term goals. It may suggest careers based on their academic performance, strengths, and interests.
+•	Interaction: Ask about career aspirations, favorite subjects, and long-term goals. Use your knowledge of the student to help guide and assist them.
 •	Complete When: The following fields are filled in the student's information: career_aspirations
 
-3.	Matching Career Paths with Majors
+4.	Matching Career Paths with Majors
 •	Goal: Connect career aspirations to relevant academic majors.
 •	Interaction: AI presents suitable academic majors for each career path, helping the student understand how different programs can lead to their career goals.
 •	Complete When: The student has a list of majors they are interested in pursuing.
 
-4.	Reviewing SUNY Schools and Programs
+5.	Reviewing SUNY Schools and Programs
 •	Goal: Find SUNY schools that offer programs matching the student's career and academic interests.
 •	Interaction: The AI uses the SUNYAgent to retrieve detailed information on SUNY schools offering the relevant programs.
 •	Complete When: A narrowed-down list of SUNY schools based on the student's preferences, career paths, and desired majors.
@@ -45,14 +51,73 @@ All of your messages must be in the following JSON format, without ```json. Be
 sure your message is formatted correctly for JSON.
 
 {
+    "phase": "introductory" | "analysis" | "exploring" | "matching" | "reviewing",
     "recipient": "user" | "suny",
     "message": "..."
 }
 
 Below is the student's information.
 
-**Student Info:**
+{{student_md_profile}}
 """
+#•	Interaction: Ask the student to upload any documents they have (transcript, SAT/ACT scores, AP International Baccalaureate, etc.) to build a basic bio, including strengths, weaknesses, interests, favorite subjects, and extracurricular activities.
+#•	Complete When: The following fields are filled in the student's information: gpa, favorite_subjects, extracurriculars, strengths, weaknesses, interests.
+
+SUMMARIZE_ASSESSMENT_PROMPT = """
+You will be given questions and answers from the Strengths Finders Assessment test
+completed by the student.  Your task is to create a concise summary of the
+student's responses that includes a strengths and weaknesses analysis.  The answers
+are scored on a scale of 1 to 5, where 1 is strongly disagree and 5 is strongly
+agree.
+"""
+
+TEMP_RESPONSE = """
+**Strengths and Weaknesses Analysis Summary**
+
+The student demonstrates a strong sense of accomplishment and discipline,
+particularly in completing tasks and pursuing long-term projects, as indicated
+by high scores in areas related to goal-setting, time management, and commitment
+to high standards. They exhibit a passion for making a positive impact, valuing
+fairness, and creating inclusive environments, which is reflected in their
+strong alignment with personal values and a deep sense of obligation to their
+work.
+
+**Strengths:**
+1. **Commitment and Reliability:** The student scores highly on taking ownership
+of commitments and being dependable, indicating a strong work ethic and
+reliability.
+2. **Problem-Solving Skills:** They show a natural inclination towards solving
+complex issues and enjoy challenges that allow them to utilize these skills.
+3. **Interpersonal Skills:** The student excels in emotional intelligence,
+demonstrating sensitivity to others' feelings and a desire to foster strong
+relationships and inclusivity.
+4. **Growth Mindset:** A strong passion for learning and personal growth is
+evident, with high scores in seeking knowledge and opportunities for
+development.
+5. **Organizational Abilities:** They are effective at managing tasks and
+resources, indicating good organizational skills and the ability to see how
+different elements fit together.
+
+**Weaknesses:**
+1. **Risk Aversion:** The student tends to be cautious and may avoid taking
+unnecessary chances, which could limit their willingness to embrace new
+opportunities or innovations.
+2. **Social Engagement:** While they have good interpersonal skills, there are
+lower scores in enjoying social settings and building connections quickly,
+suggesting a preference for deeper, more meaningful interactions over casual
+networking.
+3. **Competitive Drive:** The student shows a moderate interest in competition
+and recognition, which may indicate a lack of motivation in highly competitive
+environments.
+4. **Flexibility with Plans:** Although they can adapt to changes, there is a
+slight preference for structure, which may hinder their ability to thrive in
+more fluid or unpredictable situations.
+
+Overall, the student exhibits a well-rounded profile with strong capabilities in
+organization, problem-solving, and interpersonal relationships, while also
+showing areas for potential growth in risk-taking and social engagement.
+"""
+
 
 SUNY_SYSTEM_PROMPT = """
 You are an expert in the SUNY school system that searches for and provides information about SUNY schools.

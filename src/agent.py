@@ -4,7 +4,7 @@
 import json
 
 from src.tools import function_map
-from src.utils import get_color, RESET
+from src.utils import get_color, RESET, get_openai_client
 
 
 def format_content(content):
@@ -15,6 +15,16 @@ def format_content(content):
     except json.JSONDecodeError:
         # If it's not valid JSON, return the original content
         return content
+
+
+def quick_call(model, system_prompt, user_prompt, json_mode: bool = False, temperature: float = 0.0):
+    client = get_openai_client()
+    return client.chat.completions.create(
+        model=model,
+        messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+        temperature=temperature,
+        response_format={ "type": "json_object" } if json_mode else None
+    ).choices[0].message.content
 
 
 class Agent:
@@ -55,7 +65,7 @@ class Agent:
             model=self.model,
             messages=self.messages,
             tools=self.tools,
-            response_format={ "type": "json_object" } if self.json_mode else None,
+            response_format={"type": "json_object"} if self.json_mode else None,
             temperature=self.temperature
         )
 

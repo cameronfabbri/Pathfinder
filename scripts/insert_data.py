@@ -353,11 +353,6 @@ def get_doc_id_from_path(path: str) -> str:
         doc_id = doc_id[1:]
     return doc_id
 
-    #doc_id = doc_id.replace(os.sep, '-')
-    #if doc_id.startswith('-'):
-    #    doc_id = doc_id[1:]
-    #return doc_id
-
 
 def insert_html_files(
         db: ChromaDB,
@@ -378,14 +373,17 @@ def insert_html_files(
 
     for path in tqdm(html_files):
 
+        doc_id = get_doc_id_from_path(path)
+        if db.document_exists(doc_id):
+            print(f"Document {doc_id} already exists.")
+            continue
+
         url = get_html_url(path)
         if url is None:
             print(f"Warning: No corresponding web page found for {path}")
             with open('missing_html_urls.txt', 'a') as f:
                 f.write(path + '\n')
             continue
-
-        doc_id = get_doc_id_from_path(path)
 
         with open(path, 'r') as f:
             soup = BeautifulSoup(f, 'lxml')
