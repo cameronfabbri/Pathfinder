@@ -13,8 +13,8 @@ from openai import OpenAI
 from bs4 import BeautifulSoup
 from difflib import SequenceMatcher
 
-from src.agent import Agent
-from src.database import ChromaDB
+from src import agent
+from src.database import chroma_db
 from src.pdf_tools import load_pdf_text
 from src.utils import chunk_pages, chunk_text
 from src.constants import UNIVERSITY_DATA_DIR, CHROMA_DB_PATH, UNIVERSITY_MAPPING, METADATA_PATH
@@ -101,7 +101,7 @@ def get_distinct_university_results(query_results, n_results=3):
     return list(unique_universities.values())
 
 
-def generate_questions(agent: Agent, chunk: dict) -> list[str]:
+def generate_questions(agent: agent.Agent, chunk: dict) -> list[str]:
     prompt = 'Generate a list of 5 questions that can be answered by the given document.'
     prompt += '**Document:**\n'
     prompt += chunk['text'] + '\n\n'
@@ -182,7 +182,7 @@ def ask_question(db, question):
     docs_content = '\n\n'.join([doc['document'] for doc in docs])
 
     client = OpenAI(api_key=os.getenv("PATHFINDER_OPENAI_API_KEY"))
-    agent = Agent(client, 'Agent', None, SYSTEM_PROMPT, model='gpt-4o', json_mode=False)
+    agent = agent.Agent(client, 'Agent', None, SYSTEM_PROMPT, model='gpt-4o', json_mode=False)
 
     prompt = 'Answer the following question given the available information.\n\n'
     prompt += '**Question:**\n'
@@ -262,7 +262,11 @@ def extract_pdf_pages(pdf_file: str, text_type: str = 'text') -> list[str]:
     return pages_text
 
 
-def insert_pdf_files(db: ChromaDB, university_name: str, pdf_files: list[str], debug: bool) -> None:
+def insert_pdf_files(
+        db: chroma_db.ChromaDB,
+        university_name: str,
+        pdf_files: list[str],
+        debug: bool) -> None:
     """
     Insert the pdf files into the database
 
@@ -355,7 +359,7 @@ def get_doc_id_from_path(path: str) -> str:
 
 
 def insert_html_files(
-        db: ChromaDB,
+        db: chroma_db.ChromaDB,
         university_name: str,
         html_files: list[str],
         debug: bool) -> None:
@@ -475,11 +479,10 @@ def main(data_dir: str | None, general_data_dir: str | None, debug: bool):
         print("Error: Cannot specify both data_dir and general_data_dir")
         exit(1)
 
-    db = ChromaDB(CHROMA_DB_PATH, 'universities')
+    db = chroma_db.ChromaDB(CHROMA_DB_PATH, 'universities')
 
     if general_data_dir is not None:
         selected_files = [opj(general_data_dir, x) for x in os.listdir(general_data_dir)]
-
         print(selected_files)
         exit()
 
@@ -501,7 +504,8 @@ def main(data_dir: str | None, general_data_dir: str | None, debug: bool):
 
         # Process files based on processing instructions
         if 'processing_instructions' in data and data['processing_instructions']:
-            root_directory = data.get('root_directory')
+            # Add root directory from src.constants
+            root_directory = opj(UNIVERSITY_DATA_DIR, data.get('root_directory'))
             if root_directory:
                 selected_files = select_files(
                     root_directory=root_directory,

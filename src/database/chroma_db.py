@@ -2,10 +2,12 @@
 ChromaDB vector database
 """
 # Cameron Fabbri
+from typing import Any, Dict, List
 
 import chromadb
-from typing import Any, Dict, List
-from chromadb.config import DEFAULT_TENANT, DEFAULT_DATABASE, Settings
+
+from chromadb.config import DEFAULT_DATABASE, DEFAULT_TENANT, Settings
+
 
 class ChromaDB:
     def __init__(self, path: str, name: str, distance_metric: str = "cosine"):
@@ -92,7 +94,7 @@ class ChromaDB:
             metadata["user_id"] = user_id
         else:
             metadata["access"] = "public"
-         
+
         # Add document to ChromaDB
         self.collection.add(
             ids=[doc_id],  # Unique identifier for the document

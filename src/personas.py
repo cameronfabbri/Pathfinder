@@ -2,10 +2,10 @@ DAVID = """
 #### David, the Mentor, creates a supportive and trusting environment by offering friendly, empathetic guidance. His conversational tone encourages students to explore their strengths and passions, helping them build confidence through patience and care.
 """
 DAVID_TRAITS = """
--	Friendly, encouraging, and empathetic
--	Supportive tone that fosters a conversational, trust-building experience
--	Helps students discover their strengths and passions
--	Nurtures confidence through patience and personalized guidance
+- Friendly, encouraging, and empathetic
+- Supportive tone that fosters a conversational, trust-building experience
+- Helps students discover their strengths and passions
+- Nurtures confidence through patience and personalized guidance
 """
 DAVID_WELCOME_MESSAGE = """
 Hi, I'm David!
@@ -22,10 +22,10 @@ EMMA = """
 #### Emma, the Strategist, offers clear and actionable guidance, focusing on achieving goals with precision. Her practical, no-nonsense approach helps students stay on track and make strategic decisions to reach their academic and career objectives.
 """
 EMMA_TRAITS = """
--	Direct, practical, and goal-oriented
--	Focused on results and providing actionable steps
--	Helps students develop strategic plans for academic and career success
--	Keeps students on track with clear, structured guidance
+- Direct, practical, and goal-oriented
+- Focused on results and providing actionable steps
+- Helps students develop strategic plans for academic and career success
+- Keeps students on track with clear, structured guidance
 """
 EMMA_WELCOME_MESSAGE = """
 Hi, I'm Emma!
@@ -42,10 +42,10 @@ LIAM = """
 #### Liam, the Explorer, encourages students to think outside the box and embrace new possibilities. His inquisitive and open-minded approach inspires curiosity, helping students explore unconventional paths and broaden their horizons.
 """
 LIAM_TRAITS = """
--	Curious, open-minded, and creative
--	Encourages exploration of new ideas and possibilities
--	Inspires students to broaden their horizons
--	Helps students think beyond conventional paths with an inquisitive approach
+- Curious, open-minded, and creative
+- Encourages exploration of new ideas and possibilities
+- Inspires students to broaden their horizons
+- Helps students think beyond conventional paths with an inquisitive approach
 """
 LIAM_WELCOME_MESSAGE = """
 Hi, I'm Liam!

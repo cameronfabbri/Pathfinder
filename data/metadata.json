@@ -1,6 +1,6 @@
 {
   "SUNY Adirondack": {
-    "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/sunyacc.smartcatalogiq.com/en/23-24/college-catalog/",
+    "root_directory": "sunyacc.smartcatalogiq.com/en/23-24/college-catalog/",
     "processing_instructions": {
       "file_extensions": [".html"],
       "include_in_path": [""]
@@ -9,7 +9,7 @@
     "other_files": []
   },
   "University at Albany": {
-    "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/www.albany.edu",
+    "root_directory": "www.albany.edu",
     "processing_instructions": {
       "file_extensions": [".html"],
       "include_in_path": ["programs"]
@@ -18,30 +18,30 @@
     "other_files": []
   },
   "Alfred University": {
-    "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/www.alfred.edu/academics/undergrad-majors-minors/",
+    "root_directory": "www.alfred.edu/academics/undergrad-majors-minors/",
     "processing_instructions": {
         "file_extensions": [".html"],
         "include_in_path": [""]
     },
     "pdf_files": [
-      "/Users/cameronfabbri/Projects/system_data/suny/www.alfred.edu/academics/undergrad-majors-minors/_docs/catalog/alfred-university-undergraduate-catalog-2022-2023.pdf",
-      "Users/cameronfabbri/Projects/system_data/suny/www.alfred.edu/about/institutional-research/_docs/fact-book-may-2024.pdf"
+      "www.alfred.edu/academics/undergrad-majors-minors/_docs/catalog/alfred-university-undergraduate-catalog-2022-2023.pdf",
+      "www.alfred.edu/about/institutional-research/_docs/fact-book-may-2024.pdf"
     ]
   },
   "Alfred State College": {
-    "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/catalog.alfredstate.edu/",
+    "root_directory": "catalog.alfredstate.edu/",
     "processing_instructions": {
         "file_extensions": [".html"],
         "include_in_path": ["current"],
         "exclude_from_path": ["courses-by-code"]
     },
     "pdf_files": [
-      "/Users/cameronfabbri/Projects/system_data/suny/catalog.alfredstate.edu/current/catalog.pdf",
+      "catalog.alfredstate.edu/current/catalog.pdf",
       "catalog.alfredstate.edu/current/archive/AlfredState2024-25.pdf"
     ]
   },
   "Binghamton University": {
-    "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/www.binghamton.edu/apps/academics/program",
+    "root_directory": "suny/www.binghamton.edu/apps/academics/program",
     "processing_instructions": {
       "file_extensions": [".html"],
       "include_in_path": [""]
@@ -50,25 +50,52 @@
     "other_files": []
   },
   "SUNY Broome": {
-    "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/www1.sunybroome.edu/programs",
+    "root_directory": "suny/www1.sunybroome.edu/programs",
     "processing_instructions": {
       "file_extensions": [".html"],
       "include_in_path": [""]
     },
     "pdf_files": [
-      "/Users/cameronfabbri/Projects/system_data/suny/www1.sunybroome.edu/wp-content/uploads/2024/08/2425_student_handbook.pdf",
-      "/Users/cameronfabbri/Projects/system_data/suny/www1.sunybroome.edu/wp-content/uploads/2024/01/suny_broome_fast_facts_fall_2023-1.pdf"
+      "suny/www1.sunybroome.edu/wp-content/uploads/2024/08/2425_student_handbook.pdf",
+      "suny/www1.sunybroome.edu/wp-content/uploads/2024/01/suny_broome_fast_facts_fall_2023-1.pdf"
     ],
     "other_files": []
   },
+  "Clinton Community College": {
+    "root_directory": "www.clinton.edu/degrees-and-programs",
+    "processing_instructions": {
+      "file_extensions": [".html"],
+      "include_in_path": [""]
+    },
+    "pdf_files": [],
+    "other_files": []
+  },
+  "SUNY Cobleskill": {
+    "root_directory": "www.clinton.edu/degrees-and-programs",
+    "processing_instructions": {
+      "file_extensions": [".html"],
+      "include_in_path": [""]
+    },
+    "pdf_files": [],
+    "other_files": []
+  },
+  "Cayuga County Community College": {
+    "root_directory": "www.cayuga-cc.edu/academics/",
+    "processing_instructions": {
+      "file_extensions": [".html"],
+      "include_in_path": [""]
+    },
+    "pdf_files": ["www.cayuga-cc.edu/pdf/catalog_archive/ccc_catalog_2023-24.pdf"],
+    "other_files": []
+  },
   "SUNY Potsdam": {
-    "root_directory": "/Users/cameronfabbri/Projects/system_data/suny/www.potsdam.edu/",
+    "root_directory": "suny/www.potsdam.edu/",
     "processing_instructions": {
       "file_extensions": [".html"],
       "include_in_path": [""]
     },
     "pdf_files": [
-        "/Users/cameronfabbri/Projects/system_data/suny/www.potsdam.edu/sites/default/files/FinancialAidAssessmentPlan.pdf"
+        "suny/www.potsdam.edu/sites/default/files/FinancialAidAssessmentPlan.pdf"
     ],
     "other_files": []
   }
