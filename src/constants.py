@@ -3,7 +3,7 @@ from functools import lru_cache
 
 opj = os.path.join
 
-SYSTEM_DATA_DIR = opj('/Users', 'cameronfabbri', 'Projects', 'system_data')
+SYSTEM_DATA_DIR = opj('/Volumes', 'External', 'system_data')
 
 SUNY_DATA_DIR = opj(SYSTEM_DATA_DIR, 'general')
 CHROMA_DB_PATH = opj(SYSTEM_DATA_DIR, 'chromadb')
@@ -19,6 +19,7 @@ def get_university_mapping():
         'www.alfredstate.edu': 'Alfred State College',
         'www.albany.edu': 'University at Albany',
         'www.binghamton.edu': 'Binghamton University',
+        'www.clinton.edu': 'Clinton Community College',
         'suny.oneonta.edu': 'SUNY Oneonta',
         'www.nccc.edu': 'Niagara County Community College',
         'www.potsdam.edu': 'SUNY Potsdam',
