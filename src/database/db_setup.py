@@ -8,7 +8,6 @@ import chromadb
 
 from typing import Any, Dict, List
 from contextlib import contextmanager
-from chromadb.config import DEFAULT_TENANT, DEFAULT_DATABASE, Settings
 
 import logging
 from functools import lru_cache
