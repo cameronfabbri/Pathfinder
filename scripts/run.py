@@ -1,6 +1,8 @@
 """
 Main script
 """
+# Cameron Fabbri
+
 import os
 import sys
 import streamlit as st
@@ -32,15 +34,6 @@ DEBUG = False
 MODEL = 'gpt-4o-2024-08-06'
 
 
-def generate_key():
-    return Fernet.generate_key()
-
-
-def encrypt_file(file_data: bytes, key: bytes) -> bytes:
-    f = Fernet(key)
-    return f.encrypt(file_data)
-
-
 def initialize_st_vars():
     """
     Initialize session state variables if they don't exist
@@ -70,17 +63,7 @@ def initialize_st_vars():
 
 def initialize_counselor_agent(client: OpenAI, student_md_profile: str):
 
-    counselor_system_prompt = prompts.COUNSELOR_SYSTEM_PROMPT + student_md_profile
-
-    #strengths_prompt = '**Strengths from Assessment:**\n'
-    #for theme, score, strength_level in top_strengths:
-    #    strengths_prompt += f"{theme}: {score} ({strength_level})\n"
-
-    #weaknesses_prompt = '\n\n**Weaknesses from Assessment:**\n'
-    #for theme, score, strength_level in bot_strengths:
-    #    weaknesses_prompt += f"{theme}: {score} ({strength_level})\n"
-
-    #counselor_system_prompt += '\n\n' + strengths_prompt + weaknesses_prompt
+    counselor_system_prompt = prompts.COUNSELOR_SYSTEM_PROMPT
 
     if st.session_state.counselor_persona == 'David - The Mentor':
         persona_prompt = personas.DAVID + '\n\n' + personas.DAVID_TRAITS
@@ -89,7 +72,6 @@ def initialize_counselor_agent(client: OpenAI, student_md_profile: str):
     elif st.session_state.counselor_persona == 'Liam - The Explorer':
         persona_prompt = personas.LIAM + '\n\n' + personas.LIAM_TRAITS
 
-    #counselor_system_prompt = counselor_system_prompt.replace('PERSONA', persona_prompt)
     counselor_system_prompt = counselor_system_prompt.replace('{{persona}}', persona_prompt)
     counselor_system_prompt = counselor_system_prompt.replace('{{student_md_profile}}', student_md_profile)
 
