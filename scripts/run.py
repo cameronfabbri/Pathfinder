@@ -75,9 +75,6 @@ def initialize_counselor_agent(client: OpenAI, student_md_profile: str):
     counselor_system_prompt = counselor_system_prompt.replace('{{persona}}', persona_prompt)
     counselor_system_prompt = counselor_system_prompt.replace('{{student_md_profile}}', student_md_profile)
 
-    print('INIT COUNSELOR SYSTEM PROMPT:')
-    print(counselor_system_prompt)
-
     return agent.Agent(
         client,
         name="Counselor",
