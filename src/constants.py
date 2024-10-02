@@ -6,6 +6,7 @@ opj = os.path.join
 SYSTEM_DATA_DIR = opj('/Volumes', 'External', 'system_data')
 
 CHROMA_DB_PATH = opj('data', 'chromadb')
+QDRANT_DB_PATH = opj('data', 'qdrantdb')
 SUNY_DATA_DIR = opj(SYSTEM_DATA_DIR, 'general')
 UNIVERSITY_DATA_DIR = opj(SYSTEM_DATA_DIR, 'suny')
 
