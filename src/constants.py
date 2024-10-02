@@ -5,8 +5,8 @@ opj = os.path.join
 
 SYSTEM_DATA_DIR = opj('/Volumes', 'External', 'system_data')
 
+CHROMA_DB_PATH = opj('data', 'chromadb')
 SUNY_DATA_DIR = opj(SYSTEM_DATA_DIR, 'general')
-CHROMA_DB_PATH = opj(SYSTEM_DATA_DIR, 'chromadb')
 UNIVERSITY_DATA_DIR = opj(SYSTEM_DATA_DIR, 'suny')
 
 @lru_cache(maxsize=None)

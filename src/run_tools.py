@@ -86,17 +86,19 @@ def process_user_input(prompt):
     counselor_agent.add_message("user", prompt)
     counselor_response = counselor_agent.invoke()
 
-    print('COUNSELOR MESSAGES')
-    counselor_agent.print_messages(True)
+    #print('COUNSELOR MESSAGES')
+    #counselor_agent.print_messages(True)
 
-    print('NEXT MESSAGE')
-    print(counselor_response)
+    #print('NEXT MESSAGE')
+    #print(counselor_response)
 
     counselor_response_str = counselor_response.choices[0].message.content
     counselor_response_json = utils.parse_json(counselor_response_str)
 
     recipient = counselor_response_json.get("recipient")
     counselor_message = counselor_response_json.get("message")
+    phase = counselor_response_json.get("phase")
+    st.session_state.user_messages.append({"role": "assistant", "content": counselor_message})
 
     if recipient == "suny":
 
