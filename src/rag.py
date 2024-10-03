@@ -1,24 +1,38 @@
 """
-RAG (Retrieval Augmented Generation) class for retrieving and formatting documents from a ChromaDB instance.
+RAG (Retrieval Augmented Generation) class for retrieving and formatting documents from a QdrantDB instance.
 """
+from FlagEmbedding import FlagReranker
 from typing import Any, Dict, List, Tuple
 
-from src.database.chroma_db import ChromaDB
+from src.database import qdrant_db
 
 
 class RAG:
-    def __init__(self, db: ChromaDB, top_k: int = 5):
+    def __init__(
+            self,
+            db: qdrant_db.QdrantDB,
+            embedding_model: qdrant_db.EmbeddingModel,
+            top_n: int = 20,
+            top_k: int = 5,
+            reranker: FlagReranker = None,
+        ):
         """
         Initialize the RAG (Retrieval Augmented Generation) class.
 
         Args:
-            db (ChromaDB): An instance of the ChromaDB class.
-            top_k (int): The number of top documents to retrieve for context.
+            db (QdrantDB): An instance of the QdrantDB class.
+            embedding_model (EmbeddingModel): An instance of the src.database.qdrant_db.EmbeddingModel class.
+            top_n (int): The number of top documents to retrieve to pass to the reranker.
+            top_k (int): The number of top documents to return after reranking for context.
+            reranker (FlagReranker): An instance of the FlagReranker class.
         """
         self.db = db
         self.top_k = top_k
+        self.top_n = top_n
+        self.embedding_model = embedding_model
+        self.reranker = reranker
 
-    def retrieve(self, query: str, school_name: str = None, doc_type: str = None) -> List[Dict[str, Any]]:
+    def retrieve(self, query_text: str, school_name: str = None, doc_type: str = None) -> List[Dict[str, Any]]:
         """
         Retrieve relevant documents from the database using the query.
 
@@ -30,18 +44,30 @@ class RAG:
         Returns:
             List[Dict[str, Any]]: A list of relevant documents with metadata.
         """
-        where = {}
-        if school_name is not None:
-            where['university'] = school_name
-        if doc_type is not None:
-            where['doc_type'] = doc_type
+        query_vector = self.embedding_model.embed(query_text)
 
-        return self.db.collection.query(
-            query_texts=[query],
-            n_results=self.top_k,
-            include=['documents', 'metadatas', 'distances'],
-            where=where
+        return self.db.query(
+            collection_name='suny',
+            query_vector=query_vector,
+            university=school_name,
+            limit=self.top_n,
         )
+
+    def rerank(self, query_text, search_results):
+        """
+        Rerank the search results using the given query text and query vector.
+        """
+
+        # Compute scores for all results
+        scored_results = []
+        for result in search_results:
+            score = self.reranker.compute_score([query_text, result.payload.get('content')], normalize=True)
+            scored_results.append((result, score))
+        
+        # Sort results by score in descending order
+        sorted_results = [y[0] for y in sorted(scored_results, key=lambda x: x[1], reverse=True)]
+
+        return sorted_results[:self.top_k]
 
     def format_documents(self, documents: List[Dict[str, Any]]) -> Tuple[str, List[str]]:
         """
@@ -116,3 +142,31 @@ class RAG:
 
         return content#, content_doc_ids
 
+
+if __name__ == '__main__':
+    import time
+    import qdrant_client
+    client = qdrant_client.QdrantClient(host="localhost", port=6333)
+    db = qdrant_db.QdrantDB(client, 'suny', 786)
+    embedding_model = qdrant_db.EmbeddingModel('jina')
+
+    query_text = 'Who is the chair of the Computer and Information Technology department at Alfred University?'
+    query_text = 'Which colleges offer a degree in Arabic?'
+    school_name = None
+    #school_name = 'Binghamton University'
+    #school_name = 'Alfred State College'
+
+    reranker = FlagReranker('BAAI/bge-reranker-v2-m3', use_fp16=True)
+    rag = RAG(db, embedding_model, top_n=20, top_k=5, reranker=reranker)
+    res = rag.retrieve(query_text, school_name=school_name)
+
+    res = rag.rerank(query_text, search_results=res)
+
+    for r in res:
+        print(r.payload.get('filepath'))
+        print(r.payload.get('start_page'), '-', r.payload.get('end_page'))
+        print(r.payload.get('university'))
+        print(r.payload.get('type'))
+        print(r.payload.get('url'))
+        print('\n----------------------------------------------------------\n')
+        input()

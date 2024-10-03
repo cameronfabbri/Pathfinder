@@ -82,7 +82,7 @@ class QdrantDB:
                     id=point_id,
                     vector=embedding,
                     payload=payload
-                ),
+                )
             ],
         )
 
@@ -100,25 +100,74 @@ class QdrantDB:
             print(f"Error checking if point exists: {e}")
             return False
 
-    def query(self, collection_name: str, query_vector: np.ndarray, university: str, limit: int = 1):
-        search_result = self.client.search(
-            collection_name=collection_name,
-            query_vector=query_vector,
-            query_filter=Filter(
+    def query(self, collection_name: str, query_vector: np.ndarray, university: str | None = None, limit: int = 1):
+        """
+        Query the database for the given query vector and optional university filter.
+
+        Args:
+            collection_name (str): The name of the collection.
+            query_vector (np.ndarray): The query vector.
+            university (str | None): The name of the university. Defaults to None.
+            limit (int): The number of results to return. Defaults to 1.
+        Returns:
+            List[Dict[str, Any]]: A list of relevant documents with metadata.
+        """
+        filter = None
+        if university is not None:
+            filter = Filter(
                 must=[
                     FieldCondition(
                         key="university",
                         match=MatchValue(value=university)
                     )
                 ]
-            ),
+            )
+
+        search_result1 = self.client.search(
+            collection_name=collection_name,
+            query_vector=query_vector,
+            query_filter=filter,
             limit=limit
         )
-        return search_result
+        return search_result1
+    
 
+class EmbeddingModel:
+    def __init__(self, model_name: str):
+        self.model_name = model_name
+        if model_name == 'bge-small':
+            self.embedding_model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
+            self.emb_dim = 384
+            self.max_tokens = 512
+        elif model_name == 'jina':
+            self.embedding_model = TextEmbedding(model_name="jinaai/jina-embeddings-v2-base-en")
+            self.emb_dim = 768
+            self.max_tokens = 8192
+
+    def embed(self, text: str) -> np.ndarray:
+
+        num_tokens = utils.count_tokens(text)
+
+        if num_tokens > self.max_tokens:
+
+            # Chunk the text with an overlap of 20 words
+            words = text.split()
+            chunks = []
+            for i in range(0, len(words), self.max_tokens - 20):
+                chunk = ' '.join(words[max(0, i-20):i+self.max_tokens])
+                chunks.append(chunk)
+
+            # Get embeddings for each chunk
+            chunk_embeddings = [list(self.embedding_model.embed(chunk))[0] for chunk in chunks]
+            
+            # Average the embeddings
+            avg_embedding = np.mean(chunk_embeddings, axis=0)
+            
+            return list(avg_embedding)
+
+        return list(self.embedding_model.embed(text))[0]
 
 def main():
-
 
     #client_qdrant = QdrantClient(
     #    url="https://b3a175dd-76e6-47e4-a90e-0b76f8f3c526.europe-west3-0.gcp.cloud.qdrant.io:6333", 

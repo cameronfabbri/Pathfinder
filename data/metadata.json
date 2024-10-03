@@ -41,7 +41,7 @@
     ]
   },
   "Binghamton University": {
-    "root_directory": "suny/www.binghamton.edu/apps/academics/program",
+    "root_directory": "www.binghamton.edu/apps/academics/program",
     "processing_instructions": {
       "file_extensions": [".html"],
       "include_in_path": [""]
@@ -50,14 +50,14 @@
     "other_files": []
   },
   "SUNY Broome": {
-    "root_directory": "suny/www1.sunybroome.edu/programs",
+    "root_directory": "www1.sunybroome.edu/programs",
     "processing_instructions": {
       "file_extensions": [".html"],
       "include_in_path": [""]
     },
     "pdf_files": [
-      "suny/www1.sunybroome.edu/wp-content/uploads/2024/08/2425_student_handbook.pdf",
-      "suny/www1.sunybroome.edu/wp-content/uploads/2024/01/suny_broome_fast_facts_fall_2023-1.pdf"
+      "www1.sunybroome.edu/wp-content/uploads/2024/08/2425_student_handbook.pdf",
+      "www1.sunybroome.edu/wp-content/uploads/2024/01/suny_broome_fast_facts_fall_2023-1.pdf"
     ],
     "other_files": []
   },
@@ -89,13 +89,13 @@
     "other_files": []
   },
   "SUNY Potsdam": {
-    "root_directory": "suny/www.potsdam.edu/",
+    "root_directory": "www.potsdam.edu/",
     "processing_instructions": {
       "file_extensions": [".html"],
       "include_in_path": [""]
     },
     "pdf_files": [
-        "suny/www.potsdam.edu/sites/default/files/FinancialAidAssessmentPlan.pdf"
+        "www.potsdam.edu/sites/default/files/FinancialAidAssessmentPlan.pdf"
     ],
     "other_files": []
   }

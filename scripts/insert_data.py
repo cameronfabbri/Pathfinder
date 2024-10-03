@@ -13,17 +13,13 @@ import pymupdf4llm
 from tqdm import tqdm
 from openai import OpenAI
 from bs4 import BeautifulSoup
-from fastembed import TextEmbedding
 from difflib import SequenceMatcher
-import numpy as np
 from qdrant_client import QdrantClient
 
 from src import agent
-from src.database import qdrant_db, chroma_db
-from src.pdf_tools import load_pdf_text
-from src.constants import QDRANT_DB_PATH
 from src import utils
-from src.constants import UNIVERSITY_DATA_DIR, CHROMA_DB_PATH, UNIVERSITY_MAPPING, METADATA_PATH
+from src.database import qdrant_db
+from src.constants import UNIVERSITY_DATA_DIR, UNIVERSITY_MAPPING, METADATA_PATH
 
 opj = os.path.join
 
@@ -297,21 +293,20 @@ def extract_pdf_pages(pdf_file: str) -> list[str]:
     Returns:
         list[str]: A list of strings, one for each page of the pdf file.
     """
-
     return pymupdf4llm.to_markdown(pdf_file, page_chunks=True)
 
 
 def insert_pdf_files(
-        db: chroma_db.ChromaDB,
+        db: qdrant_db.QdrantDB,
         university_name: str,
         pdf_files: list[str],
-        embedding_model: TextEmbedding,
+        embedding_model: qdrant_db.EmbeddingModel,
         debug: bool) -> None:
     """
     Insert the pdf files into the database
 
     Args:
-        db (ChromaDB): The database to insert the documents into.
+        db (qdrant_db.QdrantDB): The database to insert the documents into.
         university_name (str): The name of the university.
         pdf_files (list[str]): The list of pdf files to insert.
     Returns:
@@ -401,10 +396,10 @@ def insert_pdf_files(
 
 
 def insert_html_files(
-        db: chroma_db.ChromaDB,
+        db: qdrant_db.QdrantDB,
         university_name: str,
         html_files: list[str],
-        embedding_model: TextEmbedding,
+        embedding_model: qdrant_db.EmbeddingModel,
         debug: bool) -> None:
     """
     Insert the html files into the database
@@ -413,7 +408,7 @@ def insert_html_files(
         db (qdrant_db.QdrantDB): The database to insert the documents into.
         university_name (str): The name of the university.
         html_files (list[str]): The list of html files to insert.
-        embedding_model (TextEmbedding): The embedding model to use.
+        embedding_model (qdrant_db.EmbeddingModel): The embedding model to use.
         debug (bool): Run in debug mode.
     Returns:
         None
@@ -485,42 +480,6 @@ def insert_html_files(
                 print(f"[DEBUG - NOTHING ACTUALLY INSERTED] Inserted chunk: {chunk_id}")
 
 
-class EmbeddingModel:
-    def __init__(self, model_name: str):
-        self.model_name = model_name
-        if model_name == 'bge-small':
-            self.embedding_model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
-            self.emb_dim = 384
-            self.max_tokens = 512
-        elif model_name == 'jina':
-            self.embedding_model = TextEmbedding(model_name="jinaai/jina-embeddings-v2-base-en")
-            self.emb_dim = 768
-            self.max_tokens = 8192
-
-    def embed(self, text: str) -> np.ndarray:
-
-        num_tokens = utils.count_tokens(text)
-
-        if num_tokens > self.max_tokens:
-
-            # Chunk the text with an overlap of 20 words
-            words = text.split()
-            chunks = []
-            for i in range(0, len(words), self.max_tokens - 20):
-                chunk = ' '.join(words[max(0, i-20):i+self.max_tokens])
-                chunks.append(chunk)
-
-            # Get embeddings for each chunk
-            chunk_embeddings = [list(self.embedding_model.embed(chunk))[0] for chunk in chunks]
-            
-            # Average the embeddings
-            avg_embedding = np.mean(chunk_embeddings, axis=0)
-            
-            return list(avg_embedding)
-
-        return list(self.embedding_model.embed(text))[0]
-
-
 @click.command()
 @click.option('--data_dir', '-d', type=str, default=None, help='University directory to process')
 @click.option('--general_data_dir', '-gd', type=str, default=None, help='General data directory to process')
@@ -528,13 +487,12 @@ class EmbeddingModel:
 @click.option('--model', type=click.Choice(['bge-small', 'jina']), default='bge-small', help='Embedding model')
 def main(data_dir: str | None, general_data_dir: str | None, debug: bool, model: str):
 
-    embedding_model = EmbeddingModel(model)
+    embedding_model = qdrant_db.EmbeddingModel(model)
 
     if general_data_dir is not None and data_dir is not None:
         print("Error: Cannot specify both data_dir and general_data_dir")
         exit(1)
 
-    #db = chroma_db.ChromaDB(CHROMA_DB_PATH, 'universities')
     client_qdrant = QdrantClient(host="localhost", port=6333)
     db = qdrant_db.QdrantDB(client_qdrant, 'suny', embedding_model.emb_dim)
 
@@ -550,8 +508,10 @@ def main(data_dir: str | None, general_data_dir: str | None, debug: bool, model:
 
         if data_dir is not None:
             if university_name != UNIVERSITY_MAPPING[os.path.basename(data_dir)]:
-                print('Skipping', university_name)
+                #print('Skipping', university_name)
                 continue
+
+        print('Inserting data for', university_name)
 
         files = {
             'html_files': data.get('html_files', []),
@@ -573,6 +533,8 @@ def main(data_dir: str | None, general_data_dir: str | None, debug: bool, model:
                 files['pdf_files'].extend(selected_files.get('pdf_files', []))
             else:
                 print(f"Warning: Root directory not specified for {university_name}")
+
+        print('Inserting', len(files['html_files']), 'HTML files and', len(files['pdf_files']), 'PDF files')
 
         if files['html_files']:
             print('Inserting HTML files for', university_name, '...')
