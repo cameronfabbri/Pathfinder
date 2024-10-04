@@ -4,37 +4,21 @@ Vector database that uses Faiss for storing and querying vectors.
 # Cameron Fabbri
 
 import os
-import re
 import json
-import faiss
+import pickle
 import numpy as np
 
-from bs4 import BeautifulSoup
-from openai import OpenAI
-
-import pickle
-from tqdm import tqdm
+from typing import List
+from functools import lru_cache
+from fastembed import TextEmbedding
+from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance
 from qdrant_client.http.models import PointStruct, Filter, FieldCondition, MatchValue
-from qdrant_client import QdrantClient
-
-from fastembed import TextEmbedding
-from typing import List
 
 from src import utils
-from src.constants import METADATA_PATH, UNIVERSITY_MAPPING, UNIVERSITY_DATA_DIR, QDRANT_DB_PATH
-from src.utils import chunk_pages, chunk_text
-
+from src.constants import METADATA_PATH, UNIVERSITY_DATA_DIR
 
 opj = os.path.join
-
-
-def get_openai_embedding(client, text, model="text-embedding-3-small"):
-    return client.embeddings.create(input=[text], model=model).data[0].embedding
-
-
-def get_fastembed_embedding(text: List[str], embedding_model: TextEmbedding) -> List[np.ndarray]:
-    return list(embedding_model.embed(text))
 
 
 class QdrantDB:
@@ -54,7 +38,6 @@ class QdrantDB:
 
     def add_document(
             self,
-            content: str,
             embedding: np.ndarray,
             collection_name: str,
             point_id: str,
@@ -64,15 +47,11 @@ class QdrantDB:
         Add a document to the collection.
 
         Args:
-            content (str): The content of the document.
             embedding (np.ndarray): The embedding of the document.
             collection_name (str): The name of the collection.
             doc_id (str): The ID of the document.
             metadata (dict): The metadata of the document.
         """
-
-        payload['content'] = content
-        payload['id'] = point_id
 
         self.client.upsert(
             collection_name=collection_name,
@@ -90,15 +69,21 @@ class QdrantDB:
         """
         Check if a point with the given ID exists in the collection.
         """
-        try:
-            result = self.client.retrieve(
-                collection_name=self.collection_name,
-                ids=[point_id]
-            )
-            return len(result) > 0
-        except Exception as e:
-            print(f"Error checking if point exists: {e}")
-            return False
+        result = self.client.retrieve(
+            collection_name=self.collection_name,
+            ids=[point_id]
+        )
+        return len(result) > 0
+
+    def get_document_by_id(self, point_id: str):
+        """
+        Get a document by its ID.
+        """
+        result = self.client.retrieve(
+            collection_name=self.collection_name,
+            ids=[point_id]
+        )
+        return result[0]
 
     def query(self, collection_name: str, query_vector: np.ndarray, university: str | None = None, limit: int = 1):
         """
@@ -123,14 +108,13 @@ class QdrantDB:
                 ]
             )
 
-        search_result1 = self.client.search(
+        return self.client.search(
             collection_name=collection_name,
             query_vector=query_vector,
             query_filter=filter,
             limit=limit
         )
-        return search_result1
-    
+
 
 class EmbeddingModel:
     def __init__(self, model_name: str):
@@ -166,6 +150,35 @@ class EmbeddingModel:
             return list(avg_embedding)
 
         return list(self.embedding_model.embed(text))[0]
+
+def get_openai_embedding(client, text, model="text-embedding-3-small"):
+    return client.embeddings.create(input=[text], model=model).data[0].embedding
+
+
+def get_fastembed_embedding(text: List[str], embedding_model: TextEmbedding) -> List[np.ndarray]:
+    return list(embedding_model.embed(text))
+
+
+@lru_cache(maxsize=None)
+def get_embedding_model(model: str) -> EmbeddingModel:
+    return EmbeddingModel(model)
+
+
+@lru_cache(maxsize=None)
+def get_qdrant_client(host: str = "localhost", port: int = 6333) -> QdrantClient:
+    return QdrantClient(host=host, port=port)
+
+
+@lru_cache(maxsize=None)
+def get_qdrant_db(client: QdrantClient, collection_name: str, emb_dim: int) -> QdrantDB:
+    return QdrantDB(client, collection_name, emb_dim)
+
+
+from FlagEmbedding import FlagReranker
+@lru_cache(maxsize=None)
+def get_reranker(model: str='BAAI/bge-reranker-v2-m3') -> FlagReranker:
+    return FlagReranker(model, use_fp16=True)
+
 
 def main():
 

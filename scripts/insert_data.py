@@ -3,7 +3,6 @@ Script to insert files found by scripts/find_relevant_files.py into the database
 """
 import os
 import re
-import fitz
 import json
 import uuid
 import click
@@ -68,7 +67,7 @@ def get_doc_id_from_path(path: str) -> str:
     return doc_id
 
 
-def get_html_url(file_path: str) -> str | None:
+def get_html_url(university_name: str, file_path: str) -> str | None:
     """
     Try and get the URL of the HTML file
      
@@ -79,7 +78,7 @@ def get_html_url(file_path: str) -> str | None:
     """
     
     # Extract base URL from the file path by removing the root directory and file extension
-    base_url = file_path.split(UNIVERSITY_DATA_DIR)[1].replace('.html', '')
+    base_url = file_path.split(university_name)[1].replace('.html', '')
     if base_url.startswith('/'):
         base_url = base_url[1:]
 
@@ -277,8 +276,6 @@ def get_html_metadata(html_file: str) -> dict:
 
     metadata['language'] = soup.html.get('lang', '')
 
-    metadata['source_url'] = soup.find('link', rel='canonical')['href'] if soup.find('link', rel='canonical') else ''
-
     return metadata
 
 
@@ -318,9 +315,9 @@ def insert_pdf_files(
             continue
 
         doc_id = get_doc_id_from_path(path)
-        point_id = str(uuid.uuid4())
+        parent_point_id = str(uuid.uuid4())
 
-        if db.point_exists(point_id):
+        if db.point_exists(parent_point_id):
             print(f"Document {doc_id} already exists.")
             continue
 
@@ -342,7 +339,7 @@ def insert_pdf_files(
                     content=page['text'],
                     embedding=embedding_model.embed(page['text']),
                     collection_name='suny',
-                    point_id=point_id,
+                    point_id=parent_point_id,
                     payload=metadata
                 )
             else:
@@ -354,6 +351,7 @@ def insert_pdf_files(
         for chunk in page_chunks:
             chunk_id = doc_id + f"-chunk-{chunk['metadata']['chunk_id']}"
             chunk_point_id = str(uuid.uuid4())
+            chunk['metadata']['parent_point_id'] = parent_point_id
             chunk['metadata']['filepath'] = path
             chunk['metadata']['university'] = university_name
             chunk['metadata']['type'] = 'pdf'
@@ -417,13 +415,13 @@ def insert_html_files(
     for path in tqdm(html_files):
 
         doc_id = get_doc_id_from_path(path)
-        point_id = str(uuid.uuid4())
+        parent_point_id = str(uuid.uuid4())
 
-        if db.point_exists(point_id):
+        if db.point_exists(parent_point_id):
             print(f"Document {doc_id} already exists.")
             continue
 
-        url = get_html_url(path)
+        url = get_html_url(university_name, path)
         if url is None:
             print(f"Warning: No corresponding web page found for {path}")
             with open('missing_html_urls.txt', 'a') as f:
@@ -439,70 +437,97 @@ def insert_html_files(
 
         text = re.sub(r'\n{3,}', '\n\n', soup.get_text()).strip()
 
-        metadata = get_html_metadata(path)
+        #metadata = get_html_metadata(path)
 
         # Insert the full document into the database
-        metadata['filepath'] = path
-        metadata['university'] = university_name
-        metadata['type'] = 'html'
-        metadata['url'] = url
+        payload = {
+            'filepath': path,
+            'university': university_name,
+            'type': 'html',
+            'url': url,
+            'content': text,
+            'point_id': parent_point_id,
+            'parent_point_id': parent_point_id
+        }
         if not debug:
             db.add_document(
-                content=text,
                 embedding=embedding_model.embed(text),
                 collection_name='suny',
-                point_id=point_id,
-                payload=metadata
+                point_id=parent_point_id,
+                payload=payload
             )
         else:
             print(f"[DEBUG - NOTHING ACTUALLY INSERTED] Inserted html: {doc_id}")
 
         # Insert chunks into the database
-        text_chunks = utils.chunk_text(text, chunk_size=512, overlap_size=20)
-        
-        for chunk in text_chunks:
-            chunk_id = doc_id + f"-chunk-{chunk['metadata']['chunk_id']}"
+        text_chunks = utils.chunk_text(text, chunk_size=256, overlap_size=32)
+
+        for chunk_id, chunk_text in enumerate(text_chunks):
             chunk_point_id = str(uuid.uuid4())
-            chunk['metadata']['filepath'] = path
-            chunk['metadata']['university'] = university_name
-            chunk['metadata']['type'] = 'html'
-            chunk['metadata']['url'] = url
-            chunk['metadata']['point_id'] = chunk_point_id
+            chunk_payload = {
+                'filepath': path,
+                'university': university_name,
+                'type': 'html',
+                'url': url,
+                'point_id': chunk_point_id,
+                'parent_point_id': parent_point_id,
+                'chunk_id': chunk_id,
+                'content': chunk_text
+            }
             if not debug:
                 db.add_document(
-                    content=chunk['text'],
-                    embedding=embedding_model.embed(chunk['text']),
+                    embedding=embedding_model.embed(chunk_text),
                     collection_name='suny',
                     point_id=chunk_point_id,
-                    payload=chunk['metadata']
+                    payload=chunk_payload
                 )
             else:
-                print(f"[DEBUG - NOTHING ACTUALLY INSERTED] Inserted chunk: {chunk_id}")
+                print(f"[DEBUG - NOTHING ACTUALLY INSERTED] Inserted chunk: {chunk_point_id}")
+
+
+def get_files(
+        data_dir: str,
+        file_extensions: list[str],
+        exclude_in_path: list[str]=None) -> list[str]:
+    """
+    Get the files in the data directory with the given file extensions.
+    """
+    files = []
+    exclude_files = []
+    for dirpath, _, filenames in os.walk(data_dir):
+        for filename in filenames:
+            if os.path.splitext(filename)[1] in file_extensions:
+                file_path = os.path.join(dirpath, filename)
+                for exclude in exclude_in_path:
+                    if exclude in file_path:
+                        exclude_files.append(file_path)
+                        break
+
+                if file_path not in exclude_files:
+                    normalized_path = os.path.normpath(file_path)
+                    files.append(normalized_path)
+
+    return files
 
 
 @click.command()
-@click.option('--data_dir', '-d', type=str, default=None, help='University directory to process')
-@click.option('--general_data_dir', '-gd', type=str, default=None, help='General data directory to process')
+@click.option('--data_dir', '-d', type=str, default=None, help='Root university directory to process')
 @click.option('--debug', is_flag=True, default=False, help='Run in debug mode')
-@click.option('--model', type=click.Choice(['bge-small', 'jina']), default='bge-small', help='Embedding model')
-def main(data_dir: str | None, general_data_dir: str | None, debug: bool, model: str):
+@click.option('--model', type=click.Choice(['bge-small', 'jina']), default='jina', help='Embedding model')
+def main(data_dir: str | None, debug: bool, model: str):
 
-    embedding_model = qdrant_db.EmbeddingModel(model)
-
-    if general_data_dir is not None and data_dir is not None:
-        print("Error: Cannot specify both data_dir and general_data_dir")
-        exit(1)
-
-    client_qdrant = QdrantClient(host="localhost", port=6333)
+    embedding_model = qdrant_db.get_embedding_model(model)
+    client_qdrant = qdrant_db.get_qdrant_client()
     db = qdrant_db.QdrantDB(client_qdrant, 'suny', embedding_model.emb_dim)
-
-    if general_data_dir is not None:
-        selected_files = [opj(general_data_dir, x) for x in os.listdir(general_data_dir)]
-        print(selected_files)
-        exit()
 
     with open(METADATA_PATH, 'r') as f:
         metadata = json.load(f)
+
+    university_name = os.path.basename(data_dir)
+    file_extensions = metadata.get(university_name).get('processing_instructions', {}).get('file_extensions', [])
+    files = get_files(data_dir, file_extensions, metadata.get(university_name).get('processing_instructions', {}).get('exclude_in_path', []))
+    insert_html_files(db, university_name, files, embedding_model, debug)
+    exit()
 
     for university_name, data in metadata.items():
 

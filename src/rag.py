@@ -12,9 +12,9 @@ class RAG:
             self,
             db: qdrant_db.QdrantDB,
             embedding_model: qdrant_db.EmbeddingModel,
-            top_n: int = 20,
-            top_k: int = 5,
             reranker: FlagReranker = None,
+            top_n: int = 20,
+            top_k: int = 5
         ):
         """
         Initialize the RAG (Retrieval Augmented Generation) class.
@@ -32,7 +32,7 @@ class RAG:
         self.embedding_model = embedding_model
         self.reranker = reranker
 
-    def retrieve(self, query_text: str, school_name: str = None, doc_type: str = None) -> List[Dict[str, Any]]:
+    def retrieve(self, query_text: str, school_name: str = None) -> List[Dict[str, Any]]:
         """
         Retrieve relevant documents from the database using the query.
 
@@ -69,104 +69,75 @@ class RAG:
 
         return sorted_results[:self.top_k]
 
-    def format_documents(self, documents: List[Dict[str, Any]]) -> Tuple[str, List[str]]:
+    def run(self, query_text: str, school_name: str = None) -> str:
+        """
+        Run the RAG pipeline.
+        """
+        search_results = self.retrieve(query_text, school_name)
+        reranked_results = self.rerank(query_text, search_results)
+        return self.format_documents(reranked_results)
+
+    def format_documents(self, documents) -> str:
         """
         Format the retrieved documents into a string to be included in the prompt.
-
-        Args:
-            documents (List[Dict[str, Any]]): The retrieved documents.
-
-        Returns:
-            Tuple[str, List[str]]: The formatted documents and the document IDs.
         """
 
-        #print('Retrieved Documents:')
-        #[print(x) for x in documents['ids'][0]]
-        #print('-' * 100)
-        content_doc_ids = []
-        for doc_id in documents['ids'][0]:
-
-            # Document is a full HTML page
-            if '.pdf' not in doc_id and 'chunk' not in doc_id:
-                if doc_id not in content_doc_ids:
-                    content_doc_ids.append(doc_id)
-
-            # Chunk of an HTML file
-            elif '.pdf' not in doc_id and 'chunk' in doc_id:
-                if doc_id.split('-chunk')[0] not in content_doc_ids:
-                    content_doc_ids.append(doc_id.split('-chunk')[0])
-
-            # Full PDF page
-            elif '.pdf' in doc_id and 'chunk' not in doc_id:
-                if doc_id not in content_doc_ids:
-                    content_doc_ids.append(doc_id)
-
-            # Chunk of a pdf page - we want to get the whole page(s)
-            elif '.pdf' in doc_id and 'chunk' in doc_id:
-                doc_id_base = doc_id.split('-chunk')[0]
-
-                doc = self.db.get_document_by_id(doc_id)
-                start_page = str(doc['metadata']['start_page'])
-                end_page = str(doc['metadata']['end_page'])
-
-                # chunk spans multiple pages
-                if start_page != end_page:
-                    doc_id1 = doc_id_base + '-page-' + start_page
-                    doc_id2 = doc_id_base + '-page-' + end_page
-                    if doc_id1 not in content_doc_ids:
-                        content_doc_ids.append(doc_id1)
-                    if doc_id2 not in content_doc_ids:
-                        content_doc_ids.append(doc_id2)
-                else:
-                    doc_id1 = doc_id_base + '-page-' + start_page
-                    if doc_id1 not in content_doc_ids:
-                        content_doc_ids.append(doc_id1)
-
-        #print('CONTENT DOC IDS:')
-        #[print(x) for x in content_doc_ids]
-        #print('\n-\n')
+        doc_ids = []
+        filtered_docs = []
+        for doc in documents:
+            doc = doc.dict()
+            if doc['payload']['parent_point_id'] not in doc_ids:
+                doc_ids.append(doc['payload']['parent_point_id'])
+                filtered_docs.append(doc)
 
         content = ''
-        for x in content_doc_ids:
-            doc = self.db.get_document_by_id(x)
-            #if 'filepath' in doc['metadata'].keys():
-            #    content += 'Filepath: ' + doc['metadata']['filepath'] + '\n'
-            if 'url' in doc['metadata'].keys():
-                content += 'URL: ' + doc['metadata']['url'] + '\n'
-            if 'page_number' in doc['metadata'].keys():
-                content += 'Page Number: ' + str(doc['metadata']['page_number']) + '\n'
-            content += doc['document'] + '\n\n'
+        for doc in filtered_docs:
 
-        #print('CONTENT:')
-        #print(content)
+            # Match was a chunk, get the full parent document
+            if doc['id'] != doc['payload']['parent_point_id']:
+                doc = self.db.get_document_by_id(doc['payload']['parent_point_id']).dict()
 
-        return content#, content_doc_ids
+            content += 'University: ' + doc['payload']['university'] + '\n'
+            content += 'URL: ' + doc['payload']['url'] + '\n'
+            content += 'Content: ' + doc['payload']['content'] + '\n\n'
+
+        return content
 
 
 if __name__ == '__main__':
-    import time
-    import qdrant_client
-    client = qdrant_client.QdrantClient(host="localhost", port=6333)
-    db = qdrant_db.QdrantDB(client, 'suny', 786)
-    embedding_model = qdrant_db.EmbeddingModel('jina')
+
+    model = 'jina'
+    embedding_model = qdrant_db.get_embedding_model(model)
+    client_qdrant = qdrant_db.get_qdrant_client()
+    reranker = qdrant_db.get_reranker()
+    db = qdrant_db.get_qdrant_db(client_qdrant, 'suny', embedding_model.emb_dim)
+    rag = RAG(db=db, embedding_model=embedding_model, reranker=reranker, top_n=20, top_k=5)
 
     query_text = 'Who is the chair of the Computer and Information Technology department at Alfred University?'
     query_text = 'Which colleges offer a degree in Arabic?'
+    query_text = 'Culinary and Baking Arts'
+    query_text = 'In addition to textbook expenses, students in the Culinary Arts program are expected to purchase uniforms ($100+) and a knife set ($300+).'
     school_name = None
     #school_name = 'Binghamton University'
     #school_name = 'Alfred State College'
 
-    reranker = FlagReranker('BAAI/bge-reranker-v2-m3', use_fp16=True)
-    rag = RAG(db, embedding_model, top_n=20, top_k=5, reranker=reranker)
-    res = rag.retrieve(query_text, school_name=school_name)
-
-    res = rag.rerank(query_text, search_results=res)
-
-    for r in res:
-        print(r.payload.get('filepath'))
-        print(r.payload.get('start_page'), '-', r.payload.get('end_page'))
-        print(r.payload.get('university'))
-        print(r.payload.get('type'))
-        print(r.payload.get('url'))
+    res = rag.run(query_text, school_name)
+    print(res)
+    exit()
+    for point in res:
+        point_dict = point.dict()
+        print(point_dict)
+        #print(point_dict['payload'].keys(), '\n')
+        #print('ID:', point_dict['payload']['id'])
+        #print('Chunk ID:', point_dict['payload']['chunk_id'])
+        #print('Point ID:', point_dict['payload']['point_id'])
+        #print('Parent Point ID:', point_dict['payload']['parent_point_id'])
+        #print('ID1:', point_dict['id'])
+        #print('Title:', point_dict['payload']['title'])
+        #print(r.payload.get('filepath'))
+        #print(r.payload.get('start_page'), '-', r.payload.get('end_page'))
+        #print(r.payload.get('university'))
+        #print(r.payload.get('type'))
+        #print(r.payload.get('url'))
         print('\n----------------------------------------------------------\n')
         input()

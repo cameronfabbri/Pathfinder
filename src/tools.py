@@ -5,8 +5,7 @@
 import os
 
 from src.rag import RAG
-from src.constants import CHROMA_DB_PATH
-from src.database.chroma_db import ChromaDB
+from src.database import qdrant_db
 
 opj = os.path.join
 
@@ -36,40 +35,29 @@ suny_tools = [
 ]
 
 
-def find_document(question: str, school_name: str = None, doc_type: str = None) -> str:
-    """
-    Find the document that the user is asking about.
-    
-    E.g., "can I see the catalog for Binghamton University"
-    """
-    # Initialize the ChromaDB instance
-    db = ChromaDB(path=CHROMA_DB_PATH, name='universities')
-
-    # Initialize the RAG instance
-    rag = RAG(db=db, top_k=3)
 
 
-def retrieve_content_from_question(question: str, school_name: str = None, doc_type: str = None) -> str:
+def retrieve_content_from_question(question: str, school_name: str = None) -> str:
     """
     Retrieve relevant content from the database based on the user's question.
 
     Args:
         question (str): The user's question about SUNY schools or programs.
         school_name (str, optional): The name of the SUNY school. Only include this if the user's question is about a specific school.
-        doc_type (str, optional): The type of document to retrieve. Only include this if the user's question is about a specific type of document.
-        Valid values are 'html', 'pdf', or None (default)
     Returns:
         str: The formatted documents.
     """
-    # Initialize the ChromaDB instance
-    db = ChromaDB(path=CHROMA_DB_PATH, name='universities')
+
+    model = 'jina'
+    embedding_model = qdrant_db.get_embedding_model(model)
+    client_qdrant = qdrant_db.get_qdrant_client()
+    db = qdrant_db.get_qdrant_db(client_qdrant, 'suny', embedding_model.emb_dim)
+    reranker = qdrant_db.get_reranker()
 
     # Initialize the RAG instance
-    rag = RAG(db=db, top_k=3)
-    documents = rag.retrieve(question, school_name, doc_type)
+    rag = RAG(db=db, top_n=20, top_k=5, embedding_model=embedding_model, reranker=reranker)
 
-    # Format the retrieved documents to include in the prompt
-    return rag.format_documents(documents)
+    return rag.run(question, school_name)
 
 
 function_map = {

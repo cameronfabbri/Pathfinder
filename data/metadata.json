@@ -1,26 +1,35 @@
 {
   "SUNY Adirondack": {
-    "root_directory": "sunyacc.smartcatalogiq.com/en/23-24/college-catalog/",
+    "urls": [
+      "https://www.sunyacc.edu/",
+      "https://sunyacc.smartcatalogiq.com/"
+    ],
     "processing_instructions": {
-      "file_extensions": [".html"],
-      "include_in_path": [""]
+      "file_extensions": [".html", ".cfm", ".php", ".asp", ".aspx", ".jsp", ".xhtml", ".shtml"],
+      "exclude_in_path": ["sunyacc.smartcatalogiq.com/en/23-24"]
     },
     "pdf_files": [],
     "other_files": []
   },
   "University at Albany": {
+    "urls": [
+      "www.albany.edu"
+    ],
     "root_directory": "www.albany.edu",
     "processing_instructions": {
-      "file_extensions": [".html"],
+        "file_extensions": [".html", ".cfm", ".php", ".asp", ".aspx", ".jsp", ".xhtml", ".shtml"],
       "include_in_path": ["programs"]
     },
     "pdf_files": [],
     "other_files": []
   },
   "Alfred University": {
-    "root_directory": "www.alfred.edu/academics/undergrad-majors-minors/",
+    "urls": [
+      "www.alfred.edu"
+    ],
+    "root_directory": "www.alfred.edu/academics/",
     "processing_instructions": {
-        "file_extensions": [".html"],
+        "file_extensions": [".html", ".cfm", ".php", ".asp", ".aspx", ".jsp", ".xhtml", ".shtml"],
         "include_in_path": [""]
     },
     "pdf_files": [
@@ -29,9 +38,13 @@
     ]
   },
   "Alfred State College": {
-    "root_directory": "catalog.alfredstate.edu/",
+    "urls": [
+      "https://www.alfredstate.edu/",
+      "https://catalog.alfredstate.edu/"
+    ],
+    "root_directory": "Alfred State College",
     "processing_instructions": {
-        "file_extensions": [".html"],
+        "file_extensions": [".html", ".cfm", ".php", ".asp", ".aspx", ".jsp", ".xhtml", ".shtml"],
         "include_in_path": ["current"],
         "exclude_from_path": ["courses-by-code"]
     },
@@ -41,15 +54,21 @@
     ]
   },
   "Binghamton University": {
-    "root_directory": "www.binghamton.edu/apps/academics/program",
+    "urls": [
+      "https://www.binghamton.edu/"
+    ],
+    "root_directory": "Binghamton University",
     "processing_instructions": {
-      "file_extensions": [".html"],
+      "file_extensions": [".html", ".cfm", ".php", ".asp", ".aspx", ".jsp", ".xhtml", ".shtml", ".txt"],
       "include_in_path": [""]
     },
     "pdf_files": [],
     "other_files": []
   },
   "SUNY Broome": {
+    "urls": [
+      "https://www1.sunybroome.edu/"
+    ],
     "root_directory": "www1.sunybroome.edu/programs",
     "processing_instructions": {
       "file_extensions": [".html"],
