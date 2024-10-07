@@ -2,46 +2,40 @@
 Script to scrape SUNY websites for information
 """
 
-import json
 import os
+import json
 import subprocess
 
-base_command = 'wget --mirror --convert-links --adjust-extension --page-requisites --no-parent'
+opj = os.path.join
+base_command = 'wget2 --reject jpg,jpeg,png,gif,css,js,woff,woff2,svg --mirror --convert-links --adjust-extension --force-directories --page-requisites --no-parent --user-agent=Mozilla/5.0 --max-threads 9'
 
-def download_websites(json_file, reverse):
-    # Read the JSON file
-    with open(json_file, 'r') as f:
+def main():
+
+    with open('data/metadata.json', 'r') as f:
         data = json.load(f)
-    
-    # Create the base directory if it doesn't exist
-    base_dir = 'system_data/suny_schools/'
-    os.makedirs(base_dir, exist_ok=True)
 
-    if reverse:
-        data = list(reversed(data))
+    downloaded = []
+    with open('data/downloaded.txt', 'r') as f:
+        downloaded = f.readlines()
+    downloaded = [x.strip() for x in downloaded]
 
-    # Process each entry in the JSON file
-    for entry in data:
-        campus = entry['campus'].replace(' ', '-').replace('_', '').title()
-        url = entry['campus_website']['url']
+    for university_name, urls in data.items():
+        if university_name in downloaded:
+            continue
+        print('Downloading', university_name)
+
+        os.makedirs(university_name, exist_ok=True)
+        urls = urls['urls']
+        for url in urls:
+            command = f"{base_command} -P {university_name} {url}"
+            subprocess.run(command, shell=True)
+
+        command2 = f'mv {university_name} /Volumes/External/system_data/suny/'
+        subprocess.run(command2, shell=True)
         
-        # Create a folder for the campus
-        campus_dir = os.path.join(base_dir, campus)
+        with open('data/downloaded.txt', 'a') as f:
+            f.write(f"{university_name}\n")
 
-        os.makedirs(campus_dir, exist_ok=True)
-        
-        # Construct the wget command
-        command = f"{base_command} -P {campus_dir} {url}"
-       
-        # Run the wget command
-        print(f"Downloading {campus} website...")
-        subprocess.run(command, shell=True)
-        print(f"Finished downloading {campus} website.")
 
-import sys
 if __name__ == "__main__":
-    reverse = False
-    json_file = 'system_data/suny_general/suny_schools.json'
-    if sys.argv[1] == 'reverse':
-        reverse = True
-    download_websites(json_file, reverse)
+    main()
