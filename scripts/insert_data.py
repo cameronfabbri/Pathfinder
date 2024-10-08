@@ -300,80 +300,106 @@ def insert_pdf_files(
         db: qdrant_db.QdrantDB,
         university_name: str,
         pdf_files: list[str],
-        embedding_model: qdrant_db.EmbeddingModel,
-        debug: bool) -> None:
+        embedding_model: qdrant_db.EmbeddingModel) -> None:
     """
-    Insert the pdf files into the database
+    Insert the pdf files into the database.
 
     Args:
         db (qdrant_db.QdrantDB): The database to insert the documents into.
         university_name (str): The name of the university.
         pdf_files (list[str]): The list of pdf files to insert.
+        embedding_model (qdrant_db.EmbeddingModel): The embedding model to use.
     Returns:
         None
     """
-    for path in tqdm(pdf_files):
 
-        if not os.path.exists(path):
-            continue
+    batch_size = 16
+
+    ids = []
+    vectors = []
+    payloads = []
+
+    for path in tqdm(pdf_files):
 
         doc_id = get_doc_id_from_path(path)
         parent_point_id = str(uuid.uuid4())
 
-        if db.point_exists(parent_point_id):
-            print(f"Document {doc_id} already exists.")
+        if db.point_exists(doc_id):
+            print(f'Document {doc_id} already exists.')
             continue
 
         url = 'https:/' + path.split(UNIVERSITY_DATA_DIR)[1]
 
-        pages = extract_pdf_pages(path)
-        file_metadata = {
-            'university': university_name,
-            'filepath': path,
-            'url': url,
-            'type': 'pdf',
-        }
+        text_pages = extract_pdf_pages(path)
+        full_text = "\n".join([page['text'] for page in text_pages])
 
-        # Insert each page as a separate document before chunking
-        for page in pages:
-            metadata = {**page['metadata'], **file_metadata}
-            if not debug:
-                db.add_document(
-                    content=page['text'],
-                    embedding=embedding_model.embed(page['text']),
-                    collection_name='suny',
-                    point_id=parent_point_id,
-                    payload=metadata
-                )
-            else:
-                print(f"[DEBUG] Inserted page: {doc_id}")
+        payloads.append(
+            {
+                'filepath': path,
+                'doc_id': doc_id,
+                'university': university_name,
+                'type': 'pdf',
+                'url': url,
+                'content': full_text,
+                'point_id': parent_point_id,
+                'parent_point_id': parent_point_id
+            }
+        )
+        ids.append(parent_point_id)
+        vectors.append(embedding_model.embed(full_text))
 
-        pages_text = [page['text'] for page in pages]
-        page_chunks = utils.chunk_pages(pages_text, chunk_size=128, overlap_size=16)
+        if len(payloads) >= batch_size:
+            db.add_batch(
+                collection_name='suny',
+                point_ids=ids,
+                payloads=payloads,
+                vectors=vectors
+            )
+            payloads = []
+            vectors = []
+            ids = []
 
-        for chunk in page_chunks:
-            chunk_id = doc_id + f"-chunk-{chunk['metadata']['chunk_id']}"
+        # Insert chunks into the database
+        page_chunks = utils.chunk_pages([page['text'] for page in text_pages], chunk_size=256, overlap_size=32)
+
+        chunk_payloads = []
+        chunk_vectors = []
+        chunk_ids = []
+        for chunk_id, chunk in enumerate(page_chunks):
             chunk_point_id = str(uuid.uuid4())
-            chunk['metadata']['parent_point_id'] = parent_point_id
-            chunk['metadata']['filepath'] = path
-            chunk['metadata']['university'] = university_name
-            chunk['metadata']['type'] = 'pdf'
-            chunk['metadata']['point_id'] = chunk_point_id
-            chunk['metadata']['url'] = url
-            chunk['metadata']['doc_id'] = doc_id
-            chunk['metadata']['start_page'] = chunk['metadata']['start_page']
-            chunk['metadata']['end_page'] = chunk['metadata']['end_page']
+            chunk_payload = {
+                'filepath': path,
+                'doc_id': doc_id,
+                'university': university_name,
+                'type': 'pdf',
+                'url': url,
+                'point_id': chunk_point_id,
+                'parent_point_id': parent_point_id,
+                'chunk_id': chunk_id,
+                'content': chunk['text'],
+                'start_page': chunk['metadata']['start_page'],
+                'end_page': chunk['metadata']['end_page']
+            }
+            chunk_payloads.append(chunk_payload)
+            chunk_vectors.append(embedding_model.embed(chunk['text']))
+            chunk_ids.append(chunk_point_id)
 
-            if not debug:
-                db.add_document(
-                    content=chunk['text'],
-                    embedding=embedding_model.embed(chunk['text']),
-                    collection_name='suny',
-                    point_id=chunk_point_id,
-                    payload=chunk['metadata']
-                )
-            else:
-                print(f"[DEBUG] Inserted chunk: {chunk_id}")
+        if chunk_payloads:
+            db.add_batch(
+                collection_name='suny',
+                point_ids=chunk_ids,
+                payloads=chunk_payloads,
+                vectors=chunk_vectors
+            )
+
+    # Insert remaining payloads if len(payloads) < batch_size
+    if payloads:
+        db.add_batch(
+            collection_name='suny',
+            point_ids=ids,
+            payloads=payloads,
+            vectors=vectors
+        )
 
 
 def insert_html_files(

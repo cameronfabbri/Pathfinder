@@ -1,5 +1,6 @@
 """
 Vector database that uses Faiss for storing and querying vectors.
+"file_extensions": [".html", ".cfm", ".php", ".asp", ".aspx", ".jsp", ".xhtml", ".shtml"],
 """
 # Cameron Fabbri
 
@@ -11,7 +12,7 @@ import numpy as np
 from typing import List
 from functools import lru_cache
 from fastembed import TextEmbedding
-from qdrant_client import QdrantClient
+from qdrant_client import QdrantClient, models
 from qdrant_client.models import VectorParams, Distance
 from qdrant_client.http.models import PointStruct, Filter, FieldCondition, MatchValue
 
@@ -35,6 +36,16 @@ class QdrantDB:
                 collection_name=self.collection_name,
                 vectors_config=VectorParams(size=emb_dim, distance=Distance.COSINE),
             )
+
+    def add_batch(self, collection_name: str, point_ids: List[str], payloads: List[dict], vectors: List[np.ndarray]):
+        self.client.upsert(
+            collection_name=collection_name,
+            points=models.Batch(
+                ids=point_ids,
+                payloads=payloads,
+                vectors=vectors,
+            ),
+        )
 
     def add_document(
             self,
@@ -65,15 +76,22 @@ class QdrantDB:
             ],
         )
 
-    def point_exists(self, point_id: str) -> bool:
+    def point_exists(self, doc_id: str) -> bool:
         """
-        Check if a point with the given ID exists in the collection.
+        Check if a point with the given doc_id exists in the collection.
         """
-        result = self.client.retrieve(
+        existing_points = self.client.scroll(
             collection_name=self.collection_name,
-            ids=[point_id]
-        )
-        return len(result) > 0
+            scroll_filter=Filter(
+                must=[
+                    FieldCondition(key="doc_id", match=MatchValue(value=doc_id))
+                ]
+            ),
+            limit=1
+        )[0]
+        if existing_points:
+            return True
+        return False
 
     def get_document_by_id(self, point_id: str):
         """

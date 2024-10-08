@@ -1,121 +1,329 @@
 {
-  "SUNY Adirondack": {
-    "urls": [
-      "https://www.sunyacc.edu/",
-      "https://sunyacc.smartcatalogiq.com/"
-    ],
-    "processing_instructions": {
-      "file_extensions": [".html", ".cfm", ".php", ".asp", ".aspx", ".jsp", ".xhtml", ".shtml"],
-      "exclude_in_path": ["sunyacc.smartcatalogiq.com/en/23-24"]
-    },
-    "pdf_files": [],
-    "other_files": []
+  "SUNY-Adirondack": {
+      "urls": ["https://www.sunyacc.edu/", "https://sunyacc.smartcatalogiq.com/en/24-25/"],
+      "root_directory": "SUNY-Adirondack",
+      "html_directories": [
+        "www.sunyacc.edu/programs-courses/",
+        "www.sunyacc.edu/student-success/",
+        "www.sunyacc.edu/offices-departments/",
+        "sunyacc.smartcatalogiq.com/en/24-25/"
+      ]
   },
-  "University at Albany": {
-    "urls": [
-      "www.albany.edu"
-    ],
-    "root_directory": "www.albany.edu",
-    "processing_instructions": {
-        "file_extensions": [".html", ".cfm", ".php", ".asp", ".aspx", ".jsp", ".xhtml", ".shtml"],
-      "include_in_path": ["programs"]
-    },
-    "pdf_files": [],
-    "other_files": []
+  "University-at-Albany": {
+      "root_directory": "University-at-Albany",
+      "urls": ["https://www.albany.edu/"],
+      "pdf_directories": [
+          "www.albany.edu/docs/schedule_of_classes/pdf/"
+      ],
+      "pdf_files": [],
+      "html_directories": [
+          "www.albany.edu/about/",
+          "www.albany.edu/academic-advising/",
+          "www.albany.edu/academics/",
+          "www.albany.edu/geographyplanning",
+          "www.albany.edu/rockefeller",
+          "www.albany.edu/sociology",
+          "www.albany.edu/womensstudies",
+          "www.albany.edu/physics",
+          "www.albany.edu/economics",
+          "www.albany.edu/computer-science",
+          "www.albany.edu/psychology",
+          "www.albany.edu/environmental-sustainable-engineering",
+          "www.albany.edu/art",
+          "www.albany.edu/communication",
+          "www.albany.edu/ece",
+          "www.albany.edu/chemistry",
+          "www.albany.edu/nanoscale-science-engineering",
+          "www.albany.edu/autism",
+          "www.albany.edu/africana",
+          "www.albany.edu/education",
+          "www.albany.edu/musicandtheatre",
+          "www.albany.edu/philosophy",
+          "www.albany.edu/daes",
+          "www.albany.edu/scj",
+          "www.albany.edu/history",
+          "www.albany.edu/eastasianstudies",
+          "www.albany.edu/math",
+          "www.albany.edu/lacs",
+          "www.albany.edu/cehc",
+          "www.albany.edu/english",
+          "www.albany.edu/llc",
+          "www.albany.edu/biology",
+          "www.albany.edu/graduate",
+          "www.albany.edu/anthropology",
+          "www.albany.edu/business",
+          "www.albany.edu/cihs",
+          "www.albany.edu/online",
+          "www.albany.edu/cost-aid"
+      ],
+      "notes": "There's no root directory of programs, each of the departments has their own folder, seen above, with a programs subdirectory"
   },
-  "Alfred University": {
-    "urls": [
-      "www.alfred.edu"
-    ],
-    "root_directory": "www.alfred.edu/academics/",
-    "processing_instructions": {
-        "file_extensions": [".html", ".cfm", ".php", ".asp", ".aspx", ".jsp", ".xhtml", ".shtml"],
-        "include_in_path": [""]
-    },
-    "pdf_files": [
-      "www.alfred.edu/academics/undergrad-majors-minors/_docs/catalog/alfred-university-undergraduate-catalog-2022-2023.pdf",
-      "www.alfred.edu/about/institutional-research/_docs/fact-book-may-2024.pdf"
-    ]
+  "Alfred-University": {
+      "root_directory": "Alfred-University",
+      "urls": ["https://www.alfred.edu/"],
+      "pdf_directories": [
+          "www.alfred.edu/academics/graduate-programs/_docs/"
+      ],
+      "pdf_files": [
+          "www.alfred.edu/academics/undergrad-majors-minors/undergraduate.catalog.2024-25.pdf",
+          "www.alfred.edu/academics/graduate-programs/_docs/catalog/alfred-university-graduate-catalog-2024-2025.pdf"
+      ],
+      "html_directories": [
+          "www.alfred.edu/academics/",
+          "www.alfred.edu/admissions/",
+          "www.alfred.edu/student-life/",
+          "www.alfred.edu/cact/"
+      ],
+      "notes": ""
   },
-  "Alfred State College": {
-    "urls": [
-      "https://www.alfredstate.edu/",
-      "https://catalog.alfredstate.edu/"
-    ],
-    "root_directory": "Alfred State College",
-    "processing_instructions": {
-        "file_extensions": [".html", ".cfm", ".php", ".asp", ".aspx", ".jsp", ".xhtml", ".shtml"],
-        "include_in_path": ["current"],
-        "exclude_from_path": ["courses-by-code"]
-    },
-    "pdf_files": [
-      "catalog.alfredstate.edu/current/catalog.pdf",
-      "catalog.alfredstate.edu/current/archive/AlfredState2024-25.pdf"
-    ]
+  "Alfred-State-College": {
+      "root_directory": "Alfred-State-College",
+      "urls": ["https://www.alfredstate.edu/", "https://catalog.alfredstate.edu/current/", "https://alfredstateathletics.com/"],
+      "pdf_directories": [
+          "catalog.alfredstate.edu/current/"
+      ],
+      "pdf_files": ["catalog.alfredstate.edu/current/catalog.pdf"],
+      "html_directories": [
+          "catalog.alfredstate.edu/current/student-affairs",
+          "catalog.alfredstate.edu/current/programs/",
+          "catalog.alfredstate.edu/current/courses/",
+          "catalog.alfredstate.edu/current/department/",
+          "catalog.alfredstate.edu/current/academic-information/",
+          "catalog.alfredstate.edu/current/financial-information/",
+          "catalog.alfredstate.edu/current/general-college-information/",
+          "catalog.alfredstate.edu/current/admission-to-alfred-state/"
+      ],
+      "html_files": [
+          "www.alfredstate.edu/faq.html",
+          "www.alfredstate.edu/financial-aid.html"
+      ],
+      "notes": "A lot of the html pages have corresponding pdfs in the same directory. There'll be index.html and index.pdf. I might want to include the root www directory for HTML files, not sure yet."
   },
-  "Binghamton University": {
-    "urls": [
-      "https://www.binghamton.edu/"
-    ],
-    "root_directory": "Binghamton University",
-    "processing_instructions": {
-      "file_extensions": [".html", ".cfm", ".php", ".asp", ".aspx", ".jsp", ".xhtml", ".shtml", ".txt"],
-      "include_in_path": [""]
-    },
-    "pdf_files": [],
-    "other_files": []
+  "Binghamton-University": {
+      "urls": ["https://www.binghamton.edu/"],
+      "pdf_directories": [
+      ],
+      "pdf_files": [],
+      "html_directories": [
+          ""
+      ],
+      "notes": ""
   },
-  "SUNY Broome": {
-    "urls": [
-      "https://www1.sunybroome.edu/"
-    ],
-    "root_directory": "www1.sunybroome.edu/programs",
-    "processing_instructions": {
-      "file_extensions": [".html"],
-      "include_in_path": [""]
-    },
-    "pdf_files": [
-      "www1.sunybroome.edu/wp-content/uploads/2024/08/2425_student_handbook.pdf",
-      "www1.sunybroome.edu/wp-content/uploads/2024/01/suny_broome_fast_facts_fall_2023-1.pdf"
-    ],
-    "other_files": []
+  "SUNY-Brockport": {
+      "urls": ["https://www.brockport.edu/"],
+      "pdf_directories": [
+          ""
+      ],
+      "pdf_files": [],
+      "html_directories": [
+          ""
+      ],
+      "notes": ""
   },
-  "Clinton Community College": {
-    "root_directory": "www.clinton.edu/degrees-and-programs",
-    "processing_instructions": {
-      "file_extensions": [".html"],
-      "include_in_path": [""]
-    },
-    "pdf_files": [],
-    "other_files": []
+  "SUNY-Broome": {
+      "urls": ["https://www1.sunybroome.edu/"],
+      "pdf_directories": [
+          ""
+      ],
+      "pdf_files": [],
+      "html_directories": [
+          ""
+      ],
+      "notes": ""
   },
-  "SUNY Cobleskill": {
-    "root_directory": "www.clinton.edu/degrees-and-programs",
-    "processing_instructions": {
-      "file_extensions": [".html"],
-      "include_in_path": [""]
-    },
-    "pdf_files": [],
-    "other_files": []
+  "University-at-Buffalo": {
+      "urls": ["https://www.buffalo.edu/"],
+      "pdf_directories": [
+          ""
+      ],
+      "pdf_files": [],
+      "html_directories": [
+          ""
+      ],
+      "notes": ""
   },
-  "Cayuga County Community College": {
-    "root_directory": "www.cayuga-cc.edu/academics/",
-    "processing_instructions": {
-      "file_extensions": [".html"],
-      "include_in_path": [""]
-    },
-    "pdf_files": ["www.cayuga-cc.edu/pdf/catalog_archive/ccc_catalog_2023-24.pdf"],
-    "other_files": []
+  "Buffalo-State-College": {
+      "urls": ["https://suny.buffalostate.edu/"],
+      "pdf_directories": [
+          ""
+      ],
+      "pdf_files": [],
+      "html_directories": [
+          ""
+      ],
+      "notes": ""
   },
-  "SUNY Potsdam": {
-    "root_directory": "www.potsdam.edu/",
-    "processing_instructions": {
-      "file_extensions": [".html"],
-      "include_in_path": [""]
-    },
-    "pdf_files": [
-        "www.potsdam.edu/sites/default/files/FinancialAidAssessmentPlan.pdf"
-    ],
-    "other_files": []
+  "SUNY-Canton": {
+      "urls": ["https://www.canton.edu/"],
+      "pdf_directories": [
+          ""
+      ],
+      "pdf_files": [],
+      "html_directories": [
+          ""
+      ],
+      "notes": ""
+  },
+  "Cayuga-Community-College": {
+      "urls": ["https://www.cayuga-cc.edu/"]
+  },
+  "Clinton-Community-College": {
+      "urls": ["https://www.clinton.edu/"]
+  },
+  "SUNY-Cobleskill": {
+      "urls": ["https://www.cobleskill.edu/"]
+  },
+  "Columbia-Greene-Community-College": {
+      "urls": ["https://www.columbiagreene.edu/"]
+  },
+  "Cornell-CALS": {
+      "urls": ["https://cals.cornell.edu/"]
+  },
+  "Cornell-Human-Ecology": {
+      "urls": ["https://www.human.cornell.edu/"]
+  },
+  "Cornell-ILR": {
+      "urls": ["https://www.ilr.cornell.edu/"]
+  },
+  "Cornell-Veterinary-Medicine": {
+      "urls": ["https://www.vet.cornell.edu/"]
+  },
+  "Corning-Community-College": {
+      "urls": ["https://www.corning-cc.edu/"]
+  },
+  "SUNY-Cortland": {
+      "urls": ["https://www2.cortland.edu/home/"]
+  },
+  "SUNY-Delhi": {
+      "urls": ["https://www.delhi.edu/"]
+  },
+  "Downstate-Health-Sciences-University": {
+      "urls": ["https://www.downstate.edu/"]
+  },
+  "Dutchess-Community-College": {
+      "urls": ["https://www.sunydutchess.edu/"]
+  },
+  "Empire-State-University": {
+      "urls": ["https://sunyempire.edu/"]
+  },
+  "SUNY-ESF": {
+      "urls": ["https://www.esf.edu/"]
+  },
+  "Erie-Community-College": {
+      "urls": ["https://www.ecc.edu/", "https://catalog.ecc.edu/"]
+  },
+  "Farmingdale-State-College": {
+      "urls": ["https://www.farmingdale.edu/"]
+  },
+  "Fashion-Institute-of-Technology": {
+      "urls": ["https://www.fitnyc.edu/"]
+  },
+  "Finger-Lakes-Community-College": {
+      "urls": ["https://www.flcc.edu/"]
+  },
+  "SUNY-Fredonia": {
+      "urls": ["https://www.fredonia.edu/"]
+  },
+  "Fulton-Montgomery-Community-College": {
+      "urls": ["https://fmcc.edu/"]
+  },
+  "Genesee-Community-College": {
+      "urls": ["https://www.genesee.edu/"]
+  },
+  "SUNY-Geneseo": {
+      "urls": ["https://www.geneseo.edu/"]
+  },
+  "Herkimer-College": {
+      "urls": ["https://www.herkimer.edu/", "https://herkimer.smartcatalogiq.com/"]
+  },
+  "Hudson-Valley-Community-College": {
+      "urls": ["https://www.hvcc.edu/", "https://catalog.hvcc.edu/"]
+  },
+  "Jamestown-Community-College": {
+      "urls": ["https://www.sunyjcc.edu/"]
+  },
+  "Jefferson-Community-College": {
+      "urls": ["https://www.sunyjefferson.edu/"]
+  },
+  "SUNY-Maritime-College": {
+      "urls": ["https://www.sunymaritime.edu/"]
+  },
+  "Mohawk-Valley-Community-College": {
+      "urls": ["https://www.mvcc.edu/", "https://catalog.mvcc.edu/current/programs/"]
+  },
+  "Monroe-Community-College": {
+      "urls": ["https://www.monroecc.edu/"]
+  },
+  "SUNY-Morrisville": {
+      "urls": ["https://www.morrisville.edu/"]
+  },
+  "Nassau-Community-College": {
+      "urls": ["https://www.ncc.edu/", "https://collegecatalog.ncc.edu/current/programs/"]
+  },
+  "SUNY-New-Paltz": {
+      "urls": ["https://www.newpaltz.edu/"]
+  },
+  "Niagara-County-Community-College": {
+      "urls": ["https://www.niagaracc.suny.edu/", "http://catalog.niagaracc.suny.edu/"]
+  },
+  "North-Country-Community-College": {
+      "urls": ["https://www.nccc.edu/"]
+  },
+  "SUNY-Old-Westbury": {
+      "urls": ["https://www.oldwestbury.edu/"]
+  },
+  "SUNY-Oneonta": {
+      "urls": ["https://suny.oneonta.edu/"]
+  },
+  "Onondaga-Community-College": {
+      "urls": ["https://www.sunyocc.edu/"]
+  },
+  "SUNY-College-of-Optometry": {
+      "urls": ["https://www.sunyopt.edu/", "https://sunyopt.cld.bz/CourseCatalog"]
+  },
+  "Orange-County-Community-College": {
+      "urls": ["https://sunyorange.edu/", "https://catalog.sunyorange.edu/current/"]
+  },
+  "SUNY-Oswego": {
+      "urls": ["https://ww1.oswego.edu/"]
+  },
+  "SUNY-Plattsburgh": {
+      "urls": ["https://www.plattsburgh.edu/"]
+  },
+  "SUNY-Potsdam": {
+      "urls": ["https://www.potsdam.edu/", "https://catalog.potsdam.edu/index.php"]
+  },
+  "Purchase-College": {
+      "urls": ["https://www.purchase.edu/"]
+  },
+  "Rockland-Community-College": {
+      "urls": ["https://sunyrockland.edu/"]
+  },
+  "Schenectady-County-Community-College": {
+      "urls": ["https://www.sunysccc.edu/"]
+  },
+  "Stony-Brook-University": {
+      "urls": ["https://www.stonybrook.edu/"]
+  },
+  "Suffolk-County-Community-College": {
+      "urls": ["https://www.sunysuffolk.edu/"]
+  },
+  "Sullivan-County-Community-College": {
+      "urls": ["https://sunysullivan.edu/"]
+  },
+  "SUNY-Polytechnic-Institute": {
+      "urls": ["https://sunypoly.edu/", "https://webapp.sunypoly.edu/undergrad-catalog-2024-2025/", "https://webapp.sunypoly.edu/grad-catalog-2024-2025/"]
+  },
+  "Tompkins-Cortland-Community-College": {
+      "urls": ["https://www.tompkinscortland.edu/"]
+  },
+  "SUNY-Ulster": {
+      "urls": ["https://www.sunyulster.edu/", "https://catalog.sunyulster.edu/"]
+  },
+  "SUNY-Upstate-Medical-University": {
+      "urls": ["https://www.upstate.edu/"]
+  },
+  "Westchester-Community-College": {
+      "urls": ["https://www.sunywcc.edu/"]
   }
 }

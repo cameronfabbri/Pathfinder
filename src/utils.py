@@ -3,10 +3,13 @@
 import os
 import re
 import json
+import requests
+import tempfile
 import tiktoken
 import subprocess
 
 from openai import OpenAI
+from bs4 import BeautifulSoup
 from functools import lru_cache
 
 opj = os.path.join
@@ -97,6 +100,36 @@ def get_color(name: str):
     elif name.lower() == "suny":
         return ORANGE
     return ""
+
+
+def get_text_from_html(path_or_url: str) -> str:
+    """
+    Get the text from the HTML file or URL.
+    """
+
+    if path_or_url.startswith('http'):
+
+        # It's a URL, download it to a temp file
+        with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.html') as temp_file:
+            response = requests.get(path_or_url)
+            temp_file.write(response.text)
+            temp_path = temp_file.name
+
+        with open(temp_path, 'r') as f:
+            soup = BeautifulSoup(f, 'lxml')
+        
+        # Clean up the temp file
+        os.unlink(temp_path)
+    else:
+        # It's a local file path
+        with open(path_or_url, 'r') as f:
+            soup = BeautifulSoup(f, 'lxml')
+
+    # Remove all <script> tags
+    for script in soup(["script"]):
+        script.extract()
+
+    return re.sub(r'\n{3,}', '\n\n', soup.get_text()).strip()
 
 
 def chunk_pages(

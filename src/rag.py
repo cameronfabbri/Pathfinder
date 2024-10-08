@@ -91,6 +91,7 @@ class RAG:
                 filtered_docs.append(doc)
 
         content = ''
+        print('Doc IDs:', doc_ids)
         for doc in filtered_docs:
 
             # Match was a chunk, get the full parent document
@@ -98,7 +99,7 @@ class RAG:
                 doc = self.db.get_document_by_id(doc['payload']['parent_point_id']).dict()
 
             content += 'University: ' + doc['payload']['university'] + '\n'
-            content += 'URL: ' + doc['payload']['url'] + '\n'
+            content += 'URL: ' + str(doc['payload']['url']) + '\n'
             content += 'Content: ' + doc['payload']['content'] + '\n\n'
 
         return content
