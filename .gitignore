@@ -4,6 +4,9 @@ __pycache__/
 *$py.class
 
 # My stuff
+TODO.md
+qdrant/
+chromadb/
 *.txt
 *.pkl
 *.pdf

@@ -3,21 +3,22 @@ Script to insert files found by scripts/find_relevant_files.py into the database
 """
 import os
 import re
-import fitz
 import json
+import uuid
 import click
 import requests
+import pymupdf4llm
 
 from tqdm import tqdm
 from openai import OpenAI
 from bs4 import BeautifulSoup
 from difflib import SequenceMatcher
+from qdrant_client import QdrantClient
 
 from src import agent
-from src.database import chroma_db
-from src.pdf_tools import load_pdf_text
-from src.utils import chunk_pages, chunk_text
-from src.constants import UNIVERSITY_DATA_DIR, CHROMA_DB_PATH, UNIVERSITY_MAPPING, METADATA_PATH
+from src import utils
+from src.database import qdrant_db
+from src.constants import UNIVERSITY_DATA_DIR, METADATA_PATH
 
 opj = os.path.join
 
@@ -51,6 +52,68 @@ You are a helpful assistant that generates a list of 5 questions based directly 
 """
 
 
+def get_doc_id_from_path(path: str) -> str:
+    """
+    Get the document id from the path
+
+    Args:
+        path (str): The path to the document.
+    Returns:
+        str: The document id.
+    """
+    doc_id = path.split(UNIVERSITY_DATA_DIR)[-1]
+    if doc_id.startswith(os.sep):
+        doc_id = doc_id[1:]
+    return doc_id
+
+
+def get_html_url(university_name: str, file_path: str) -> str | None:
+    """
+    Try and get the URL of the HTML file
+     
+    Args:
+        file_path (str): The local path to the HTML file.
+    Returns:
+        str: The valid URL (with or without .html) or None.
+    """
+    
+    # Extract base URL from the file path by removing the root directory and file extension
+    base_url = file_path.split(university_name)[1].replace('.html', '')
+    if base_url.startswith('/'):
+        base_url = base_url[1:]
+
+    base_url = 'https://' + base_url
+
+    # TODO - look if .cfm is in the URL, I had wget --adjust-extension so they all
+    # turned from index.cfm to index.cfm.html
+
+    variants = [
+        base_url.rstrip('/index') + '/',
+        base_url,
+        base_url + '.html',
+        base_url + '/index.html',
+        base_url + '/index.php',
+        base_url + '/index.php.html',
+        base_url.rstrip('/index'),
+    ]
+
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
+        'Referer': base_url,
+        'Accept-Language': 'en-US,en;q=0.9',
+    }
+
+    for variant in variants:
+        try:
+            response = requests.get(variant, headers=headers)
+            if response.status_code == 200:
+                return variant
+        except requests.exceptions.RequestException:
+            pass
+
+    return None
+
+
 def select_files(root_directory: str, instructions: dict) -> dict:
     """
     Select the files to insert into the database
@@ -80,25 +143,6 @@ def select_files(root_directory: str, instructions: dict) -> dict:
                     elif filename.endswith('.pdf'):
                         selected_files['pdf_files'].append(file_path)
     return selected_files
-
-
-def get_distinct_university_results(query_results, n_results=3):
-    unique_universities = {}
-    
-    for idx, metadata in enumerate(query_results['metadatas'][0]):
-        university = metadata['university']
-        if university not in unique_universities:
-            unique_universities[university] = {
-                'id': query_results['ids'][0][idx],
-                'distance': query_results['distances'][0][idx],
-                'metadata': metadata,
-                'document': query_results['documents'][0][idx]  # Include the document text here
-            }
-        
-        if len(unique_universities) == n_results:
-            break
-    
-    return list(unique_universities.values())
 
 
 def generate_questions(agent: agent.Agent, chunk: dict) -> list[str]:
@@ -235,12 +279,10 @@ def get_html_metadata(html_file: str) -> dict:
 
     metadata['language'] = soup.html.get('lang', '')
 
-    metadata['source_url'] = soup.find('link', rel='canonical')['href'] if soup.find('link', rel='canonical') else ''
-
     return metadata
 
 
-def extract_pdf_pages(pdf_file: str, text_type: str = 'text') -> list[str]:
+def extract_pdf_pages(pdf_file: str) -> list[str]:
     """
     Extract the text from each page of a pdf file as a list of strings.
 
@@ -251,277 +293,261 @@ def extract_pdf_pages(pdf_file: str, text_type: str = 'text') -> list[str]:
     Returns:
         list[str]: A list of strings, one for each page of the pdf file.
     """
-    pages_text = []
-    
-    with fitz.open(pdf_file) as doc:
-        for page_num in range(doc.page_count):
-            page = doc.load_page(page_num)
-            text = page.get_text(text_type)
-            pages_text.append(text)
-    
-    return pages_text
+    return pymupdf4llm.to_markdown(pdf_file, page_chunks=True)
 
 
 def insert_pdf_files(
-        db: chroma_db.ChromaDB,
+        db: qdrant_db.QdrantDB,
         university_name: str,
         pdf_files: list[str],
-        debug: bool) -> None:
+        embedding_model: qdrant_db.EmbeddingModel) -> None:
     """
-    Insert the pdf files into the database
+    Insert the pdf files into the database.
 
     Args:
-        db (ChromaDB): The database to insert the documents into.
+        db (qdrant_db.QdrantDB): The database to insert the documents into.
         university_name (str): The name of the university.
         pdf_files (list[str]): The list of pdf files to insert.
+        embedding_model (qdrant_db.EmbeddingModel): The embedding model to use.
     Returns:
         None
     """
+
+    batch_size = 16
+
+    ids = []
+    vectors = []
+    payloads = []
+
     for path in tqdm(pdf_files):
 
-        if not os.path.exists(path):
-            continue
-
-        # TODO - remove table of contents pages
-
         doc_id = get_doc_id_from_path(path)
-        pages = extract_pdf_pages(path, 'text')
-        metadata = {
-            'university': university_name,
-            'filepath': path,
-        }
+        parent_point_id = str(uuid.uuid4())
 
-        url = get_html_url(path)
-        if url is None:
-            print(f"Warning: No corresponding web page found for {path}")
-            with open('missing_html_urls.txt', 'a') as f:
-                f.write(path + '\n')
+        if db.point_exists(doc_id):
+            print(f'Document {doc_id} already exists.')
             continue
 
-        # Insert each page as a separate document before chunking
-        for page_num, page_text in enumerate(pages):
-            page_num += 1
-            page_id = doc_id + f'-page-{page_num}'
-            metadata['page_number'] = page_num
-            metadata['type'] = 'pdf'
-            if not debug:
-                db.insert_if_not_exists(page_text, page_id, metadata)
-            else:
-                print(f"[DEBUG] Inserted page: {page_id}")
+        url = 'https:/' + path.split(UNIVERSITY_DATA_DIR)[1]
 
-        page_chunks = chunk_pages(pages, chunk_size=128, overlap_size=16)
+        text_pages = extract_pdf_pages(path)
+        full_text = "\n".join([page['text'] for page in text_pages])
 
-        for chunk in page_chunks:
-            chunk_id = doc_id + f"-chunk-{chunk['metadata']['chunk_id']}"
-            chunk['metadata']['filepath'] = path
-            chunk['metadata']['university'] = university_name
-            chunk['metadata']['type'] = 'pdf'
-            if not debug:
-                db.insert_if_not_exists(chunk['text'], chunk_id, chunk['metadata'])
-            else:
-                print(f"[DEBUG] Inserted chunk: {chunk_id}")
+        payloads.append(
+            {
+                'filepath': path,
+                'doc_id': doc_id,
+                'university': university_name,
+                'type': 'pdf',
+                'url': url,
+                'content': full_text,
+                'point_id': parent_point_id,
+                'parent_point_id': parent_point_id
+            }
+        )
+        ids.append(parent_point_id)
+        vectors.append(embedding_model.embed(full_text))
 
-                #inserted = db.insert_if_not_exists(chunk['text'], doc_id, combined_metadata)
-                #if inserted:
-                #    print(f"Inserted new document: {doc_id}")
-                    #questions = generate_questions(agent, chunk)
-                #else:
-                #    print(f"Document already exists: {doc_id}")
+        if len(payloads) >= batch_size:
+            db.add_batch(
+                collection_name='suny',
+                point_ids=ids,
+                payloads=payloads,
+                vectors=vectors
+            )
+            payloads = []
+            vectors = []
+            ids = []
 
-#                if questions is None:
-#                    continue
+        # Insert chunks into the database
+        page_chunks = utils.chunk_pages([page['text'] for page in text_pages], chunk_size=256, overlap_size=32)
 
-                # Insert the generated questions into the database
-                #for idx, question in enumerate(questions[:2]):
-                #    question_id = f"{doc_id}-question-{idx}"
-                    #combined_metadata['reference_doc_id'] = doc_id
-                    #inserted = db.insert_if_not_exists(question, question_id, combined_metadata)
-                #    if inserted:
-                #        print(f"Inserted new question: {question_id}")
-                #    else:
-                #        print(f"Question already exists: {question_id}")
+        chunk_payloads = []
+        chunk_vectors = []
+        chunk_ids = []
+        for chunk_id, chunk in enumerate(page_chunks):
+            chunk_point_id = str(uuid.uuid4())
+            chunk_payload = {
+                'filepath': path,
+                'doc_id': doc_id,
+                'university': university_name,
+                'type': 'pdf',
+                'url': url,
+                'point_id': chunk_point_id,
+                'parent_point_id': parent_point_id,
+                'chunk_id': chunk_id,
+                'content': chunk['text'],
+                'start_page': chunk['metadata']['start_page'],
+                'end_page': chunk['metadata']['end_page']
+            }
+            chunk_payloads.append(chunk_payload)
+            chunk_vectors.append(embedding_model.embed(chunk['text']))
+            chunk_ids.append(chunk_point_id)
 
+        if chunk_payloads:
+            db.add_batch(
+                collection_name='suny',
+                point_ids=chunk_ids,
+                payloads=chunk_payloads,
+                vectors=chunk_vectors
+            )
 
-
-def get_doc_id_from_path(path: str) -> str:
-    """
-    Get the document id from the path
-
-    Args:
-        path (str): The path to the document.
-    Returns:
-        str: The document id.
-    """
-    doc_id = path.split(UNIVERSITY_DATA_DIR)[-1]
-    if doc_id.startswith(os.sep):
-        doc_id = doc_id[1:]
-    return doc_id
+    # Insert remaining payloads if len(payloads) < batch_size
+    if payloads:
+        db.add_batch(
+            collection_name='suny',
+            point_ids=ids,
+            payloads=payloads,
+            vectors=vectors
+        )
 
 
 def insert_html_files(
-        db: chroma_db.ChromaDB,
+        db: qdrant_db.QdrantDB,
         university_name: str,
         html_files: list[str],
-        debug: bool) -> None:
+        embedding_model: qdrant_db.EmbeddingModel) -> None:
     """
     Insert the html files into the database
 
     Args:
-        db (ChromaDB): The database to insert the documents into.
+        db (qdrant_db.QdrantDB): The database to insert the documents into.
         university_name (str): The name of the university.
         html_files (list[str]): The list of html files to insert.
+        embedding_model (qdrant_db.EmbeddingModel): The embedding model to use.
         debug (bool): Run in debug mode.
     Returns:
         None
     """
 
+    batch_size = 16
+
+    ids = []
+    vectors = []
+    payloads = []
+
     for path in tqdm(html_files):
 
         doc_id = get_doc_id_from_path(path)
-        if db.document_exists(doc_id):
-            print(f"Document {doc_id} already exists.")
+        parent_point_id = str(uuid.uuid4())
+
+        if db.point_exists(doc_id):
+            print(f'Document {doc_id} already exists.')
             continue
 
-        url = get_html_url(path)
+        url = get_html_url(university_name, path)
         if url is None:
             print(f"Warning: No corresponding web page found for {path}")
             with open('missing_html_urls.txt', 'a') as f:
                 f.write(path + '\n')
-            continue
 
-        with open(path, 'r') as f:
-            soup = BeautifulSoup(f, 'lxml')
+        text = utils.get_text_from_html(path)
 
-        # Remove all <script> tags
-        for script in soup(["script"]):
-            script.extract()
+        payloads.append(
+            {
+                'filepath': path,
+                'doc_id': doc_id,
+                'university': university_name,
+                'type': 'html',
+                'url': url,
+                'content': text,
+                'point_id': parent_point_id,
+                'parent_point_id': parent_point_id
+            }
+        )
+        ids.append(parent_point_id)
+        vectors.append(embedding_model.embed(text))
 
-        text = re.sub(r'\n{3,}', '\n\n', soup.get_text()).strip()
-
-        metadata = get_html_metadata(path)
-
-        # Insert the full document into the database
-        metadata['filepath'] = path
-        metadata['university'] = university_name
-        metadata['type'] = 'html'
-        metadata['url'] = url
-        if not debug:
-            db.insert_if_not_exists(text, doc_id, metadata)
-        else:
-            print(f"[DEBUG] Inserted html: {doc_id}")
+        if len(payloads) >= batch_size:
+            db.add_batch(
+                collection_name='suny',
+                point_ids=ids,
+                payloads=payloads,
+                vectors=vectors
+            )
+            payloads = []
+            vectors = []
+            ids = []
 
         # Insert chunks into the database
-        text_chunks = chunk_text(text, chunk_size=512, overlap_size=20)
-        
-        for chunk in text_chunks:
-            chunk_id = doc_id + f"-chunk-{chunk['metadata']['chunk_id']}"
-            chunk['metadata']['filepath'] = path
-            chunk['metadata']['university'] = university_name
-            chunk['metadata']['type'] = 'html'
-            chunk['metadata']['url'] = url
-            if not debug:
-                db.insert_if_not_exists(chunk['text'], chunk_id, chunk['metadata'])
-            else:
-                print(f"[DEBUG] Inserted chunk: {chunk_id}")
+        text_chunks = utils.chunk_text(text, chunk_size=256, overlap_size=32)
 
+        chunk_payloads = []
+        chunk_vectors = []
+        chunk_ids = []
+        for chunk_id, chunk_text in enumerate(text_chunks):
+            chunk_point_id = str(uuid.uuid4())
+            chunk_payload = {
+                'filepath': path,
+                'doc_id': doc_id,
+                'university': university_name,
+                'type': 'html',
+                'url': url,
+                'point_id': chunk_point_id,
+                'parent_point_id': parent_point_id,
+                'chunk_id': chunk_id,
+                'content': chunk_text
+            }
+            chunk_payloads.append(chunk_payload)
+            chunk_vectors.append(embedding_model.embed(chunk_text))
+            chunk_ids.append(chunk_point_id)
 
-def get_html_url(file_path: str) -> str | None:
-    """
-    Try and get the URL of the HTML file
-     
-    Args:
-        file_path (str): The local path to the HTML file.
-    Returns:
-        str: The valid URL (with or without .html) or None.
-    """
-    
-    # Extract base URL from the file path by removing the root directory and file extension
-    base_url = file_path.split(UNIVERSITY_DATA_DIR)[1].replace('.html', '')
-    if base_url.startswith('/'):
-        base_url = base_url[1:]
+        if chunk_payloads:
+            db.add_batch(
+                collection_name='suny',
+                point_ids=chunk_ids,
+                payloads=chunk_payloads,
+                vectors=chunk_vectors
+            )
 
-    base_url = 'https://' + base_url
-
-    variants = [
-        base_url.rstrip('/index') + '/',
-        base_url,
-        base_url + '.html',
-        base_url + '/index.html',
-        base_url + '/index.php',
-        base_url + '/index.php.html',
-        base_url.rstrip('/index'),
-    ]
-
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
-        'Referer': base_url,
-        'Accept-Language': 'en-US,en;q=0.9',
-    }
-
-    for variant in variants:
-        try:
-            response = requests.get(variant, headers=headers)
-            if response.status_code == 200:
-                return variant
-        except requests.exceptions.RequestException:
-            pass
-
-    return None
+    # Insert the remaining payloads if len(payloads) < batch_size
+    if payloads:
+        db.add_batch(
+            collection_name='suny',
+            point_ids=ids,
+            payloads=payloads,
+            vectors=vectors
+        )
 
 
 @click.command()
-@click.option('--data_dir', '-d', type=str, default=None, help='University directory to process')
-@click.option('--general_data_dir', '-gd', type=str, default=None, help='General data directory to process')
+@click.option('--data_dir', '-d', type=str, default=None, help='Root university directory to process')
 @click.option('--debug', is_flag=True, default=False, help='Run in debug mode')
-def main(data_dir: str | None, general_data_dir: str | None, debug: bool):
+@click.option('--model', type=click.Choice(['bge-small', 'jina']), default='jina', help='Embedding model')
+def main(data_dir: str | None, debug: bool, model: str):
 
-    if general_data_dir is not None and data_dir is not None:
-        print("Error: Cannot specify both data_dir and general_data_dir")
-        exit(1)
-
-    db = chroma_db.ChromaDB(CHROMA_DB_PATH, 'universities')
-
-    if general_data_dir is not None:
-        selected_files = [opj(general_data_dir, x) for x in os.listdir(general_data_dir)]
-        print(selected_files)
-        exit()
-
+    embedding_model = qdrant_db.get_embedding_model(model)
+    client_qdrant = qdrant_db.get_qdrant_client()
+    db = qdrant_db.QdrantDB(client_qdrant, 'suny', embedding_model.emb_dim)
 
     with open(METADATA_PATH, 'r') as f:
         metadata = json.load(f)
 
-    for university_name, data in metadata.items():
+    university_name = os.path.basename(data_dir)
 
-        if data_dir is not None:
-            if university_name != UNIVERSITY_MAPPING[os.path.basename(data_dir)]:
-                print('Skipping', university_name)
-                continue
+    if university_name not in metadata:
+        print(f"Warning: University {university_name} not found in metadata")
+        exit()
 
-        files = {
-            'html_files': data.get('html_files', []),
-            'pdf_files': data.get('pdf_files', [])
-        }
+    html_files = []
+    for directory in metadata[university_name]['html_directories']:
+        directory = opj(UNIVERSITY_DATA_DIR, metadata[university_name]['root_directory'], directory)
+        html_files.extend(utils.get_files(directory, '.html'))
 
-        # Process files based on processing instructions
-        if 'processing_instructions' in data and data['processing_instructions']:
-            # Add root directory from src.constants
-            root_directory = opj(UNIVERSITY_DATA_DIR, data.get('root_directory'))
-            if root_directory:
-                selected_files = select_files(
-                    root_directory=root_directory,
-                    instructions=data['processing_instructions']
-                )
-                files['html_files'].extend(selected_files.get('html_files', []))
-                files['pdf_files'].extend(selected_files.get('pdf_files', []))
-            else:
-                print(f"Warning: Root directory not specified for {university_name}")
+    pdf_files = []
+    for directory in metadata[university_name]['pdf_directories']:
+        directory = opj(UNIVERSITY_DATA_DIR, metadata[university_name]['root_directory'], directory)
+        pdf_files.extend(utils.get_files(directory, '.pdf'))
+    for file in metadata[university_name]['pdf_files']:
+        pdf_files.append(opj(UNIVERSITY_DATA_DIR, metadata[university_name]['root_directory'], file))
+    pdf_files = sorted(list(set(pdf_files)))
 
-        if files['html_files']:
-            print('Inserting HTML files for', university_name, '...')
-            insert_html_files(db, university_name, files['html_files'], debug)
-        if files['pdf_files']:
-            print('Inserting PDF files for', university_name, '...')
-            insert_pdf_files(db, university_name, files['pdf_files'], debug)
+    if len(pdf_files) > 0:
+        print('Inserting', len(pdf_files), 'pdf files...')
+        insert_pdf_files(db, university_name, pdf_files, embedding_model)
+    if len(html_files) > 0:
+        print('Inserting', len(html_files), 'html files...')
+        insert_html_files(db, university_name, html_files, embedding_model)
 
 
 if __name__ == '__main__':

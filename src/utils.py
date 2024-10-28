@@ -3,11 +3,16 @@
 import os
 import re
 import json
-import tiktoken
+import tempfile
 import subprocess
 
-from openai import OpenAI
 from functools import lru_cache
+
+import requests
+import tiktoken
+
+from bs4 import BeautifulSoup
+from openai import OpenAI
 
 opj = os.path.join
 
@@ -99,6 +104,36 @@ def get_color(name: str):
     return ""
 
 
+def get_text_from_html(path_or_url: str) -> str:
+    """
+    Get the text from the HTML file or URL.
+    """
+
+    if path_or_url.startswith('http'):
+
+        # It's a URL, download it to a temp file
+        with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.html') as temp_file:
+            response = requests.get(path_or_url)
+            temp_file.write(response.text)
+            temp_path = temp_file.name
+
+        with open(temp_path, 'r') as f:
+            soup = BeautifulSoup(f, 'lxml')
+
+        # Clean up the temp file
+        os.unlink(temp_path)
+    else:
+        # It's a local file path
+        with open(path_or_url, 'r') as f:
+            soup = BeautifulSoup(f, 'lxml')
+
+    # Remove all <script> tags
+    for script in soup(["script"]):
+        script.extract()
+
+    return re.sub(r'\n{3,}', '\n\n', soup.get_text()).strip()
+
+
 def chunk_pages(
         pages: list[str],
         chunk_size: int = 500,
@@ -118,25 +153,25 @@ def chunk_pages(
     chunks = []
     all_tokens = []
     page_boundaries = [0]
-    
+
     for page in pages:
         tokens = re.findall(r'\S+|\s+', page)
         all_tokens.extend(tokens)
         page_boundaries.append(page_boundaries[-1] + len(tokens))
-    
+
     word_count = 0
     chunk_start = 0
-    
+
     for i, token in enumerate(all_tokens):
         if not token.isspace():
             word_count += 1
-        
+
         if word_count == chunk_size or i == len(all_tokens) - 1:
             chunk_text = ''.join(all_tokens[chunk_start:i+1])
-            
+
             start_page = next(idx for idx, boundary in enumerate(page_boundaries) if boundary > chunk_start) - 1
             end_page = next(idx for idx, boundary in enumerate(page_boundaries) if boundary > i) - 1
-            
+
             chunk_info = {
                 "text": chunk_text,
                 "metadata": {
@@ -149,13 +184,13 @@ def chunk_pages(
                 }
             }
             chunks.append(chunk_info)
-            
+
             # Move back by overlap_size words for the next chunk
             while word_count > overlap_size and chunk_start < i:
                 if not all_tokens[chunk_start].isspace():
                     word_count -= 1
                 chunk_start += 1
-    
+
     # If the last chunk is too small, merge it with the previous one
     if len(chunks) > 1 and chunks[-1]["metadata"]["word_count"] < chunk_size // 2:
         chunks[-2]["text"] += chunks[-1]["text"]
@@ -167,98 +202,61 @@ def chunk_pages(
     return chunks
 
 
-def chunk_text(text, chunk_size=500, overlap_size=125):
+def chunk_text(text, chunk_size=512, overlap_size=128):
     """
-    Split text into chunks with a specified overlap size, preserving formatting.
+    Split text into chunks with a specified overlap size while preserving formatting.
 
     Args:
         text (str): The input text to be chunked.
-        chunk_size (int): The target size of each chunk in words. Defaults to 500.
-        overlap_size (int): The number of words to overlap between chunks. Defaults to 125.
+        chunk_size (int): The target size of each chunk in words.
+        overlap_size (int): The number of words to overlap between chunks.
 
     Returns:
-        list[dict]: A list of dictionaries, each containing the chunk text and metadata.
+        list[str]: A list of chunked text strings.
     """
-    tokens = re.findall(r'\S+|\s+', text)
+    # Use regex to split text into words and whitespace, keeping track of their types
+    pattern = re.compile(r'(\S+|\s+)')  # Matches words and whitespace separately
+    tokens = []
+    for match in pattern.finditer(text):
+        token = match.group(0)
+        if token.strip():
+            token_type = 'word'
+        else:
+            token_type = 'whitespace'
+        tokens.append({'text': token, 'type': token_type})
+
     chunks = []
-    word_count = 0
-    chunk_start = 0
+    total_tokens = len(tokens)
+    i = 0  # Start index for each chunk
 
-    for i, token in enumerate(tokens):
-        if not token.isspace():
-            word_count += 1
+    while i < total_tokens:
+        chunk_tokens = []
+        word_count = 0
+        j = i  # Current index within the tokens
 
-        if word_count == chunk_size or i == len(tokens) - 1:
-            chunk_text = ''.join(tokens[chunk_start:i+1])
-            chunk_info = {
-                "text": chunk_text,
-                "metadata": {
-                    "chunk_id": len(chunks),
-                    "start_word": sum(1 for t in tokens[:chunk_start] if not t.isspace()),
-                    "end_word": sum(1 for t in tokens[:i+1] if not t.isspace()) - 1,
-                    "word_count": sum(1 for t in tokens[chunk_start:i+1] if not t.isspace())
-                }
-            }
-            chunks.append(chunk_info)
+        # Build the chunk until we reach the desired word count
+        while j < total_tokens and word_count < chunk_size:
+            chunk_tokens.append(tokens[j]['text'])
+            if tokens[j]['type'] == 'word':
+                word_count += 1
+            j += 1
 
-            # Move back by overlap_size words for the next chunk
-            while word_count > overlap_size and chunk_start < i:
-                if not tokens[chunk_start].isspace():
-                    word_count -= 1
-                chunk_start += 1
+        # Combine the tokens to form the chunk text
+        chunk_text_str = ''.join(chunk_tokens)
+        chunks.append(chunk_text_str)
 
-    # If the last chunk is too small, merge it with the previous one
-    if len(chunks) > 1 and chunks[-1]["metadata"]["word_count"] < chunk_size // 2:
-        chunks[-2]["text"] += chunks[-1]["text"]
-        chunks[-2]["metadata"]["end_word"] = chunks[-1]["metadata"]["end_word"]
-        chunks[-2]["metadata"]["word_count"] += chunks[-1]["metadata"]["word_count"]
-        chunks.pop()
+        if j >= total_tokens:
+            break  # Reached the end of the tokens
 
-    return chunks
-
-
-def chunk_text_by_tokens(text: str, chunk_size: int = 512, overlap_size: int = 20) -> list[dict]:
-    """
-    Split text into chunks based on token count with a specified overlap,
-    preserving formatting.
-
-    Args:
-        text (str): The input text to be chunked.
-        chunk_size (int): The target size of each chunk in tokens.
-        overlap_size (int): The number of tokens to overlap between chunks. Defaults to 125.
-
-    Returns:
-        list[dict]: A list of dictionaries, each containing the chunk text and metadata.
-    """
-    encoding = tiktoken.get_encoding("cl100k_base")
-    tokens = encoding.encode(text)
-    chunks = []
-    chunk_start = 0
-
-    while chunk_start < len(tokens):
-        chunk_end = min(chunk_start + chunk_size, len(tokens))
-        chunk_tokens = tokens[chunk_start:chunk_end]
-        chunk_text = encoding.decode(chunk_tokens)
-
-        chunk_info = {
-            "text": chunk_text,
-            "metadata": {
-                "chunk_id": len(chunks),
-                "start_token": chunk_start,
-                "end_token": chunk_end - 1,
-                "token_count": len(chunk_tokens)
-            }
-        }
-        chunks.append(chunk_info)
-
-        chunk_start += chunk_size - overlap_size
-
-    # If the last chunk is too small, merge it with the previous one
-    if len(chunks) > 1 and chunks[-1]["metadata"]["token_count"] < chunk_size // 2:
-        last_chunk = chunks.pop()
-        chunks[-1]["text"] += last_chunk["text"]
-        chunks[-1]["metadata"]["end_token"] = last_chunk["metadata"]["end_token"]
-        chunks[-1]["metadata"]["token_count"] += last_chunk["metadata"]["token_count"]
+        # Calculate the start index for the next chunk with overlap
+        # We need to start overlap_size words back from the end of the current chunk
+        words_to_rewind = overlap_size
+        k = j - 1  # Last token index in the current chunk
+        while k >= i and words_to_rewind > 0:
+            if tokens[k]['type'] == 'word':
+                words_to_rewind -= 1
+            k -= 1
+        i = k + 1  # Start index for the next chunk
 
     return chunks
 
@@ -292,6 +290,38 @@ def is_file_pdf(file_path: str) -> bool:
         return False
 
 
+def filter_files(files: list[str], exclude_patterns: list[str]) -> list[str]:
+    filtered_files = []
+    for file in files:
+        if not any(pattern in file if pattern == '?' else re.search(pattern, file) for pattern in exclude_patterns):
+            filtered_files.append(file)
+    return filtered_files
+
+
+def get_files(directory: str, extension: str) -> list[str]:
+    """
+    Recursively search for files with the given extension in the given directory
+    and return their full paths.
+
+    Args:
+        directory (str): The root directory to start the search from.
+        extension (str): File extension to search for.
+
+    Returns:
+        list[str]: A list of full paths to files with the given extension found
+        in the directory and its subdirectories.
+    """
+    if not extension.startswith('.'):
+        extension = '.' + extension
+
+    result_files = []
+    for root, _, filenames in os.walk(directory):
+        for file in filenames:
+            if file.lower().endswith(extension):
+                result_files.append(os.path.join(root, file))
+    return sorted(list(set(result_files)))
+
+
 def dict_to_str(info_dict: dict, format: bool) -> str:
     """
     Convert a dictionary to a string
@@ -318,7 +348,7 @@ def format_for_json(input_string):
     """
     # Use json.dumps to handle escaping
     formatted_string = json.dumps(input_string)
-    
+
     # Remove the surrounding double quotes added by json.dumps
     return formatted_string[1:-1]
 

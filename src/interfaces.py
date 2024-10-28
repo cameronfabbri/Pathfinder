@@ -1,23 +1,20 @@
 """
 """
-
 import os
 import sys
+import pickle
+
 import streamlit as st
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
-import pickle
+from icecream import ic
 
-from src import auth
-from src import agent
-from src import utils
-from src import prompts
-from src import run_tools as rt
-from src.assessment import answers
+from src import agent, auth, prompts, run_tools as rt, utils
 from src.database import db_access as dba
 from src.constants import SYSTEM_DATA_DIR
+from src.assessment import answers
 
 opj = os.path.join
 
@@ -40,10 +37,11 @@ def main_chat_interface():
 
     #st.session_state.counselor_agent.print_messages()
     prompt = st.chat_input("Type your message here...")
-    
+
     # Display chat messages in the container
     with chat_container:
         for msg in st.session_state.user_messages:
+            #ic(msg)
             if isinstance(msg, dict) and 'role' in msg and 'content' in msg:
                 if isinstance(msg['content'], str):
                     st.chat_message(msg["role"]).write(msg["content"])
@@ -85,7 +83,7 @@ def main_chat_interface():
         for key, value in response_json.items():
             if key in current_student_info:
                 current_student_info[key] = value
-        
+
         dba.update_student_info(st.session_state.user.user_id, current_student_info)
 
         # Load new info into the user object
@@ -111,17 +109,17 @@ def display_student_info(user_id: int):
         <style>
         [data-testid="stSidebar"] .stText {
             word-wrap: break-word;
-            white-space: pre-wrap;      
+            white-space: pre-wrap;
         }
         </style>
     """, unsafe_allow_html=True)
 
     student_info = dba.get_student_info(user_id)
- 
+
     if student_info:
         for key, value in student_info.items():
             st.sidebar.text(f"{key}: {value}")
-        
+
     #top_strengths = dba.get_top_strengths(user_id)
     #bot_strengths = dba.get_bot_strengths(user_id)
 
@@ -195,7 +193,7 @@ def assessment_page():
                     index=None
                 )
                 user_responses[question] = response
-    
+
         user_responses = answers
 
     if submit:
@@ -245,7 +243,7 @@ def assessment_page():
                 json_mode=False
             )
         else:
-            response = prompts.TEMP_RESPONSE 
+            response = prompts.TEMP_RESPONSE
 
         conn = dba.get_db_connection()
         cursor = conn.cursor()
@@ -266,7 +264,8 @@ def assessment_page():
 def display_counselor_options():
     st.subheader("Choose your counselor")
 
-    from src.personas import DAVID_WELCOME_MESSAGE, EMMA_WELCOME_MESSAGE, LIAM_WELCOME_MESSAGE
+    from src.personas import (DAVID_WELCOME_MESSAGE, EMMA_WELCOME_MESSAGE,
+                              LIAM_WELCOME_MESSAGE)
     from src.run_tools import type_text
 
     col1, col2, col3 = st.columns(3)
@@ -306,7 +305,7 @@ def display_counselor_options():
             welcome_message = EMMA_WELCOME_MESSAGE
         elif persona == "Liam - The Explorer":
             welcome_message = LIAM_WELCOME_MESSAGE
-        
+
         if welcome_message:
             type_text(welcome_message, char_speed=0.00001)
         st.session_state.show_welcome_message = False

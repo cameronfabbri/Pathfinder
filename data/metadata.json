@@ -1,102 +1,1315 @@
 {
-  "SUNY Adirondack": {
-    "root_directory": "sunyacc.smartcatalogiq.com/en/23-24/college-catalog/",
-    "processing_instructions": {
-      "file_extensions": [".html"],
-      "include_in_path": [""]
+    "Alfred-State-College": {
+        "urls": [
+            "https://www.alfredstate.edu/",
+            "https://catalog.alfredstate.edu/current/",
+            "https://alfredstateathletics.com/"
+        ],
+        "pdf_directories": {
+            "recursive": [
+                "catalog.alfredstate.edu/current/"
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": ["catalog.alfredstate.edu/current/catalog.pdf"],
+        "html_directories": {
+            "recursive": [
+                    "catalog.alfredstate.edu/current/academic-information/",
+                    "catalog.alfredstate.edu/current/admission-to-alfred-state/",
+                    "catalog.alfredstate.edu/current/courses/",
+                    "catalog.alfredstate.edu/current/department/",
+                    "catalog.alfredstate.edu/current/financial-information/",
+                    "catalog.alfredstate.edu/current/general-college-information/",
+                    "catalog.alfredstate.edu/current/programs/",
+                    "catalog.alfredstate.edu/current/student-affairs"
+            ],
+            "nonrecursive": ["catalog.alfredstate.edu/current/programs/"]
+        },
+        "html_files": [
+            "www.alfredstate.edu/faq.html",
+            "www.alfredstate.edu/financial-aid.html"
+        ],
+        "notes": "A lot of the html pages have corresponding pdfs in the same directory. There'll be index.html and index.pdf. Not gonna include html from the root www directory bc they just link to the catalog."
     },
-    "pdf_files": [],
-    "other_files": []
-  },
-  "University at Albany": {
-    "root_directory": "www.albany.edu",
-    "processing_instructions": {
-      "file_extensions": [".html"],
-      "include_in_path": ["programs"]
+    "Alfred-University": {
+        "urls": ["https://www.alfred.edu/"],
+        "pdf_directories": {
+            "recursive": [
+                "www.alfred.edu/academics/graduate-programs/_docs/",
+                "www.alfred.edu/academics/undergrad-majors-minors/_docs/"
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+            "www.alfred.edu/academics/undergrad-majors-minors/undergraduate_catalog-2024-25.pdf",
+            "www.alfred.edu/academics/graduate-programs/_docs/catalog/alfred-university-graduate-catalog-2024-2025.pdf"
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.alfred.edu/about/",
+                "www.alfred.edu/academics/",
+                "www.alfred.edu/admissions/",
+                "www.alfred.edu/student-life/",
+                "www.alfred.edu/cact/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
     },
-    "pdf_files": [],
-    "other_files": []
-  },
-  "Alfred University": {
-    "root_directory": "www.alfred.edu/academics/undergrad-majors-minors/",
-    "processing_instructions": {
-        "file_extensions": [".html"],
-        "include_in_path": [""]
+    "Binghamton-University": {
+        "urls": ["https://www.binghamton.edu/"],
+        "pdf_directories": {
+            "recursive": [],
+            "nonrecursive": []
+        },
+        "pdf_files": [],
+        "html_directories": {
+            "recursive": [
+                "www.binghamton.edu/about/",
+                "www.binghamton.edu/academics/",
+                "www.binghamton.edu/aaas/",
+                "www.binghamton.edu/admissions/",
+                "www.binghamton.edu/centers/",
+                "www.binghamton.edu/counseling/",
+                "www.binghamton.edu/home/",
+                "www.binghamton.edu/financial-aid/",
+                "www.binghamton.edu/online/",
+                "www.binghamton.edu/programs/",
+                "www.binghamton.edu/research/",
+                "www.binghamton.edu/residential-life/",
+                "www.binghamton.edu/services/",
+                "www.binghamton.edu/student-affairs/",
+                "www.binghamton.edu/student-life/",
+                "www.binghamton.edu/student-research-and-scholarship/",
+                "www.binghamton.edu/higher-education-and-student-affairs/",
+                "www.binghamton.edu/first-year-research-immersion/",
+                "www.binghamton.edu/apps/academics/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
     },
-    "pdf_files": [
-      "www.alfred.edu/academics/undergrad-majors-minors/_docs/catalog/alfred-university-undergraduate-catalog-2022-2023.pdf",
-      "www.alfred.edu/about/institutional-research/_docs/fact-book-may-2024.pdf"
-    ]
-  },
-  "Alfred State College": {
-    "root_directory": "catalog.alfredstate.edu/",
-    "processing_instructions": {
-        "file_extensions": [".html"],
-        "include_in_path": ["current"],
-        "exclude_from_path": ["courses-by-code"]
+    "Buffalo-State-College": {
+        "urls": ["https://suny.buffalostate.edu/"],
+        "pdf_directories": {
+            "recursive": [],
+            "nonrecursive": []
+        },
+        "pdf_files": [],
+        "html_directories": {
+            "recursive": [
+                "suny.buffalostate.edu/programs",
+                "suny.buffalostate.edu/graduate"
+            ],
+            "nonrecursive": [
+                "suny.buffalostate.edu"
+            ]
+        },
+        "notes": ""
     },
-    "pdf_files": [
-      "catalog.alfredstate.edu/current/catalog.pdf",
-      "catalog.alfredstate.edu/current/archive/AlfredState2024-25.pdf"
-    ]
-  },
-  "Binghamton University": {
-    "root_directory": "suny/www.binghamton.edu/apps/academics/program",
-    "processing_instructions": {
-      "file_extensions": [".html"],
-      "include_in_path": [""]
+    "Cayuga-Community-College": {
+        "urls": ["https://www.cayuga-cc.edu/"],
+        "pdf_directories": {
+            "recursive": [
+                "www.cayuga-cc.edu/pdf/catalog_archive/",
+                "www.cayuga-cc.edu/pdf/admissions/",
+                "www.cayuga-cc.edu/pdf/financial-aid/",
+                "www.cayuga-cc.edu/pdf/scholarships/"
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+            "www.cayuga-cc.edu/pdf/catalog_archive/ccc_catalog_2023-24.pdf",
+            "www.cayuga-cc.edu/about/facts/strategic-plan/Strategic-Plan-2022-2025.pdf"
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.cayuga-cc.edu/about/",
+                "www.cayuga-cc.edu/academics/",
+                "www.cayuga-cc.edu/financial-aid/",
+                "www.cayuga-cc.edu/students/resources/",
+                "www.cayuga-cc.edu/students/student-life/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
     },
-    "pdf_files": [],
-    "other_files": []
-  },
-  "SUNY Broome": {
-    "root_directory": "suny/www1.sunybroome.edu/programs",
-    "processing_instructions": {
-      "file_extensions": [".html"],
-      "include_in_path": [""]
+    "Clinton-Community-College": {
+        "urls": ["https://www.clinton.edu/"],
+        "pdf_directories": {
+            "recursive": [
+                "www.clinton.edu/degrees-and-programs/",
+                "www.clinton.edu/Admissions/"
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+            "catalog.clinton.edu/sites/default/files/2023-2024-catalog-9-27-24.pdf"],
+        "html_directories": {
+            "recursive": [
+                "catalog.clinton.edu/",
+                "www.clinton.edu/about",
+                "www.clinton.edu/Admissions",
+                "www.clinton.edu/degrees-and-programs",
+                "www.clinton.edu/future-students",
+                "www.clinton.edu/student-resources/",
+                "www.clinton.edu/tuition-and-aid/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
     },
-    "pdf_files": [
-      "suny/www1.sunybroome.edu/wp-content/uploads/2024/08/2425_student_handbook.pdf",
-      "suny/www1.sunybroome.edu/wp-content/uploads/2024/01/suny_broome_fast_facts_fall_2023-1.pdf"
-    ],
-    "other_files": []
-  },
-  "Clinton Community College": {
-    "root_directory": "www.clinton.edu/degrees-and-programs",
-    "processing_instructions": {
-      "file_extensions": [".html"],
-      "include_in_path": [""]
+    "Columbia-Greene-Community-College": {
+        "urls": ["https://www.columbiagreene.edu/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+            "www.columbiagreene.edu/wp-content/uploads/2023/09/2023-2024-Catalog-FINAL-WITH-CANNABIS-CAREERS-PROGRAM.pdf",
+            "www.columbiagreene.edu/wp-content/uploads/2023/12/cgcc_SPR24_CourseCatalog_accessible_fin.pdf",
+            "www.columbiagreene.edu/wp-content/uploads/2024/03/cgcc_SUM24_CourseCatalog_3.pdf",
+            "www.columbiagreene.edu/wp-content/uploads/2024/08/Fall-202480-CEPD-Catalog-1.pdf",
+            "www.columbiagreene.edu/wp-content/uploads/2024/08/202480-CEPD-Catalog_accessible_2.pdf"
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.columbiagreene.edu/about/",
+                "www.columbiagreene.edu/academics/programs/",
+                "www.columbiagreene.edu/admissions/",
+                "www.columbiagreene.edu/student-life/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
     },
-    "pdf_files": [],
-    "other_files": []
-  },
-  "SUNY Cobleskill": {
-    "root_directory": "www.clinton.edu/degrees-and-programs",
-    "processing_instructions": {
-      "file_extensions": [".html"],
-      "include_in_path": [""]
+    "Cornell-CALS": {
+        "urls": ["https://cals.cornell.edu/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+                "cals.cornell.edu/agricultural-experiment-station/",
+                "cals.cornell.edu/american-indian-indigenous-studies/",
+                "cals.cornell.edu/animal-science/",
+                "cals.cornell.edu/education/",
+                "cals.cornell.edu/entomology/",
+                "cals.cornell.edu/field-crops/",
+                "cals.cornell.edu/food-science/",
+                "cals.cornell.edu/global-development/",
+                "cals.cornell.edu/landscape-architecture/",
+                "cals.cornell.edu/microbiology/",
+                "cals.cornell.edu/pro-dairy/",
+                "cals.cornell.edu/research/",
+                "cals.cornell.edu/school-integrative-plant-science/",
+                "cals.cornell.edu/undergraduate-students/"
+            ],
+            "nonrecursive": []
+        },
+        "html_files": [
+            "cals.cornell.edu/visit-cals.html",
+            "cals.cornell.edu/undergraduate-students.html",
+            "cals.cornell.edu/research.html",
+            "cals.cornell.edu/pro-dairy.html",
+            "cals.cornell.edu/molecular-biology-genetics.html",
+            "cals.cornell.edu/natural-resources-environment.html",
+            "cals.cornell.edu/occupational-environmental-health-program.html",
+            "cals.cornell.edu/produce-safety-alliance.html",
+            "cals.cornell.edu/measuring-sustainability-food-production-systems-exploring-solution-space.html",
+            "cals.cornell.edu/graduate-students.html",
+            "cals.cornell.edu/global-development.html",
+            "cals.cornell.edu/food-security-water-quality-and-climate-change-global-challenges-requiring-local-empowerment.html",
+            "cals.cornell.edu/dairy-feeder-school.html",
+            "cals.cornell.edu/dairy-extension.html",
+            "cals.cornell.edu/cornell-agritech.html"
+        ],
+        "notes": ""
     },
-    "pdf_files": [],
-    "other_files": []
-  },
-  "Cayuga County Community College": {
-    "root_directory": "www.cayuga-cc.edu/academics/",
-    "processing_instructions": {
-      "file_extensions": [".html"],
-      "include_in_path": [""]
+    "Cornell-Human-Ecology": {
+        "urls": ["https://www.human.cornell.edu/"],
+        "pdf_directories": {
+            "recursive": [
+                "www.human.cornell.edu/sites/default/files/Academics/"
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.human.cornell.edu/about/",
+                "www.human.cornell.edu/about-college/",
+                "www.human.cornell.edu/academics/",
+                "www.human.cornell.edu/admissions/",
+                "www.human.cornell.edu/college-human-ecology/",
+                "www.human.cornell.edu/dns/",
+                "www.human.cornell.edu/hcd/",
+                "www.human.cornell.edu/heaa/",
+                "www.human.cornell.edu/human-centered-design/",
+                "www.human.cornell.edu/research/",
+                "www.human.cornell.edu/studentlife/"
+            ],
+            "nonrecursive": ["www.human.cornell.edu/"]
+        },
+        "notes": ""
     },
-    "pdf_files": ["www.cayuga-cc.edu/pdf/catalog_archive/ccc_catalog_2023-24.pdf"],
-    "other_files": []
-  },
-  "SUNY Potsdam": {
-    "root_directory": "suny/www.potsdam.edu/",
-    "processing_instructions": {
-      "file_extensions": [".html"],
-      "include_in_path": [""]
+    "Cornell-ILR": {
+        "urls": ["https://www.ilr.cornell.edu/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.ilr.cornell.edu/about-ilr/",
+                "www.ilr.cornell.edu/programs/",
+                "www.ilr.cornell.edu/academics/",
+                "www.ilr.cornell.edu/admissions/"
+
+            ],
+            "nonrecursive": [
+                "www.ilr.cornell.edu/academics/"
+            ]
+        },
+        "notes": ""
     },
-    "pdf_files": [
-        "suny/www.potsdam.edu/sites/default/files/FinancialAidAssessmentPlan.pdf"
-    ],
-    "other_files": []
-  }
+    "Cornell-Veterinary-Medicine": {
+        "urls": ["https://www.vet.cornell.edu/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.vet.cornell.edu/about-us/",
+                "www.vet.cornell.edu/departments/",
+                "www.vet.cornell.edu/departments-centers-and-institutes/",
+                "www.vet.cornell.edu/education/",
+                "www.vet.cornell.edu/research-departments/departments/",
+                "www.vet.cornell.edu/research-departments/labs/",
+                "www.vet.cornell.edu/researchareas/",
+                "www.vet.cornell.edu/researchcategories/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
+    },
+    "Corning-Community-College": {
+        "urls": ["https://www.corning-cc.edu/"],
+        "pdf_directories": {
+            "recursive": [
+                "www.corning-cc.edu/admissions-future-students/"
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+            "www.corning-cc.edu/community-business/pdfs/2022-weap-catalog.pdf"
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.corning-cc.edu/about/",
+                "www.corning-cc.edu/academics/",
+                "www.corning-cc.edu/admissions-future-students/",
+                "www.corning-cc.edu/careers/",
+                "www.corning-cc.edu/community-business/",
+                "www.corning-cc.edu/student-life/",
+                "www.corning-cc.edu/visit/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
+    },
+    "Downstate-Health-Sciences-University": {
+        "urls": ["https://www.downstate.edu/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.downstate.edu/about",
+                "www.downstate.edu/education-training",
+                "www.downstate.edu/research"
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
+    },
+    "Dutchess-Community-College": {
+        "urls": ["https://www.sunydutchess.edu/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": ["www.sunydutchess.edu/"]
+        },
+        "pdf_files": [],
+        "html_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": ["www.sunydutchess.edu/"]
+        },
+        "notes": "Had to use a python script to download them"
+    },
+    "Empire-State-University": {
+        "urls": ["https://sunyempire.edu/", "https://catalog.sunyempire.edu/"],
+        "pdf_directories": {
+            "recursive": [
+                "catalog.sunyempire.edu/undergraduate/about/",
+                "catalog.sunyempire.edu/undergraduate/academic-support/",
+                "catalog.sunyempire.edu/undergraduate/areas-study-degrees-certificates/",
+                "catalog.sunyempire.edu/undergraduate/earning-undergraduate-degree/",
+                "catalog.sunyempire.edu/undergraduate/financial-aid/",
+                "catalog.sunyempire.edu/undergraduate/getting-started-registration/",
+                "catalog.sunyempire.edu/undergraduate/student-activities/"
+            ],
+            "nonrecursive": [
+                "catalog.sunyempire.edu/pdf/"
+            ]
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+                "catalog.sunyempire.edu/undergraduate/about/",
+                "catalog.sunyempire.edu/undergraduate/academic-support/",
+                "catalog.sunyempire.edu/undergraduate/areas-study-degrees-certificates/",
+                "catalog.sunyempire.edu/undergraduate/earning-undergraduate-degree/",
+                "catalog.sunyempire.edu/undergraduate/financial-aid/",
+                "catalog.sunyempire.edu/undergraduate/getting-started-registration/",
+                "catalog.sunyempire.edu/undergraduate/student-activities/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
+    },
+    "Erie-Community-College": {
+        "urls": ["https://www.ecc.edu/", "https://catalog.ecc.edu/"],
+        "pdf_directories": {
+            "recursive": [""],
+            "nonrecursive": [""]
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [""],
+            "nonrecursive": ["filtered_catalog/"]
+        },
+        "notes": "Had to change filenames so the URLs won't work. There were also like 70k files in the root directory."
+    },
+    "Farmingdale-State-College": {
+        "urls": ["https://www.farmingdale.edu/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": ["www.farmingdale.edu/consumer-information/residence-life-res-hall-guide-2023-2024.pdf"],
+        "html_directories": {
+            "recursive": [
+                "www.farmingdale.edu/about/",
+                "www.farmingdale.edu/academics/",
+                "www.farmingdale.edu/accessibility/",
+                "www.farmingdale.edu/admissions/",
+                "www.farmingdale.edu/arts-sciences/",
+                "www.farmingdale.edu/business/",
+                "www.farmingdale.edu/campus-mental-health-services/",
+                "www.farmingdale.edu/campus-recreation/",
+                "www.farmingdale.edu/contact/",
+                "www.farmingdale.edu/course-offerings/",
+                "www.farmingdale.edu/curriculum/",
+                "www.farmingdale.edu/disability-services-center/",
+                "www.farmingdale.edu/distance-learning/",
+                "www.farmingdale.edu/engineering/",
+                "www.farmingdale.edu/fraternity-and-sorority-life/",
+                "www.farmingdale.edu/future-students/",
+                "www.farmingdale.edu/health-sciences/",
+                "www.farmingdale.edu/scholarships/",
+                "www.farmingdale.edu/sstem-scholarship/",
+                "www.farmingdale.edu/student-financial-services/",
+                "www.farmingdale.edu/university-in-the-high-school/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
+    },
+    "Fashion-Institute-of-Technology": {
+        "urls": ["https://www.fitnyc.edu/", "https://catalog.fitnyc.edu"],
+        "pdf_directories": {
+            "recursive": [
+                "www.fitnyc.edu/academics/",
+                "catalog.fitnyc.edu/undergraduate/",
+                "catalog.fitnyc.edu/graduate/"
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+            "www.fitnyc.edu/documents/2019-2030-undergraduate-catalog.pdf",
+            "catalog.fitnyc.edu/pdf/2024-25-undergraduate.pdf",
+            "catalog.fitnyc.edu/pdf/2024-25-graduate.pdf"
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.fitnyc.edu/academics/academic-divisions/",
+                "www.fitnyc.edu/academics/academic-support/",
+                "www.fitnyc.edu/academics/cis/",
+                "www.fitnyc.edu/academics/courses-and-registration/",
+                "www.fitnyc.edu/academics/global/",
+                "www.fitnyc.edu/academics/honors/",
+                "www.fitnyc.edu/academics/life-at-fit/",
+                "www.fitnyc.edu/academics/minors/",
+                "www.fitnyc.edu/academics/online-learning/",
+                "www.fitnyc.edu/academics/precollege/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
+    },
+    "Finger-Lakes-Community-College": {
+        "urls": ["https://www.flcc.edu/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": [
+                "www.flcc.edu/pdf/about/",
+                "www.flcc.edu/pdf/academics/",
+                "www.flcc.edu/pdf/apci/",
+                "www.flcc.edu/pdf/applied-learning/",
+                "www.flcc.edu/pdf/apply/",
+                "www.flcc.edu/pdf/career/",
+                "www.flcc.edu/pdf/counseling/",
+                "www.flcc.edu/pdf/diversity/",
+                "www.flcc.edu/pdf/emt/",
+                "www.flcc.edu/pdf/financialaid/",
+                "www.flcc.edu/pdf/highschool-homeschool/",
+                "www.flcc.edu/pdf/honors/",
+                "www.flcc.edu/pdf/returntofinish/",
+                "www.flcc.edu/pdf/scholarships/",
+                "www.flcc.edu/pdf/studentlife/",
+                "www.flcc.edu/pdf/tour/",
+                "www.flcc.edu/pdf/undecided/",
+                "www.flcc.edu/pdf/visit/",
+                "www.flcc.edu/pdf//",
+                "www.flcc.edu/pdf//"
+            ]
+        },
+        "pdf_files": ["www.flcc.edu/pdf/catalog/2023-2024-FLCC-Catalog.pdf"
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.flcc.edu/about/",
+                "www.flcc.edu/academics/",
+                "www.flcc.edu/apply/",
+                "www.flcc.edu/career/",
+                "www.flcc.edu/clubs/",
+                "www.flcc.edu/costs/",
+                "www.flcc.edu/diversity/",
+                "www.flcc.edu/dream/",
+                "www.flcc.edu/dsp/",
+                "www.flcc.edu/facts/",
+                "www.flcc.edu/highschool-homeschool/",
+                "www.flcc.edu/grit/",
+                "www.flcc.edu/honors/",
+                "www.flcc.edu/hybrid/",
+                "www.flcc.edu/learningsupport/",
+                "www.flcc.edu/mission/",
+                "www.flcc.edu/online/",
+                "www.flcc.edu/parttime/",
+                "www.flcc.edu/pathways/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
+    },
+    "Fulton-Montgomery-Community-College": {
+        "urls": ["https://fmcc.edu/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+            "fmcc.edu/images/Downloads/2024-2025 SUNY FMCC Catalog.pdf"
+        ],
+        "html_directories": {
+            "recursive": [
+                "fmcc.edu/about-fmcc-2/",
+                "fmcc.edu/admissions-aid-2/",
+                "fmcc.edu/business-startups/",
+                "fmcc.edu/computers-technology/",
+                "fmcc.edu/education/",
+                "fmcc.edu/programs-offerings-2/",
+                "fmcc.edu/student-experience-2/",
+                "fmcc.edu/",
+                "fmcc.edu/",
+                "fmcc.edu/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
+    },
+    "Genesee-Community-College": {
+        "urls": ["https://www.genesee.edu/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.genesee.edu/about/accreditation/",
+                "www.genesee.edu/about/campuses/",
+                "www.genesee.edu/about/diversity-and-inclusion/",
+                "www.genesee.edu/academics/degree-opportunities/",
+                "www.genesee.edu/academics/honors/",
+                "www.genesee.edu/academics/law-and-criminal-justice/",
+                "www.genesee.edu/academics/online-learning/",
+                "www.genesee.edu/academics/programs/",
+                "www.genesee.edu/academics/study-abroad/",
+                "www.genesee.edu/admissions/",
+                "www.genesee.edu/contact-admissions/",
+                "www.genesee.edu/pay-for-college/",
+                "www.genesee.edu/resources/high-school-students/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
+    },
+    "Herkimer-College": {
+        "urls": [
+            "https://www.herkimer.edu/",
+            "https://herkimer.smartcatalogiq.com/"
+        ],
+        "pdf_directories": {
+            "recursive": [
+                "herkimer.smartcatalogiq.com/en/current/"
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": ["herkimer.smartcatalogiq.com/-/media/institution/herkimer-ccc/College Catalog 2024-2025 final.pdf"
+        ],
+        "html_directories": {
+            "recursive": [
+                "herkimer.smartcatalogiq.com/en/current/",
+                "www.herkimer.edu/about/",
+                "www.herkimer.edu/admissions/",
+                "www.herkimer.edu/online-learning/",
+                "www.herkimer.edu/openhouse/",
+                "www.herkimer.edu/pay-for-college/",
+                "www.herkimer.edu/prospective-students/"
+            ],
+            "nonrecursive": ["www.herkimer.edu/"]
+        },
+        "notes": ""
+    },
+    "Hudson-Valley-Community-College": {
+        "urls": ["https://www.hvcc.edu/", "https://catalog.hvcc.edu/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.hvcc.edu/admissions/",
+                "www.hvcc.edu/forms/",
+                "www.hvcc.edu/studentservices/",
+                "www.hvcc.edu/programs/"
+            ],
+            "nonrecursive": [
+                "www.hvcc.edu/"
+            ]
+        },
+        "notes": ""
+    },
+    "Jamestown-Community-College": {
+        "urls": ["https://www.sunyjcc.edu/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": ["www.sunyjcc.edu/sites/default/files/JCC-catalog.pdf"],
+        "html_directories": {
+            "recursive": [
+                "www.sunyjcc.edu/about/",
+                "www.sunyjcc.edu/admissions/",
+                "www.sunyjcc.edu/program-offering/",
+                "www.sunyjcc.edu/programs/"
+            ],
+            "nonrecursive": [
+                "www.sunyjcc.edu/"
+            ]
+        },
+        "notes": ""
+    },
+    "Jefferson-Community-College": {
+        "urls": ["https://www.sunyjefferson.edu/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+            "www.sunyjefferson.edu/academics/documents/College-Catalog-24-25.pdf"
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.sunyjefferson.edu/about/",
+                "www.sunyjefferson.edu/academics/",
+                "www.sunyjefferson.edu/accessibility/",
+                "www.sunyjefferson.edu/admissions/",
+                "www.sunyjefferson.edu/student-life/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
+    },
+    "Mohawk-Valley-Community-College": {
+        "urls": [
+            "https://www.mvcc.edu/",
+            "https://catalog.mvcc.edu/current/programs/"
+        ],
+        "pdf_directories": {
+            "recursive": [
+                "www.mvcc.edu/strengths/"
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+            "www.mvcc.edu/admissions/MVCC-College-Catalog-2018-19.pdf",
+            "www.mvcc.edu/mvilr/course-catalog.pdf",
+            "www.mvcc.edu/placement-testing/pdf/clep-exams.pdf"
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.mvcc.edu/about/",
+                "www.mvcc.edu/academics/",
+                "www.mvcc.edu/admissions/",
+                "www.mvcc.edu/counseling/",
+                "www.mvcc.edu/eop/",
+                "www.mvcc.edu/honors/",
+                "www.mvcc.edu/mental-health/",
+                "www.mvcc.edu/microcredentials/",
+                "www.mvcc.edu/middlestates/",
+                "www.mvcc.edu/mvilr/",
+                "www.mvcc.edu/paying-for-college/",
+                "www.mvcc.edu/placement-testing/",
+                "www.mvcc.edu/prospective-students/",
+                "www.mvcc.edu/ptk/",
+                "www.mvcc.edu/strengths/",
+                "www.mvcc.edu/tlae/",
+                "www.mvcc.edu/tlm/",
+                "www.mvcc.edu/visit/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
+    },
+    "Monroe-Community-College": {
+        "urls": ["https://www.monroecc.edu/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.monroecc.edu/about-mcc/",
+                "www.monroecc.edu/academics/",
+                "www.monroecc.edu/admissions/",
+                "www.monroecc.edu/campus-locations/",
+                "www.monroecc.edu/college-now/",
+                "www.monroecc.edu/contact-us/",
+                "www.monroecc.edu/depts/",
+                "www.monroecc.edu/diversity/",
+                "www.monroecc.edu/downtown/",
+                "www.monroecc.edu/future-students/",
+                "www.monroecc.edu/life-at-mcc/",
+                "www.monroecc.edu/parents/",
+                "www.monroecc.edu/quick-links/",
+                "www.monroecc.edu/schools/",
+                "www.monroecc.edu/special-programs/",
+                "www.monroecc.edu/tuition-aid/",
+                "www.monroecc.edu/visitors/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": "The directory classes/ has html files for every class offered. Omitting for now, but may want them later"
+    },
+    "Nassau-Community-College": {
+        "urls": ["https://www.ncc.edu/", "https://collegecatalog.ncc.edu/current/programs/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+                "collegecatalog.ncc.edu/current/programs",
+                "www.ncc.edu/aboutncc/",
+                "www.ncc.edu/admissions/",
+                "www.ncc.edu/contactus/",
+                "www.ncc.edu/financialaid/",
+                "www.ncc.edu/payingforcollege/",
+                "www.ncc.edu/programsandcourses/",
+                "www.ncc.edu/studentlife/"
+            ],
+            "nonrecursive": [
+                "www.ncc.edu/"
+            ]
+        },
+        "notes": ""
+    },
+    "Niagara-County-Community-College": {
+        "urls": ["https://www.niagaracc.suny.edu/", "http://catalog.niagaracc.suny.edu/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": [
+                "catalog.niagaracc.suny.edu/programs/",
+                "www.niagaracc.suny.edu/about/",
+                "www.niagaracc.suny.edu/basic-needs-resources/",
+                "www.niagaracc.suny.edu/campus-life/",
+                "www.niagaracc.suny.edu/clubs-and-organization-list/",
+                "www.niagaracc.suny.edu/fin-aid/",
+                "www.niagaracc.suny.edu/scholarships/",
+                "www.niagaracc.suny.edu/studentlife/",
+                "www.niagaracc.suny.edu/visit/"
+            ]
+        },
+        "notes": "Another one with the catalog having 34,000 html files downloaded into one directory. We want the programs, and they all have preview_program.php?catoid=32 and print.html in the filenames. I'm going to copy them into a 'programs' directory and rename them for Windows. Looks like catoid=32 is the current year. Other catoids were for older years. This looks like it contains everything for the current year, not just programs"
+    },
+    "North-Country-Community-College": {
+        "urls": ["https://www.nccc.edu/"],
+        "pdf_directories": {
+            "recursive": [
+                "www.ncc.edu/pdfs/catalog/",
+                "www.ncc.edu/pdfs/business_office/tuition-and-fees_2024-2025/",
+                "www.ncc.edu/pdfs/foundation/",
+                "www.ncc.edu/pdfs/",
+                "www.ncc.edu/radtech/",
+                "www.nccc.edu/registration/",
+                "www.nccc.edu/wilderness/"
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.nccc.edu/about/",
+                "www.nccc.edu/admissions/",
+                "www.nccc.edu/admissions-to-radiologic-technology/",
+                "www.nccc.edu//",
+                "www.nccc.edu/coding/",
+                "www.nccc.edu/college-bridge-program-2/",
+                "www.nccc.edu/contact-us/",
+                "www.nccc.edu/criminal-justice/",
+                "www.nccc.edu/design/",
+                "www.nccc.edu/emstraining/",
+                "www.nccc.edu/environmental-science/",
+                "www.nccc.edu/environmental-studies/",
+                "www.nccc.edu/fall/",
+                "www.nccc.edu/financial-aid/",
+                "www.nccc.edu/health-science/",
+                "www.nccc.edu/nccc-p-tech/",
+                "www.nccc.edu/nursing/",
+                "www.nccc.edu/radtech/",
+                "www.nccc.edu/refunds/",
+                "www.nccc.edu/registration/",
+                "www.nccc.edu/scholarships/",
+                "www.nccc.edu/student-support/",
+                "www.nccc.edu/transfer/",
+                "www.nccc.edu/tuition_fees_schedules/",
+                "www.nccc.edu/visit/",
+                "www.nccc.edu/wilderness/",
+                "www.nccc.edu/winter/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
+    },
+    "Onondaga-Community-College": {
+        "urls": ["https://www.sunyocc.edu/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": [
+                "www.sunyocc.edu/",
+                "www.sunyocc.edu/childrens-learning-center/",
+                "www.sunyocc.edu/civic-engagement-center/",
+                "www.sunyocc.edu/community-care-hub/",
+                "www.sunyocc.edu/community-education/",
+                "www.sunyocc.edu/cstep/",
+                "www.sunyocc.edu/educational-opportunity-program/",
+                "www.sunyocc.edu/financial-aid/",
+                "www.sunyocc.edu/form/",
+                "www.sunyocc.edu/phi-theta-kappa/",
+                "www.sunyocc.edu/phi-theta-kappaphi-theta-kappa/",
+                "www.sunyocc.edu/programs/",
+                "www.sunyocc.edu/residence-life/",
+                "www.sunyocc.edu/sole/",
+                "www.sunyocc.edu/testing-services/",
+                "www.sunyocc.edu/transfer/",
+                "www.sunyocc.edu/trio/",
+                "www.sunyocc.edu/tuition-fees/"
+            ]
+        },
+        "notes": "I removed a bunch of files that weren't needed, index.html?page etc. type html files. There were a ton for programs too, but we have everything in the programs/ directory"
+    },
+    "Orange-County-Community-College": {
+        "urls": [
+            "https://sunyorange.edu/",
+            "https://catalog.sunyorange.edu/current/"
+        ],
+        "pdf_directories": {
+            "recursive": [
+                "catalog.sunyorange.edu/current"
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+                "catalog.sunyorange.edu/current"
+            ],
+            "nonrecursive": []
+        },
+        "notes": "There's a full catalog located at 'catalog.sunyorange.edu/current/catalog.pdf', but the entire directory catalog.sunyorange.edu/current contains everything we need, so I'm getting everything"
+    },
+    "Purchase-College": {
+        "urls": ["https://www.purchase.edu/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.purchase.edu/about/",
+                "www.purchase.edu/academics/",
+                "www.purchase.edu/admissions/",
+                "www.purchase.edu/campus-life/",
+                "www.purchase.edu/summer-and-winter-sessions/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": "Not a single pdf file, looks like there's no extensions on them. I only found a few unrelated ones anyway."
+    },
+    "Rockland-Community-College": {
+        "urls": [
+            "https://sunyrockland.edu/",
+            "https://iq2.smartcatalogiq.com/catalogs/rockland-community-college/2024-2025/"
+        ],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+                "sunyrockland.edu/about/",
+                "sunyrockland.edu/academics/",
+                "sunyrockland.edu/admission/",
+                "sunyrockland.edu/financial-aid/",
+                "sunyrockland.edu/programs/",
+                "sunyrockland.edu/services/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": "Wasn't able to scrape the second URL with wget2"
+    },
+    "Schenectady-County-Community-College": {
+        "urls": ["https://www.sunysccc.edu/"],
+        "pdf_directories": {
+            "recursive": [
+                "www.sunysccc.edu/About SCCC/Middle States/",
+                "www.sunysccc.edu/PDF/AcademicPrograms/",
+                "www.sunysccc.edu/PDF/Admissions/",
+                "www.sunysccc.edu/PDF/BCJL/",
+                "www.sunysccc.edu/PDF/Current Students/Wellness and Support/",
+                "www.sunysccc.edu/PDF/Financial Aid/",
+                "www.sunysccc.edu/PDF/Registrar/",
+                "www.sunysccc.edu/PDF/WFDCE/"
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+            "www.sunysccc.edu/About SCCC/SCCOC-Application_2024/",
+            "www.sunysccc.edu/About SCCC/Sp23_Employment-Outcomes-Data.pdf"
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.sunysccc.edu/About-Us/",
+                "www.sunysccc.edu/Academics/",
+                "www.sunysccc.edu/Admissions/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
+    },
+    "Stony-Brook-University": {
+        "urls": ["https://www.stonybrook.edu/"],
+        "pdf_directories": {
+            "recursive": [
+                "www.stonybrook.edu/commcms/_second-level/about/",
+                "www.stonybrook.edu/undergratuate-admissions/",
+                "www.stonybrook.edu/undergratuate-colleges/"
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+            "www.stonybrook.edu/hsbulletin/catalog.pdf",
+            "www.stonybrook.edu/hsbulletin/courses.pdf",
+            "www.stonybrook.edu/commcms/finaid/pdfs/Financial_Aid_Guide.pdf",
+            "www.stonybrook.edu/commcms/korean/2024 Undergrad Scholarship.pdf"
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.stonybrook.edu/about/",
+                "www.stonybrook.edu/academics/",
+                "www.stonybrook.edu/admissions/",
+                "www.stonybrook.edu/campus-life/",
+                "www.stonybrook.edu/contact/",
+                "www.stonybrook.edu/commcms/",
+                "www.stonybrook.edu/undergratuate-admissions/",
+                "www.stonybrook.edu/undergratuate-colleges/",
+                "www.stonybrook.edu/virtual-tour/",
+                "www.stonybrook.edu/visit/",
+                "www.stonybrook.edu/winter-session/"
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
+    },
+    "Suffolk-County-Community-College": {
+        "urls": ["https://www.sunysuffolk.edu/"],
+        "pdf_directories": {
+            "recursive": [
+                "www.sunysuffolk.edu/apply-enroll/",
+                "www.sunysuffolk.edu/explore-academics/"
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+                "www.sunysuffolk.edu/explore-academics/college-catalog/documents/Catalog-2022-24.pdf"
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.sunysuffolk.edu/about-suffolk/",
+                "www.sunysuffolk.edu/apply-enroll/",
+                "www.sunysuffolk.edu/explore-academics/",
+                "www.sunysuffolk.edu/openhouse/",
+                "www.sunysuffolk.edu/stem/",
+                "www.sunysuffolk.edu/tours/"
+            ],
+            "nonrecursive": [
+                "www.sunysuffolk.edu/_resources/webservice/output/catalog/",
+                "www.sunysuffolk.edu/"
+            ]
+        },
+        "notes": "One big html catalog file with everything"
+    },
+    "Sullivan-County-Community-College": {
+        "urls": ["https://sunysullivan.edu/"],
+        "pdf_directories": {
+            "recursive": [
+                "sunysullivan.edu/wp-content/uploads/2024/"
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+            "sunysullivan.edu/wp-content/uploads/2024/10/10.3.24-SSCat_Rnd11.1.pdf"
+        ],
+        "html_directories": {
+            "recursive": [
+                "sunysullivan.edu/admissions/",
+                "sunysullivan.edu/athletics_sccc/",
+                "sunysullivan.edu/business-and-entrepreneurship/",
+                "sunysullivan.edu/computer-science/",
+                "sunysullivan.edu/criminal-justice/",
+                "sunysullivan.edu/culinary-arts/",
+                "sunysullivan.edu/education/",
+                "sunysullivan.edu/educational-opportunity-program-eop/",
+                "sunysullivan.edu/find-your-fit/",
+                "sunysullivan.edu/health-sciences/",
+                "sunysullivan.edu/liberal-arts/",
+                "sunysullivan.edu/liberty-partnerships-program/",
+                "sunysullivan.edu/math-and-science/",
+                "sunysullivan.edu/microcredentials/",
+                "sunysullivan.edu/scholarships/",
+                "sunysullivan.edu/sports-fitness-and-wellness/",
+                "sunysullivan.edu/what-we-offer/",
+                "sunysullivan.edu//",
+                "sunysullivan.edu//",
+                "sunysullivan.edu//",
+                "sunysullivan.edu//",
+                "sunysullivan.edu//",
+                "sunysullivan.edu//"
+            ],
+            "nonrecursive": []
+        },
+        "notes": "Had to manually download the catalog: https://sunysullivan.edu/wp-content/uploads/2024/10/10.3.24-SSCat_Rnd11.1.pdf. Other stuff isn't able to be downloaded as well, e.g., https://sunysullivan.edu/culinary-arts/professional-chef-aas/ does NOT get downloaded, only https://sunysullivan.edu/culinary-arts/index.html"
+    },
+    "SUNY-Adirondack": {
+        "urls": [
+            "https://www.sunyacc.edu/",
+            "https://sunyacc.smartcatalogiq.com/en/24-25/"
+        ],
+        "html_directories": {
+            "recursive": [
+                "www.sunyacc.edu/about/",
+                "www.sunyacc.edu/admissions-aid/",
+                "www.sunyacc.edu/campus-life/",
+                "www.sunyacc.edu//",
+                "www.sunyacc.edu/programs-courses/",
+                "www.sunyacc.edu/student-success/",
+                "www.sunyacc.edu/offices-departments/",
+                "sunyacc.smartcatalogiq.com/en/24-25/"
+            ],
+            "nonrecursive": [
+                "www.sunyacc.edu/"
+            ]
+        },
+        "notes": ""
+    },
+    "SUNY-Brockport": {
+        "urls": ["https://www.brockport.edu/"],
+        "pdf_directories": {
+            "recursive": [],
+            "nonrecursive": []
+        },
+        "pdf_files": [],
+        "html_directories": {
+            "recursive": [],
+            "nonrecursive": []
+        },
+        "notes": ""
+    },
+    "SUNY-Broome": {
+        "urls": ["https://www1.sunybroome.edu/"]
+    },
+    "SUNY-New-Paltz": {
+        "urls": ["https://www.newpaltz.edu/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
+    },
+    "SUNY-Old-Westbury": {
+        "urls": ["https://www.oldwestbury.edu/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
+    },
+    "SUNY-Oneonta": {
+        "urls": ["https://suny.oneonta.edu/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
+    },
+    "SUNY-College-of-Optometry": {
+        "urls": ["https://www.sunyopt.edu/", "https://sunyopt.cld.bz/CourseCatalog"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
+    },
+    "SUNY-Cortland": {
+        "urls": ["https://www2.cortland.edu/home/"],
+        "pdf_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "pdf_files": [
+        ],
+        "html_directories": {
+            "recursive": [
+            ],
+            "nonrecursive": []
+        },
+        "notes": ""
+    },
+    "University-at-Buffalo": {
+      "urls": ["https://www.buffalo.edu/"]
+    },
+    "SUNY-Canton": {
+        "urls": ["https://www.canton.edu/"]
+    },
+    "SUNY-Cobleskill": {
+        "urls": ["https://www.cobleskill.edu/"]
+    },
+    "SUNY-Delhi": {
+        "urls": ["https://www.delhi.edu/"]
+    },
+    "SUNY-ESF": {
+        "urls": ["https://www.esf.edu/"]
+    },
+    "SUNY-Fredonia": {
+        "urls": ["https://www.fredonia.edu/"]
+    },
+    "SUNY-Geneseo": {
+        "urls": ["https://www.geneseo.edu/"]
+    },
+    "SUNY-Maritime-College": {
+        "urls": ["https://www.sunymaritime.edu/"]
+    },
+    "SUNY-Morrisville": {
+        "urls": ["https://www.morrisville.edu/"]
+    },
+    "SUNY-Oswego": {
+        "urls": ["https://ww1.oswego.edu/"]
+    },
+    "SUNY-Plattsburgh": {
+        "urls": ["https://www.plattsburgh.edu/"]
+    },
+    "SUNY-Potsdam": {
+        "urls": ["https://www.potsdam.edu/", "https://catalog.potsdam.edu/index.php"]
+    },
+    "SUNY-Polytechnic-Institute": {
+        "urls": ["https://sunypoly.edu/", "https://webapp.sunypoly.edu/undergrad-catalog-2024-2025/", "https://webapp.sunypoly.edu/grad-catalog-2024-2025/"]
+    },
+    "Tompkins-Cortland-Community-College": {
+        "urls": ["https://www.tompkinscortland.edu/"]
+    },
+    "SUNY-Ulster": {
+        "urls": ["https://www.sunyulster.edu/", "https://catalog.sunyulster.edu/"]
+    },
+    "SUNY-Upstate-Medical-University": {
+        "urls": ["https://www.upstate.edu/"]
+    },
+    "Westchester-Community-College": {
+        "urls": ["https://www.sunywcc.edu/"]
+    },
+    "University-at-Albany": {
+      "urls": ["https://www.albany.edu/"],
+      "pdf_directories": {
+          "recursive": [
+              "www.albany.edu/docs/schedule_of_classes/pdf/"
+          ]
+      },
+      "pdf_files": [],
+      "html_directories": [
+          "www.albany.edu/about/",
+          "www.albany.edu/academic-advising/",
+          "www.albany.edu/academics/",
+          "www.albany.edu/geographyplanning",
+          "www.albany.edu/rockefeller",
+          "www.albany.edu/sociology",
+          "www.albany.edu/womensstudies",
+          "www.albany.edu/physics",
+          "www.albany.edu/economics",
+          "www.albany.edu/computer-science",
+          "www.albany.edu/psychology",
+          "www.albany.edu/environmental-sustainable-engineering",
+          "www.albany.edu/art",
+          "www.albany.edu/communication",
+          "www.albany.edu/ece",
+          "www.albany.edu/chemistry",
+          "www.albany.edu/nanoscale-science-engineering",
+          "www.albany.edu/autism",
+          "www.albany.edu/africana",
+          "www.albany.edu/education",
+          "www.albany.edu/musicandtheatre",
+          "www.albany.edu/philosophy",
+          "www.albany.edu/daes",
+          "www.albany.edu/scj",
+          "www.albany.edu/history",
+          "www.albany.edu/eastasianstudies",
+          "www.albany.edu/math",
+          "www.albany.edu/lacs",
+          "www.albany.edu/cehc",
+          "www.albany.edu/english",
+          "www.albany.edu/llc",
+          "www.albany.edu/biology",
+          "www.albany.edu/graduate",
+          "www.albany.edu/anthropology",
+          "www.albany.edu/business",
+          "www.albany.edu/cihs",
+          "www.albany.edu/online",
+          "www.albany.edu/cost-aid"
+      ],
+      "notes": "There's no root directory of programs, each of the departments has their own folder, seen above, with a programs subdirectory"
+    }
 }

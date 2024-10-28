@@ -30,8 +30,8 @@ from src.database import db_access as dba
 
 DEBUG = False
 #MODEL = 'gpt-4o'
-#MODEL = 'gpt-4o-mini'
-MODEL = 'gpt-4o-2024-08-06'
+MODEL = 'gpt-4o-mini'
+#MODEL = 'gpt-4o-2024-08-06'
 
 
 def initialize_st_vars():
@@ -88,7 +88,7 @@ def initialize_counselor_agent(client: OpenAI, student_md_profile: str):
 @lru_cache(maxsize=None)
 def initialize_suny_agent(client: OpenAI):
     suny_system_prompt = prompts.SUNY_SYSTEM_PROMPT + '\n'
-    for name in constants.UNIVERSITY_MAPPING.values():
+    for name in constants.UNIVERSITY_NAMES:
         suny_system_prompt += name + '\n'
 
     return agent.Agent(

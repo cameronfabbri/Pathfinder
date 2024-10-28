@@ -1,23 +1,22 @@
 """
 """
 # Cameron Fabbri
-
 import os
 import re
 import sys
 import time
+import logging
 import sqlite3
+
 import streamlit as st
 
-import logging
-
 from openai import OpenAI
+from icecream import ic
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
-from src import utils
-from src import prompts
+from src import prompts, utils
 from src.database import db_access as dba
 from src.pdf_tools import parse_pdf_with_llama
 
@@ -31,18 +30,18 @@ def type_text(text, char_speed=0.03, sentence_pause=0.5):
     placeholder = st.empty()
     full_text = ""
     sentences = re.split('([.!?]+)', text)
-    
+
     for sentence in sentences:
         for char in sentence:
             full_text += char
             placeholder.markdown(full_text + "▌")
             time.sleep(char_speed)
-        
+
         # Pause after completing a sentence (if it ends with .!?)
         if sentence.strip() and sentence.strip()[-1] in '.!?':
             placeholder.markdown(full_text)
             time.sleep(sentence_pause)
-    
+
     placeholder.markdown(full_text)
 
 
@@ -135,23 +134,7 @@ def process_user_input(prompt):
         # counselor agent, which is why we delete the last message.
         counselor_agent.delete_last_message()
 
-    elif 0:#recipient == "system":
-        # Call update student bio function
-
-        # TODO - what if the student says something like "my gpa is a 3.4, which
-        # suny schools should I apply to?" Then this part won't work as expected
-        # because I'm now assuming the response is for the counselor to respond
-        # to the user.
-        print('recipient == system')
-        print('counselor_message:', counselor_message, '\n')
-
-        counselor_agent.add_message("assistant", counselor_message)
-        log_message(st.session_state.user.user_id, st.session_state.user.session_id, 'counselor', 'system', counselor_message)
-        recipient, counselor_message = parse_counselor_response(counselor_agent.invoke())
-        print('invoked()')
-        print('recipient:', recipient)
-        print('counselor_message:', counselor_message, '\n')
-
+    #ic(counselor_message)
     counselor_agent.add_message("assistant", counselor_message)
     st.session_state.user_messages.append({"role": "assistant", "content": counselor_message})
 
@@ -274,6 +257,6 @@ def logout():
     # Clear the session state
     for key in list(st.session_state.keys()):
         del st.session_state[key]
-    
+
     # Rerun the script to return to the login page
     st.rerun()
