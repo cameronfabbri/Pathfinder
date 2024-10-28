@@ -61,10 +61,6 @@ def create_filename_mapping(directory: str, mapping_file: str):
 
     for filepath in tqdm(files):
         if '?' in filepath or '&' in filepath or '=' in filepath or '+' in filepath:
-            #new_filepath = re.sub(r'[?&:"=+]', '_', filepath)
-
-            #if new_filepath in filepath_mapping.values():
-            #    continue
 
             # Sanitize the full path (including directories)
             sanitized_path = sanitize_path(filepath)
