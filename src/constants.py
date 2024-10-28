@@ -14,6 +14,9 @@ METADATA_PATH = opj('data', 'metadata.json')
 
 EXCLUDE = ['meeting', 'blog', 'news', 'events', 'calendar', 'faculty', '\\uf03f', '?', '_archive', 'alumni']
 
+# Number of threads to use for downloading files using wget2
+MAX_DOWNLOAD_THREADS = 9
+
 @lru_cache(maxsize=None)
 def get_university_names():
     with open(opj('data', 'university_names.txt'), 'r') as f:

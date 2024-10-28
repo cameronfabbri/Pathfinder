@@ -18,7 +18,7 @@ from qdrant_client import QdrantClient
 from src import agent
 from src import utils
 from src.database import qdrant_db
-from src.constants import UNIVERSITY_DATA_DIR, UNIVERSITY_MAPPING, METADATA_PATH
+from src.constants import UNIVERSITY_DATA_DIR, METADATA_PATH
 
 opj = os.path.join
 
@@ -510,38 +510,6 @@ def insert_html_files(
         )
 
 
-
-def get_files(directory: str, extension: str) -> list[str]:
-    """
-    Recursively search for files with the given extension in the given directory and return their full paths.
-
-    Args:
-        directory (str): The root directory to start the search from.
-        extension (str): File extension to search for.
-
-    Returns:
-        list[str]: A list of full paths to files with the given extension found in the directory and its subdirectories.
-    """
-    if not extension.startswith('.'):
-        extension = '.' + extension
-
-    result_files = []
-    for root, _, filenames in os.walk(directory):
-        for file in filenames:
-            if file.lower().endswith(extension):
-                if '?' in file:
-                    file2 = file.split('?')[0] + '.html'
-                    if os.path.exists(os.path.join(root, file2)):
-                        result_files.append(os.path.join(root, file2))
-                    else:
-                        result_files.append(os.path.join(root, file))
-                else:
-                    result_files.append(os.path.join(root, file))
-
-    return sorted(list(set(result_files)))
-
-
-
 @click.command()
 @click.option('--data_dir', '-d', type=str, default=None, help='Root university directory to process')
 @click.option('--debug', is_flag=True, default=False, help='Run in debug mode')
@@ -564,13 +532,14 @@ def main(data_dir: str | None, debug: bool, model: str):
     html_files = []
     for directory in metadata[university_name]['html_directories']:
         directory = opj(UNIVERSITY_DATA_DIR, metadata[university_name]['root_directory'], directory)
-        html_files.extend(get_files(directory, '.html'))
+        html_files.extend(utils.get_files(directory, '.html'))
 
     pdf_files = []
     for directory in metadata[university_name]['pdf_directories']:
         directory = opj(UNIVERSITY_DATA_DIR, metadata[university_name]['root_directory'], directory)
-        pdf_files.extend(get_files(directory, '.pdf'))
-    pdf_files.extend(metadata[university_name]['pdf_files'])
+        pdf_files.extend(utils.get_files(directory, '.pdf'))
+    for file in metadata[university_name]['pdf_files']:
+        pdf_files.append(opj(UNIVERSITY_DATA_DIR, metadata[university_name]['root_directory'], file))
     pdf_files = sorted(list(set(pdf_files)))
 
     if len(pdf_files) > 0:
