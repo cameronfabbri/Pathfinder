@@ -63,6 +63,37 @@ Below is the student's information.
 #•	Interaction: Ask the student to upload any documents they have (transcript, SAT/ACT scores, AP International Baccalaureate, etc.) to build a basic bio, including strengths, weaknesses, interests, favorite subjects, and extracurricular activities.
 #•	Complete When: The following fields are filled in the student's information: gpa, favorite_subjects, extracurriculars, strengths, weaknesses, interests.
 
+FILTER_FILES_PROMPT = """
+Determine if the given document is relavant or not. Relevant documents are those that contain information about the university that would be useful for a prospective student.
+
+**Examples of Relevant Documents:**
+1. Admissions Information: Application guidelines, deadlines, and requirements.
+2. Academic Programs: Course catalogs, course pages, program brochures, major and minor offerings.
+3. Student Life: Information on housing, dining, clubs, sports, and extracurriculars.
+4. Financial Aid & Scholarships: Details on grants, loans, and scholarships.
+5. Campus Life: Information on housing, dining, clubs, sports, and extracurriculars.
+6. Campus Maps & Tours: Maps, orientation materials, and virtual tours.
+7. Student Support: Counseling, tutoring, and career services.
+8. Tuition & Fees: Cost breakdowns for in-state and out-of-state students.
+
+**Examples of Irrelevant Documents:**
+1. Research papers and academic theses.
+2. Internal administrative documents (memos, budgets, governance).
+3. Marketing and promotional materials unrelated to academics.
+4. Historical or archival documents (e.g., yearbooks, newsletters).
+5. Legal documents (contracts, bylaws, etc.).
+6. Employee-related documents (handbooks, job postings, training materials).
+7. Calendar pages, event pages, and news pages.
+8. Faculty pages.
+
+**Format:** Your output should be a JSON object with the following structure, without ```json or any other formatting.
+
+{
+    "filepath": "filepath",
+    "relevant": "YES" | "NO"
+}
+"""
+
 SUMMARIZE_ASSESSMENT_PROMPT = """
 You will be given questions and answers from the Strengths Finders Assessment test
 completed by the student.  Your task is to create a concise summary of the
