@@ -3,14 +3,16 @@
 import os
 import re
 import json
-import requests
 import tempfile
-import tiktoken
 import subprocess
 
-from openai import OpenAI
-from bs4 import BeautifulSoup
 from functools import lru_cache
+
+import requests
+import tiktoken
+
+from bs4 import BeautifulSoup
+from openai import OpenAI
 
 opj = os.path.join
 
@@ -117,7 +119,7 @@ def get_text_from_html(path_or_url: str) -> str:
 
         with open(temp_path, 'r') as f:
             soup = BeautifulSoup(f, 'lxml')
-        
+
         # Clean up the temp file
         os.unlink(temp_path)
     else:
@@ -151,25 +153,25 @@ def chunk_pages(
     chunks = []
     all_tokens = []
     page_boundaries = [0]
-    
+
     for page in pages:
         tokens = re.findall(r'\S+|\s+', page)
         all_tokens.extend(tokens)
         page_boundaries.append(page_boundaries[-1] + len(tokens))
-    
+
     word_count = 0
     chunk_start = 0
-    
+
     for i, token in enumerate(all_tokens):
         if not token.isspace():
             word_count += 1
-        
+
         if word_count == chunk_size or i == len(all_tokens) - 1:
             chunk_text = ''.join(all_tokens[chunk_start:i+1])
-            
+
             start_page = next(idx for idx, boundary in enumerate(page_boundaries) if boundary > chunk_start) - 1
             end_page = next(idx for idx, boundary in enumerate(page_boundaries) if boundary > i) - 1
-            
+
             chunk_info = {
                 "text": chunk_text,
                 "metadata": {
@@ -182,13 +184,13 @@ def chunk_pages(
                 }
             }
             chunks.append(chunk_info)
-            
+
             # Move back by overlap_size words for the next chunk
             while word_count > overlap_size and chunk_start < i:
                 if not all_tokens[chunk_start].isspace():
                     word_count -= 1
                 chunk_start += 1
-    
+
     # If the last chunk is too small, merge it with the previous one
     if len(chunks) > 1 and chunks[-1]["metadata"]["word_count"] < chunk_size // 2:
         chunks[-2]["text"] += chunks[-1]["text"]
@@ -199,7 +201,6 @@ def chunk_pages(
 
     return chunks
 
-import re
 
 def chunk_text(text, chunk_size=512, overlap_size=128):
     """
@@ -289,6 +290,38 @@ def is_file_pdf(file_path: str) -> bool:
         return False
 
 
+def filter_files(files: list[str], exclude_patterns: list[str]) -> list[str]:
+    filtered_files = []
+    for file in files:
+        if not any(pattern in file if pattern == '?' else re.search(pattern, file) for pattern in exclude_patterns):
+            filtered_files.append(file)
+    return filtered_files
+
+
+def get_files(directory: str, extension: str) -> list[str]:
+    """
+    Recursively search for files with the given extension in the given directory
+    and return their full paths.
+
+    Args:
+        directory (str): The root directory to start the search from.
+        extension (str): File extension to search for.
+
+    Returns:
+        list[str]: A list of full paths to files with the given extension found
+        in the directory and its subdirectories.
+    """
+    if not extension.startswith('.'):
+        extension = '.' + extension
+
+    result_files = []
+    for root, _, filenames in os.walk(directory):
+        for file in filenames:
+            if file.lower().endswith(extension):
+                result_files.append(os.path.join(root, file))
+    return sorted(list(set(result_files)))
+
+
 def dict_to_str(info_dict: dict, format: bool) -> str:
     """
     Convert a dictionary to a string
@@ -315,7 +348,7 @@ def format_for_json(input_string):
     """
     # Use json.dumps to handle escaping
     formatted_string = json.dumps(input_string)
-    
+
     # Remove the surrounding double quotes added by json.dumps
     return formatted_string[1:-1]
 

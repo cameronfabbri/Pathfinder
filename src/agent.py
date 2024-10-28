@@ -1,10 +1,11 @@
 """
+File containing the Agent class and functionality for the Agent
 """
-
+# Cameron Fabbri
 import json
 
 from src.tools import function_map
-from src.utils import get_color, RESET, get_openai_client
+from src.utils import RESET, get_color, get_openai_client
 
 
 def format_content(content):
@@ -17,18 +18,48 @@ def format_content(content):
         return content
 
 
-def quick_call(model, system_prompt, user_prompt, json_mode: bool = False, temperature: float = 0.0):
+def quick_call(
+        model: str,
+        system_prompt: str,
+        user_prompt: str,
+        json_mode: bool = False,
+        temperature: float = 0.0) -> str:
+    """
+
+    """
+
     client = get_openai_client()
     return client.chat.completions.create(
         model=model,
-        messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+        messages=[
+            {
+                "role": "system",
+                "content": system_prompt
+            },
+            {
+                "role": "user",
+                "content": user_prompt
+            }
+        ],
         temperature=temperature,
         response_format={ "type": "json_object" } if json_mode else None
     ).choices[0].message.content
 
 
 class Agent:
-    def __init__(self, client, name, tools, system_prompt: str, model: str = 'gpt-4o-2024-08-06', json_mode: bool = False, temperature: float = 0.0):
+    def __init__(
+            self,
+            client,
+            name: str,
+            tools,
+            system_prompt: str,
+            model: str = 'gpt-4o-2024-08-06',
+            json_mode: bool = False,
+            temperature: float = 0.0) -> None:
+        """
+
+        """
+
         self.client = client
         self.name = name
         self.tools = tools
@@ -92,6 +123,9 @@ class Agent:
         print('\n', 100 * '=', '\n')
 
     def handle_tool_call(self, response):
+        """
+        """
+
         for tool_call in response.choices[0].message.tool_calls:
             print(f"{self.color}{self.name}{RESET}: Handling tool call: {tool_call.function.name}")
             arguments = json.loads(tool_call.function.arguments)

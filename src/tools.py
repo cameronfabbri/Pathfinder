@@ -1,7 +1,5 @@
 """
 """
-
-
 import os
 
 from src.rag import RAG
@@ -43,7 +41,8 @@ def retrieve_content_from_question(question: str, school_name: str = None) -> st
 
     Args:
         question (str): The user's question about SUNY schools or programs.
-        school_name (str, optional): The name of the SUNY school. Only include this if the user's question is about a specific school.
+        school_name (str, optional): The name of the SUNY school. Only include
+        this if the user's question is about a specific school.
     Returns:
         str: The formatted documents.
     """
@@ -55,7 +54,7 @@ def retrieve_content_from_question(question: str, school_name: str = None) -> st
     reranker = qdrant_db.get_reranker()
 
     # Initialize the RAG instance
-    rag = RAG(db=db, top_n=20, top_k=5, embedding_model=embedding_model, reranker=reranker)
+    rag = RAG(db=db, top_n=20, top_k=2, embedding_model=embedding_model, reranker=reranker)
 
     return rag.run(question, school_name)
 
