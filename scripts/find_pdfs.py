@@ -26,8 +26,7 @@ def main(directory: str):
             pbar.update(1)
             for file in files:
                 path = os.path.join(root, file)
-                if is_file_pdf(path):
-                    print(path)
+                if is_file_pdf(path) and not path.endswith('.pdf'):
                     new_path = os.path.splitext(path)[0] + '.pdf'
                     shutil.copy2(path, new_path)
                     print(f"Renamed: {path} -> {new_path}\n")
