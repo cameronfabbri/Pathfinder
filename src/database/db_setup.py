@@ -1,18 +1,19 @@
 """
-File describing the database with additional functions for interacting with the database.
+File describing the database with additional functions for creating the database.
 """
 # Cameron Fabbri
-
+import logging
 import sqlite3
-import chromadb
 
 from typing import Any, Dict, List
-from contextlib import contextmanager
-
-import logging
 from functools import lru_cache
+from contextlib import contextmanager
 from dataclasses import dataclass
+
+import chromadb
+
 import src.assessment as assessment
+
 from src.database.db_access import get_db_connection
 
 
@@ -212,6 +213,7 @@ def initialize_db():
 
     # TODO - remove after testing
     from src.auth import hash_password
+
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT COUNT(*) FROM users WHERE username = ?", ("test",))
@@ -219,7 +221,7 @@ def initialize_db():
         hashed_password = hash_password("test")
 
         cursor.execute(
-            "INSERT INTO users (username, session_id, hashed_password) VALUES (?, ?, ?)", 
+            "INSERT INTO users (username, session_id, hashed_password) VALUES (?, ?, ?)",
             ("test", -1, hashed_password)
         )
         user_vars = '(user_id, first_name, last_name, age, gender, high_school, high_school_grad_year, address, city, state, zip_code)'
@@ -230,7 +232,7 @@ def initialize_db():
 
     conn = get_db_connection()
     cursor = conn.cursor()
-        
+
     # Check if domains table is empty
     cursor.execute("SELECT COUNT(*) FROM domains")
     if cursor.fetchone()[0] == 0:

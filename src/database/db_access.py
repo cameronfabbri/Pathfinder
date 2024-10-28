@@ -1,13 +1,14 @@
 """
+
 """
 # Cameron Fabbri
-
-import sqlite3
 import logging
+import sqlite3
 
-from openai import OpenAI
 from typing import Tuple
 from functools import lru_cache
+
+from openai import OpenAI
 
 from src import prompts
 
@@ -48,6 +49,9 @@ def execute_query(query, args=None) -> list | None:
 
 
 def get_student_info(user_id: int):
+    """
+    Gets all of the information from the students table for the given user_id
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM students WHERE user_id=?", (user_id,))
@@ -70,7 +74,7 @@ def load_assessment_responses(user_id: int):
         WHERE user_responses.user_id = ?
     ''', (user_id,))
     return [
-        (row['statement'], row['response']) 
+        (row['statement'], row['response'])
         for row in cursor.fetchall()
     ]
 
@@ -138,7 +142,7 @@ def get_topbot_strengths(user_id: int, k: int) -> Tuple[list, list]:
     return top_strengths, bot_strengths
 
 
-def update_student_info(user_id: int, student_info: dict):
+def update_student_info(user_id: int, student_info: dict) -> None:
     """
     Update the student info in the database
 
@@ -219,7 +223,7 @@ def _get_top_strengths(user_id):
     """
     conn = get_db_connection()
     cursor = conn.cursor()
-        
+
     # Fetch Strengths data
     cursor.execute('''
         SELECT themes.theme_name, theme_results.total_score, theme_results.strength_level
@@ -261,7 +265,7 @@ def _get_bot_strengths(user_id):
 def insert_user_responses(user_id, responses):
     """
     Insert the responses to the assessment test into the user_responses table.
-    
+
     Args:
         user_id (int): The ID of the user.
         responses (dict): The user responses.
@@ -278,7 +282,7 @@ def insert_user_responses(user_id, responses):
 
         #print('Inserted response:', statement, score)
         cursor.execute(
-            "INSERT INTO user_responses (user_id, question_id, response) VALUES (?, ?, ?)", 
+            "INSERT INTO user_responses (user_id, question_id, response) VALUES (?, ?, ?)",
             (user_id, question_id, score)
         )
 
@@ -302,7 +306,7 @@ def insert_strengths(user_id, strengths):
     for theme, score in strengths.items():
         cursor.execute("SELECT theme_id FROM themes WHERE theme_name=?", (theme,))
         theme_id = cursor.fetchone()[0]
-        
+
         # Determine strength level based on the score
         if score >= 13:
             strength_level = 'Strong strength'
@@ -315,7 +319,7 @@ def insert_strengths(user_id, strengths):
 
         #print(f"User ID: {user_id}, Theme ID: {theme_id}, Score: {score}, Strength Level: {strength_level}")
         cursor.execute(
-            "INSERT INTO theme_results (user_id, theme_id, total_score, strength_level) VALUES (?, ?, ?, ?)", 
+            "INSERT INTO theme_results (user_id, theme_id, total_score, strength_level) VALUES (?, ?, ?, ?)",
             (user_id, theme_id, score, strength_level)
         )
 

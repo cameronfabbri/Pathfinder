@@ -1,20 +1,21 @@
 """
-Vector database that uses Faiss for storing and querying vectors.
-"file_extensions": [".html", ".cfm", ".php", ".asp", ".aspx", ".jsp", ".xhtml", ".shtml"],
 """
 # Cameron Fabbri
-
 import os
 import json
 import pickle
-import numpy as np
 
 from typing import List
 from functools import lru_cache
+
+import numpy as np
+
 from fastembed import TextEmbedding
+
 from qdrant_client import QdrantClient, models
-from qdrant_client.models import VectorParams, Distance
-from qdrant_client.http.models import PointStruct, Filter, FieldCondition, MatchValue
+from qdrant_client.models import Distance, VectorParams
+from qdrant_client.http.models import (FieldCondition, Filter, MatchValue,
+                                       PointStruct)
 
 from src import utils
 from src.constants import METADATA_PATH, UNIVERSITY_DATA_DIR
@@ -37,7 +38,14 @@ class QdrantDB:
                 vectors_config=VectorParams(size=emb_dim, distance=Distance.COSINE),
             )
 
-    def add_batch(self, collection_name: str, point_ids: List[str], payloads: List[dict], vectors: List[np.ndarray]):
+    def add_batch(
+            self,
+            collection_name: str,
+            point_ids: List[str],
+            payloads: List[dict],
+            vectors: List[np.ndarray]) -> None:
+        """ """
+
         self.client.upsert(
             collection_name=collection_name,
             points=models.Batch(
@@ -53,7 +61,7 @@ class QdrantDB:
             collection_name: str,
             point_id: str,
             payload: dict = None
-        ):
+        ) -> None:
         """
         Add a document to the collection.
 
@@ -103,7 +111,12 @@ class QdrantDB:
         )
         return result[0]
 
-    def query(self, collection_name: str, query_vector: np.ndarray, university: str | None = None, limit: int = 1):
+    def query(
+            self,
+            collection_name: str,
+            query_vector: np.ndarray,
+            university: str | None = None,
+            limit: int = 1):
         """
         Query the database for the given query vector and optional university filter.
 
@@ -138,11 +151,13 @@ class EmbeddingModel:
     def __init__(self, model_name: str):
         self.model_name = model_name
         if model_name == 'bge-small':
-            self.embedding_model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
+            self.embedding_model = TextEmbedding(
+                model_name="BAAI/bge-small-en-v1.5")
             self.emb_dim = 384
             self.max_tokens = 512
         elif model_name == 'jina':
-            self.embedding_model = TextEmbedding(model_name="jinaai/jina-embeddings-v2-base-en")
+            self.embedding_model = TextEmbedding(
+                model_name="jinaai/jina-embeddings-v2-base-en")
             self.emb_dim = 768
             self.max_tokens = 8192
 
@@ -161,19 +176,21 @@ class EmbeddingModel:
 
             # Get embeddings for each chunk
             chunk_embeddings = [list(self.embedding_model.embed(chunk))[0] for chunk in chunks]
-            
+
             # Average the embeddings
             avg_embedding = np.mean(chunk_embeddings, axis=0)
-            
+
             return list(avg_embedding)
 
         return list(self.embedding_model.embed(text))[0]
 
-def get_openai_embedding(client, text, model="text-embedding-3-small"):
+def get_openai_embedding(
+        client, text, model="text-embedding-3-small"):
     return client.embeddings.create(input=[text], model=model).data[0].embedding
 
 
-def get_fastembed_embedding(text: List[str], embedding_model: TextEmbedding) -> List[np.ndarray]:
+def get_fastembed_embedding(
+        text: List[str], embedding_model: TextEmbedding) -> List[np.ndarray]:
     return list(embedding_model.embed(text))
 
 
@@ -191,8 +208,9 @@ def get_qdrant_client(host: str = "localhost", port: int = 6333) -> QdrantClient
 def get_qdrant_db(client: QdrantClient, collection_name: str, emb_dim: int) -> QdrantDB:
     return QdrantDB(client, collection_name, emb_dim)
 
-
 from FlagEmbedding import FlagReranker
+
+
 @lru_cache(maxsize=None)
 def get_reranker(model: str='BAAI/bge-reranker-v2-m3') -> FlagReranker:
     return FlagReranker(model, use_fp16=True)
@@ -201,7 +219,7 @@ def get_reranker(model: str='BAAI/bge-reranker-v2-m3') -> FlagReranker:
 def main():
 
     #client_qdrant = QdrantClient(
-    #    url="https://b3a175dd-76e6-47e4-a90e-0b76f8f3c526.europe-west3-0.gcp.cloud.qdrant.io:6333", 
+    #    url="https://b3a175dd-76e6-47e4-a90e-0b76f8f3c526.europe-west3-0.gcp.cloud.qdrant.io:6333",
     #    api_key="bEnJ-0g3rj4waAA3Ep9M7bcxSQXhH7VtJvkWuAjvxZmB3H4gi6DqhQ",
     #)
     #client_qdrant = QdrantClient(path=QDRANT_DB_PATH)
@@ -209,9 +227,9 @@ def main():
 
     qdrant_db = QdrantDB(client, 'suny', 786)
 
+    import uuid
     import random
     import string
-    import uuid
 
     for i in range(10):
 
