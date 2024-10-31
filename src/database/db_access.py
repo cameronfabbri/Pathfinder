@@ -48,6 +48,24 @@ def execute_query(query, args=None) -> list | None:
         return None
 
 
+def parse_sql_result(cursor: sqlite3.Cursor):
+    """ Parse the result of a SQL query into a dictionary. """
+    columns = [column[0] for column in cursor.description]
+    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+
+def load_message_history(user_id: int):
+    """ Loads the message history of the user. """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT user_id, sender, recipient, message, session_id, timestamp FROM conversation_history
+        WHERE user_id = ?
+        ORDER BY timestamp ASC
+    """, (user_id,))
+    return parse_sql_result(cursor)
+
+
 def get_student_info(user_id: int):
     """
     Gets all of the information from the students table for the given user_id
@@ -324,38 +342,3 @@ def insert_strengths(user_id, strengths):
         )
 
     conn.commit()
-
-
-def update_document_text(user_id, document_id, text):
-    """
-    Update the extracted text for a document.
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE user_documents SET extracted_text = ? WHERE document_id = ? AND user_id = ?", (text, document_id, user_id))
-    #cursor.execute("UPDATE user_documents SET processed = ? WHERE document_id = ? AND user_id = ?", (True, document_id, user_id))
-    conn.commit()
-
-
-#def load_user_documents(self):
-#    conn = get_db_connection()
-#    cursor = conn.cursor()
-#    cursor.execute('''
-#        SELECT document_id, document_type, filename, filepath, upload_date, extracted_text, processed
-#        FROM user_documents
-#        WHERE user_id = ?
-#    ''', (self.user_id,))
-#    self.documents = [Document(**dict(row)) for row in cursor.fetchall()]
-
-
-#def add_document(self, document_type, filename, filepath, extracted_text, processed):
-#    conn = get_db_connection()
-#    cursor = conn.cursor()
-#    cursor.execute('''
-#        INSERT INTO user_documents (user_id, document_type, filename, filepath, extracted_text, processed)
-#        VALUES (?, ?, ?, ?, ?, ?)
-#    ''', (self.user_id, document_type, filename, filepath, extracted_text, processed))
-#    conn.commit()
-#
-#    # Reload documents
-#    self.load_user_documents()

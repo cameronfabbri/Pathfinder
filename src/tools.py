@@ -33,8 +33,6 @@ suny_tools = [
 ]
 
 
-
-
 def retrieve_content_from_question(question: str, school_name: str = None) -> str:
     """
     Retrieve relevant content from the database based on the user's question.

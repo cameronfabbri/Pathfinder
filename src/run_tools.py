@@ -18,7 +18,6 @@ sys.path.insert(0, project_root)
 
 from src import prompts, utils
 from src.database import db_access as dba
-from src.pdf_tools import parse_pdf_with_llama
 
 opj = os.path.join
 
@@ -75,7 +74,11 @@ def parse_counselor_response(response):
     return recipient, counselor_message
 
 
-def process_user_input(prompt):
+def process_user_input(prompt: str):
+    """
+    Process the user input and send it to the counselor agent
+    """
+
     counselor_agent = st.session_state.counselor_agent
     suny_agent = st.session_state.suny_agent
 
@@ -85,21 +88,14 @@ def process_user_input(prompt):
     counselor_agent.add_message("user", prompt)
     counselor_response = counselor_agent.invoke()
 
-    #print('COUNSELOR MESSAGES')
-    #counselor_agent.print_messages(True)
-
-    #print('NEXT MESSAGE')
-    #print(counselor_response)
-
     counselor_response_str = counselor_response.choices[0].message.content
     counselor_response_json = utils.parse_json(counselor_response_str)
 
     recipient = counselor_response_json.get("recipient")
     counselor_message = counselor_response_json.get("message")
-    phase = counselor_response_json.get("phase")
-    st.session_state.user_messages.append({"role": "assistant", "content": counselor_message})
+    #phase = counselor_response_json.get("phase")
 
-    if recipient == "suny":
+    if recipient.lower() == "suny":
 
         # Log the counselor message to the suny agent
         log_message(st.session_state.user.user_id, st.session_state.user.session_id, 'counselor', 'suny', counselor_message)
@@ -134,51 +130,11 @@ def process_user_input(prompt):
         # counselor agent, which is why we delete the last message.
         counselor_agent.delete_last_message()
 
-    #ic(counselor_message)
     counselor_agent.add_message("assistant", counselor_message)
-    st.session_state.user_messages.append({"role": "assistant", "content": counselor_message})
+    st.session_state.counselor_user_messages.append({"role": "assistant", "content": counselor_message})
 
     # Log the counselor message to the user
     log_message(st.session_state.user.user_id, st.session_state.user.session_id, 'counselor', 'user', counselor_message)
-
-
-def process_uploaded_file(uploaded_file, document_type, user_id):
-    """
-    Process the uploaded file and add it to the database
-
-    Args:
-        uploaded_file (File): The uploaded file
-        document_type (str): The type of document
-        user_id (int): The user ID
-    Returns:
-        None
-    """
-    upload_dir = opj('uploads', str(user_id))
-    os.makedirs(upload_dir, exist_ok=True)
-
-    filename, extension = os.path.splitext(os.path.basename(uploaded_file.name))
-
-    filepath = os.path.join(upload_dir, filename + extension)
-    idx = 0
-    while os.path.exists(filepath):
-        filepath = os.path.join(upload_dir, filename + f'_{idx}' + extension)
-        idx += 1
-
-    with open(filepath, "wb") as f:
-        f.write(uploaded_file.getvalue())
-
-    # Process the transcript using parse_pdf_with_llama
-    transcript_text = '\n'.join([x.text for x in parse_pdf_with_llama(filepath)])
-
-    #client = utils.get_openai_client()
-    print('Document type:', document_type)
-
-
-    return transcript_text
-
-    # Insert into chromadb
-    #db = ChromaDB(path='./chroma_data')
-    #db.add_document(transcript_text, doc_id=uploaded_file.name, user_id=st.session_state.user.user_id)
 
 
 def summarize_chat():
@@ -194,7 +150,7 @@ def summarize_chat():
     summary = None
 
     # Only summarize the chat if the counselor agent has received user messages
-    num_user_messages = len([msg for msg in st.session_state.counselor_agent.messages if msg['role'] == 'user'])
+    num_user_messages = len([msg for msg in st.session_state.counselor_user_messages if msg['role'] == 'user'])
     if num_user_messages > 0:
         st.session_state.counselor_agent.add_message("user", prompts.SUMMARY_PROMPT)
         response = st.session_state.counselor_agent.invoke()
