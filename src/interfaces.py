@@ -3,6 +3,7 @@
 import os
 import sys
 import pickle
+import streamlit_chat
 
 import streamlit as st
 
@@ -19,49 +20,127 @@ from src.assessment import answers
 opj = os.path.join
 
 
+DEBUG = False
+
+
+def move_focus():
+    """
+    Move the focus to the chat input area.
+    """
+    st.components.v1.html(
+        f"""
+            <script>
+                var textarea = window.parent.document.querySelectorAll("textarea[type=textarea]");
+                for (var i = 0; i < textarea.length; ++i) {{
+                    textarea[i].focus();
+                }}
+            </script>
+        """,
+    )
+
+def place_header():
+    """
+    Place the header at the top of the page with no extra gap.
+    """
+    st.markdown(
+        """
+        <div class='fixed-header'></div>
+        <style>
+            /* Adjust positioning of the header */
+            div[data-testid="stVerticalBlock"] div:has(div.fixed-header) {
+                position: sticky;
+                top: 0;
+                background-color: #0e1118;
+                z-index: 9999; /* Ensure header is above all other elements */
+                margin: 0;
+                padding: 0;
+            }
+            .fixed-header {
+                border-bottom: 1px solid black;
+                margin: 0;
+                padding: 0;
+            }
+            .chat-container {
+                height: 400px;
+                overflow-y: auto;
+                margin-top: 0; /* Ensure no gap below header */
+            }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+# TODO: pass in session state as a parameter
 def main_chat_interface():
-    st.title("💬 User-Counselor Chat")
-    st.caption("🚀 Chat with your SUNY counselor")
+    """
+    The main chat interface.
+    """
+    place_header()
+    st.markdown(
+        """
+        <div class='fixed-header'>
+            <h1>💬 User-Counselor Chat</h1>
+            <p>🚀 Chat with your SUNY counselor</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    #st.session_state.counselor_agent.print_messages()
+    # Initialize the conversation if it's empty
+    if not st.session_state.counselor_user_messages:
 
-    if len(st.session_state.user_messages) == 1:
-        first_message = st.session_state.user_messages[0]["content"]
+        # First time logging in
+        if st.session_state.user.session_id == 0:
+            if not DEBUG:
+                first_message = utils.parse_json(
+                    st.session_state.counselor_agent.invoke().choices[0].message.content
+                )['message']
+            else:
+                first_message = prompts.DEBUG_FIRST_MESSAGE.format('NAME', st.session_state.user.username)
+        else:
+            first_message = st.session_state.user.message_history[0]['content']
+            #try:
+            #    first_message = dba.get_chat_summary_from_db(st.session_state.user.user_id)
+            #except:
+            #    print('\nNo chat summary found in database, did you quit without logging out?\n')
+            #    first_message = f"Hello {st.session_state.user.username}, welcome back to the chat!"
+        rt.log_message(st.session_state.user.user_id, st.session_state.user.session_id, 'counselor', 'user', first_message)
+        st.session_state.counselor_user_messages = [{"role": "assistant", "content": first_message}]
+        st.session_state.counselor_agent.add_message("assistant", first_message)
 
-        # Add in the first message to the counselor agent if it's not already there
-        if {"role": "assistant", "content": first_message} not in st.session_state.counselor_agent.messages:
-            st.session_state.counselor_agent.add_message("assistant", first_message)
-            print('Added first message to counselor agent')
-
+    # Chat container with scrollable area
     chat_container = st.container()
-
-    #st.session_state.counselor_agent.print_messages()
-    prompt = st.chat_input("Type your message here...")
-
-    # Display chat messages in the container
     with chat_container:
-        for msg in st.session_state.user_messages:
-            #ic(msg)
+        st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
+        for idx, msg in enumerate(st.session_state.counselor_user_messages):
             if isinstance(msg, dict) and 'role' in msg and 'content' in msg:
                 if isinstance(msg['content'], str):
-                    st.chat_message(msg["role"]).write(msg["content"])
-            else:
-                print(f"Debug: Skipping invalid message format: {msg}")
+                    if msg["role"] == "user":
+                        streamlit_chat.message(msg["content"], is_user=True, key=f'user_{idx}')
+                    else:
+                        streamlit_chat.message(msg["content"], is_user=False, key=f'assistant_{idx}')
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # Chat input at the bottom
+    prompt = st.chat_input("Type your message here...")
 
     if prompt:
-
         # Add user message to session
-        st.session_state.user_messages.append({"role": "user", "content": prompt})
+        st.session_state.counselor_user_messages.append({"role": "user", "content": prompt})
+        streamlit_chat.message(prompt, is_user=True, key=f'user_input_{len(st.session_state.counselor_user_messages)}')
 
         # Process user input and get response
         rt.process_user_input(prompt)
         st.session_state.messages_since_update += 1
 
-        # Force a rerun to display the new messages
+        # Rerun to display the new messages
         st.rerun()
 
     si = st.session_state.user.student_info.values()
     nsi = None in si or 'None' in si
+    ic(nsi)
+    ic(st.session_state.messages_since_update)
     if st.session_state.messages_since_update > 2 and nsi:
         print('Updating student info...')
         st.session_state.messages_since_update = 0
@@ -69,7 +148,7 @@ def main_chat_interface():
         current_student_info_str = utils.dict_to_str(current_student_info, format=False)
         new_info_prompt = prompts.UPDATE_INFO_PROMPT
         new_info_prompt += f"\n**Student's Current Information:**\n{current_student_info_str}\n\n"
-        new_info_prompt += f"**Conversation History:**\n{st.session_state.user_messages}\n\n"
+        new_info_prompt += f"**Conversation History:**\n{st.session_state.counselor_user_messages}\n\n"
         response = st.session_state.counselor_agent.client.chat.completions.create(
             model='gpt-4o-mini',
             messages=[
