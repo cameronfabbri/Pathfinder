@@ -11,6 +11,7 @@ from functools import lru_cache
 import numpy as np
 
 from fastembed import TextEmbedding
+from FlagEmbedding import FlagReranker
 
 from qdrant_client import QdrantClient, models
 from qdrant_client.models import Distance, VectorParams
@@ -207,8 +208,6 @@ def get_qdrant_client(host: str = "localhost", port: int = 6333) -> QdrantClient
 @lru_cache(maxsize=None)
 def get_qdrant_db(client: QdrantClient, collection_name: str, emb_dim: int) -> QdrantDB:
     return QdrantDB(client, collection_name, emb_dim)
-
-from FlagEmbedding import FlagReranker
 
 
 @lru_cache(maxsize=None)

@@ -25,7 +25,6 @@ def quick_call(
         json_mode: bool = False,
         temperature: float = 0.0) -> str:
     """
-
     """
 
     client = get_openai_client()

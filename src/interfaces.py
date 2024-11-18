@@ -3,6 +3,7 @@
 import os
 import sys
 import pickle
+import streamlit_chat
 
 import streamlit as st
 
@@ -15,53 +16,132 @@ from src import agent, auth, prompts, run_tools as rt, utils
 from src.database import db_access as dba
 from src.constants import SYSTEM_DATA_DIR
 from src.assessment import answers
+from src.user import UserProfile
 
 opj = os.path.join
 
 
+DEBUG = False
+
+
+def move_focus():
+    """
+    Move the focus to the chat input area.
+    """
+    st.components.v1.html(
+        f"""
+            <script>
+                var textarea = window.parent.document.querySelectorAll("textarea[type=textarea]");
+                for (var i = 0; i < textarea.length; ++i) {{
+                    textarea[i].focus();
+                }}
+            </script>
+        """,
+    )
+
+def place_header():
+    """
+    Place the header at the top of the page with no extra gap.
+    """
+    st.markdown(
+        """
+        <div class='fixed-header'></div>
+        <style>
+            /* Adjust positioning of the header */
+            div[data-testid="stVerticalBlock"] div:has(div.fixed-header) {
+                position: sticky;
+                top: 0;
+                background-color: #0e1118;
+                z-index: 9999; /* Ensure header is above all other elements */
+                margin: 0;
+                padding: 0;
+            }
+            .fixed-header {
+                border-bottom: 1px solid black;
+                margin: 0;
+                padding: 0;
+            }
+            .chat-container {
+                height: 400px;
+                overflow-y: auto;
+                margin-top: 0; /* Ensure no gap below header */
+            }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+# TODO: pass in session state as a parameter
 def main_chat_interface():
-    st.title("💬 User-Counselor Chat")
-    st.caption("🚀 Chat with your SUNY counselor")
+    """
+    The main chat interface.
+    """
+    place_header()
+    st.markdown(
+        """
+        <div class='fixed-header'>
+            <h1>💬 User-Counselor Chat</h1>
+            <p>🚀 Chat with your SUNY counselor</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    #st.session_state.counselor_agent.print_messages()
+    # Initialize the conversation if it's empty
+    if not st.session_state.counselor_user_messages:
 
-    if len(st.session_state.user_messages) == 1:
-        first_message = st.session_state.user_messages[0]["content"]
+        # First time logging in
+        if st.session_state.user.session_id == 0:
+            if not DEBUG:
+                first_message = utils.parse_json(
+                    st.session_state.counselor_agent.invoke().choices[0].message.content
+                )['message']
+            else:
+                first_message = prompts.DEBUG_FIRST_MESSAGE.format('NAME', st.session_state.user.username)
+        else:
+            first_message = st.session_state.user.message_history[0]['content']
+            #try:
+            #    first_message = dba.get_chat_summary_from_db(st.session_state.user.user_id)
+            #except:
+            #    print('\nNo chat summary found in database, did you quit without logging out?\n')
+            #    first_message = f"Hello {st.session_state.user.username}, welcome back to the chat!"
+        rt.log_message(st.session_state.user.user_id, st.session_state.user.session_id, 'counselor', 'user', first_message)
+        st.session_state.counselor_user_messages = [{"role": "assistant", "content": first_message}]
+        st.session_state.counselor_agent.add_message("assistant", first_message)
 
-        # Add in the first message to the counselor agent if it's not already there
-        if {"role": "assistant", "content": first_message} not in st.session_state.counselor_agent.messages:
-            st.session_state.counselor_agent.add_message("assistant", first_message)
-            print('Added first message to counselor agent')
-
+    # Chat container with scrollable area
     chat_container = st.container()
-
-    #st.session_state.counselor_agent.print_messages()
-    prompt = st.chat_input("Type your message here...")
-
-    # Display chat messages in the container
     with chat_container:
-        for msg in st.session_state.user_messages:
-            #ic(msg)
+        st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
+        for idx, msg in enumerate(st.session_state.counselor_user_messages):
             if isinstance(msg, dict) and 'role' in msg and 'content' in msg:
                 if isinstance(msg['content'], str):
-                    st.chat_message(msg["role"]).write(msg["content"])
-            else:
-                print(f"Debug: Skipping invalid message format: {msg}")
+                    if msg["role"] == "user":
+                        streamlit_chat.message(msg["content"], is_user=True, key=f'user_{idx}')
+                    else:
+                        streamlit_chat.message(msg["content"], is_user=False, key=f'assistant_{idx}')
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # Chat input at the bottom
+    prompt = st.chat_input("Type your message here...")
 
     if prompt:
-
         # Add user message to session
-        st.session_state.user_messages.append({"role": "user", "content": prompt})
+        st.session_state.counselor_user_messages.append({"role": "user", "content": prompt})
+        streamlit_chat.message(prompt, is_user=True, key=f'user_input_{len(st.session_state.counselor_user_messages)}')
 
         # Process user input and get response
         rt.process_user_input(prompt)
         st.session_state.messages_since_update += 1
 
-        # Force a rerun to display the new messages
+        # Rerun to display the new messages
         st.rerun()
 
-    si = st.session_state.user.student_info.values()
+    si = st.session_state.user_profile.student_info.values()
     nsi = None in si or 'None' in si
+    ic(nsi)
+    ic(st.session_state.messages_since_update)
     if st.session_state.messages_since_update > 2 and nsi:
         print('Updating student info...')
         st.session_state.messages_since_update = 0
@@ -69,7 +149,7 @@ def main_chat_interface():
         current_student_info_str = utils.dict_to_str(current_student_info, format=False)
         new_info_prompt = prompts.UPDATE_INFO_PROMPT
         new_info_prompt += f"\n**Student's Current Information:**\n{current_student_info_str}\n\n"
-        new_info_prompt += f"**Conversation History:**\n{st.session_state.user_messages}\n\n"
+        new_info_prompt += f"**Conversation History:**\n{st.session_state.counselor_user_messages}\n\n"
         response = st.session_state.counselor_agent.client.chat.completions.create(
             model='gpt-4o-mini',
             messages=[
@@ -101,7 +181,10 @@ def main_chat_interface():
         st.rerun()
 
 
-def display_student_info(user_id: int):
+def display_student_info(user_profile: UserProfile):
+
+    # TODO - pass in sidebar too
+
     st.sidebar.title("Student Information")
 
     # Add custom CSS for text wrapping
@@ -114,35 +197,30 @@ def display_student_info(user_id: int):
         </style>
     """, unsafe_allow_html=True)
 
-    student_info = dba.get_student_info(user_id)
-
-    if student_info:
-        for key, value in student_info.items():
+    if user_profile.student_info:
+        for key, value in user_profile.student_info.items():
             st.sidebar.text(f"{key}: {value}")
-
-    #top_strengths = dba.get_top_strengths(user_id)
-    #bot_strengths = dba.get_bot_strengths(user_id)
 
     # Display Strengths
     st.sidebar.markdown("---")
     st.sidebar.subheader("Top 5 Strengths")
-    for theme, score, strength_level in st.session_state.user.top_strengths:
-        st.sidebar.text(f"{theme}: {score} ({strength_level})")
+    for strength_dict in user_profile.top_strengths:
+        st.sidebar.text(f"{strength_dict['theme_name']}: {strength_dict['total_score']} ({strength_dict['strength_level']})")
 
     st.sidebar.markdown("---")
     st.sidebar.subheader("Top 5 Weaknesses")
-    for theme, score, strength_level in st.session_state.user.bot_strengths:
-        st.sidebar.text(f"{theme}: {score} ({strength_level})")
+    for strength_dict in user_profile.bot_strengths:
+        st.sidebar.text(f"{strength_dict['theme_name']}: {strength_dict['total_score']} ({strength_dict['strength_level']})")
 
     # Add transcript upload button to sidebar
-    st.sidebar.markdown("---")  # Add a separator
-    st.sidebar.subheader("Upload File")
-    uploaded_file = st.sidebar.file_uploader("Choose a file", type=["csv", "xlsx", "pdf", "txt"])
-    if uploaded_file is not None:
-        document_type = st.sidebar.selectbox("Select Document Type", ["Transcript", "SAT Score", "ACT Score", "Certification", "Other"])
-        if st.sidebar.button("Process File"):
-            rt.process_uploaded_file(uploaded_file, document_type, user_id)
-            st.sidebar.success("File processed successfully!")
+    #st.sidebar.markdown("---")  # Add a separator
+    #st.sidebar.subheader("Upload File")
+    #uploaded_file = st.sidebar.file_uploader("Choose a file", type=["csv", "xlsx", "pdf", "txt"])
+    #if uploaded_file is not None:
+    #    document_type = st.sidebar.selectbox("Select Document Type", ["Transcript", "SAT Score", "ACT Score", "Certification", "Other"])
+    #    if st.sidebar.button("Process File"):
+    #        rt.process_uploaded_file(uploaded_file, document_type, user_id)
+    #        st.sidebar.success("File processed successfully!")
     """
 
     st.subheader("Upload File")
@@ -222,41 +300,28 @@ def assessment_page():
         # Insert user assessment responses into the database
         dba.insert_user_responses(st.session_state.user.user_id, user_responses)
 
+        # Generate strengths summary
+        user_prompt = '[question] | Score: [score]\n'
+        for question, score in user_responses.items():
+            user_prompt += f'{question} | Score: {score}\n'
+        response = agent.quick_call(
+            model='gpt-4o-mini',
+            system_prompt=prompts.SUMMARIZE_ASSESSMENT_PROMPT,
+            user_prompt=user_prompt)
+        print('\n---------\n')
+        ic(response)
+
         #  Insert strengths and weaknesses into the database
         dba.insert_strengths(st.session_state.user.user_id, theme_scores)
 
+        # Insert assessment analysis into the database
+        dba.insert_assessment_analysis(st.session_state.user.user_id, response)
+
         # Load the assessment responses from the database into the user object
-        st.session_state.user.load_assessment_responses()
+        #st.session_state.user.load_assessment_responses()
 
         # Load the strengths and weaknesses from the database into the user object
-        st.session_state.user.load_topbot_strengths()
-
-        if 0:
-            # Insert summary into the database
-            prompt = '**Strengths Finders Assessment Test**\n'
-            for question, answer in st.session_state.user.assessment_responses:
-                prompt += f'{question}: {answer}\n'
-            response = agent.quick_call(
-                model='gpt-4o-mini',
-                system_prompt=prompts.SUMMARIZE_ASSESSMENT_PROMPT,
-                user_prompt=prompt,
-                json_mode=False
-            )
-        else:
-            response = prompts.TEMP_RESPONSE
-
-        conn = dba.get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            'INSERT INTO student_summaries (user_id, summary) VALUES (?, ?)',
-            (st.session_state.user.user_id, response)
-        )
-        conn.commit()
-
-        #print('Response:', response)
-
-        # Reload all user data
-        st.session_state.user.reload_all_data()
+        #st.session_state.user.load_topbot_strengths()
 
         st.rerun()
 
