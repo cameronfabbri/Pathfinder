@@ -64,7 +64,6 @@ sure your message is formatted correctly for JSON.
 }
 
 **Student Information:**
-
 {{student_md_profile}}
 """
 
@@ -73,7 +72,7 @@ You will be given questions and answers from the Strengths Finders Assessment te
 completed by the student.  Your task is to create a concise summary of the
 student's responses that includes a strengths and weaknesses analysis.  The answers
 are scored on a scale of 1 to 5, where 1 is strongly disagree and 5 is strongly
-agree.
+agree. Your summary must be 4 sentences or less.
 """
 
 TEMP_RESPONSE = """

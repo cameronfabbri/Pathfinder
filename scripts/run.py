@@ -7,6 +7,7 @@ import os
 import sys
 import icecream as ic
 import streamlit as st
+from icecream import ic
 
 from openai import OpenAI
 from functools import lru_cache
@@ -31,6 +32,9 @@ from src.database import db_access as dba
 MODEL = 'gpt-4o-mini'
 #MODEL = 'gpt-4o-2024-08-06'
 
+FIRST_LOGIN = 0
+ASSESSMENT_COMPLETE = 1
+
 
 def initialize_st_vars():
     """
@@ -53,6 +57,10 @@ def initialize_st_vars():
         st.session_state.counselor_suny_messages = []
     if 'counselor_persona' not in st.session_state:
         st.session_state.counselor_persona = None
+    if 'is_new_session' not in st.session_state:
+        st.session_state.is_new_session = True
+    if 'user_profile' not in st.session_state:
+        st.session_state.user_profile = None
 
 
 def initialize_counselor_agent(client: OpenAI, student_md_profile: str):
@@ -66,8 +74,11 @@ def initialize_counselor_agent(client: OpenAI, student_md_profile: str):
     elif st.session_state.counselor_persona == 'Liam - The Explorer':
         persona_prompt = personas.LIAM + '\n\n' + personas.LIAM_TRAITS
 
+    # TODO - make a function build_counselor_prompt()
     counselor_system_prompt = counselor_system_prompt.replace('{{persona}}', persona_prompt)
     counselor_system_prompt = counselor_system_prompt.replace('{{student_md_profile}}', student_md_profile)
+
+    #ic(counselor_system_prompt)
 
     return agent.Agent(
         client,
@@ -98,7 +109,8 @@ def check_assessment_completed(user_id):
     """
     Check if the user has completed the assessment.
     """
-    top_strengths = dba.get_top_strengths(user_id)
+    top_strengths, _ = dba.get_topbot_strengths(user_id, k=1)
+    ic(top_strengths)
     return bool(top_strengths)
 
 
@@ -114,53 +126,43 @@ def main():
     if st.session_state.user is None:
         st.session_state.user = itf.streamlit_login()
 
-    if st.session_state.user:
+    if not st.session_state.user:
+        st.error("Please log in to continue")
+        return 
+
+    st.sidebar.success(f"Logged in as: {st.session_state.user.username}")
+
+    # If the assessment isn't finished
+    #if not st.session_state.user_profile.top_strengths:
+    if not check_assessment_completed(st.session_state.user.user_id):
+        itf.assessment_page()
+    else:
+        from src.user import UserProfile
+        st.session_state.user_profile = UserProfile(st.session_state.user.user_id)
+        col1, col2 = st.columns([6, 1])
+        with col2:
+            if st.button("Logout"):
+                rt.logout()
+
+        itf.display_student_info(st.session_state.user_profile)
+
+        if st.session_state.counselor_agent is None:
+            client = utils.get_openai_client()
+            st.session_state.counselor_agent = initialize_counselor_agent(
+                client, st.session_state.user_profile.student_md_profile
+            )
+
+        if st.session_state.suny_agent is None:
+            client = utils.get_openai_client()
+            st.session_state.suny_agent = initialize_suny_agent(client)
 
         # Load the message history for both user <-> counselor and counselor <-> suny
         # TODO - should we summarize the message history so we aren't using up tokens?
-        message_history = dba.load_message_history(st.session_state.user.user_id)
-        for message in message_history:
-            sender = message['sender']
-            recipient = message['recipient']
-            message_content = {'role': sender, 'content': message['message']}
-            
-            # Add messages between counselor and user
-            if (sender, recipient) in [('counselor', 'user'), ('user', 'counselor')]:
-                st.session_state.counselor_user_messages.append(message_content)
+        if st.session_state.is_new_session:
+            rt.load_message_history()
+            st.session_state.is_new_session = False
 
-            # Add messages between counselor and suny
-            elif sender == 'counselor' and recipient == 'suny':
-                st.session_state.counselor_suny_messages.append(message_content)
-
-            # Add message history to agents
-
-        st.sidebar.success(f"Logged in as: {st.session_state.user.username}")
-
-        if not st.session_state.user.top_strengths:
-            itf.assessment_page()
-        else:
-            st.session_state.user.reload_all_data()
-            col1, col2 = st.columns([6, 1])
-            with col2:
-                if st.button("Logout"):
-                    rt.logout()
-
-            itf.display_student_info(st.session_state.user.user_id)
-
-            if st.session_state.counselor_agent is None:
-                client = utils.get_openai_client()
-                st.session_state.counselor_agent = initialize_counselor_agent(
-                    client, st.session_state.user.student_md_profile
-                )
-
-            if st.session_state.suny_agent is None:
-                client = utils.get_openai_client()
-                st.session_state.suny_agent = initialize_suny_agent(client)
-
-            itf.main_chat_interface()
-    else:
-        st.error("Please log in to continue")
-
+        itf.main_chat_interface()
 
 if __name__ == "__main__":
     main()
