@@ -5,9 +5,8 @@ Main script
 
 import os
 import sys
-import icecream as ic
 import streamlit as st
-from icecream import ic
+import icecream as ic
 
 from openai import OpenAI
 from functools import lru_cache
