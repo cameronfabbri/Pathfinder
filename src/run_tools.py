@@ -25,6 +25,23 @@ opj = os.path.join
 logging.basicConfig(level=logging.INFO)
 
 
+# TODO - pass session state to this function
+def load_message_history():
+    message_history = dba.load_message_history(st.session_state.user.user_id)
+    for message in message_history:
+        sender = message['sender']
+        recipient = message['recipient']
+        message_content = {'role': sender, 'content': message['message']}
+
+        # Add messages between counselor and user
+        if (sender, recipient) in [('counselor', 'user'), ('user', 'counselor')]:
+            st.session_state.counselor_user_messages.append(message_content)
+
+        # Add messages between counselor and suny
+        elif (sender, recipient) in [('counselor', 'suny'), ('suny', 'counselor')]:
+            st.session_state.counselor_suny_messages.append(message_content)
+
+
 def type_text(text, char_speed=0.03, sentence_pause=0.5):
     placeholder = st.empty()
     full_text = ""

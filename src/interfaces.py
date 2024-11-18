@@ -16,6 +16,7 @@ from src import agent, auth, prompts, run_tools as rt, utils
 from src.database import db_access as dba
 from src.constants import SYSTEM_DATA_DIR
 from src.assessment import answers
+from src.user import UserProfile
 
 opj = os.path.join
 
@@ -137,7 +138,7 @@ def main_chat_interface():
         # Rerun to display the new messages
         st.rerun()
 
-    si = st.session_state.user.student_info.values()
+    si = st.session_state.user_profile.student_info.values()
     nsi = None in si or 'None' in si
     ic(nsi)
     ic(st.session_state.messages_since_update)
@@ -180,7 +181,10 @@ def main_chat_interface():
         st.rerun()
 
 
-def display_student_info(user_id: int):
+def display_student_info(user_profile: UserProfile):
+
+    # TODO - pass in sidebar too
+
     st.sidebar.title("Student Information")
 
     # Add custom CSS for text wrapping
@@ -193,35 +197,30 @@ def display_student_info(user_id: int):
         </style>
     """, unsafe_allow_html=True)
 
-    student_info = dba.get_student_info(user_id)
-
-    if student_info:
-        for key, value in student_info.items():
+    if user_profile.student_info:
+        for key, value in user_profile.student_info.items():
             st.sidebar.text(f"{key}: {value}")
-
-    #top_strengths = dba.get_top_strengths(user_id)
-    #bot_strengths = dba.get_bot_strengths(user_id)
 
     # Display Strengths
     st.sidebar.markdown("---")
     st.sidebar.subheader("Top 5 Strengths")
-    for theme, score, strength_level in st.session_state.user.top_strengths:
-        st.sidebar.text(f"{theme}: {score} ({strength_level})")
+    for strength_dict in user_profile.top_strengths:
+        st.sidebar.text(f"{strength_dict['theme_name']}: {strength_dict['total_score']} ({strength_dict['strength_level']})")
 
     st.sidebar.markdown("---")
     st.sidebar.subheader("Top 5 Weaknesses")
-    for theme, score, strength_level in st.session_state.user.bot_strengths:
-        st.sidebar.text(f"{theme}: {score} ({strength_level})")
+    for strength_dict in user_profile.bot_strengths:
+        st.sidebar.text(f"{strength_dict['theme_name']}: {strength_dict['total_score']} ({strength_dict['strength_level']})")
 
     # Add transcript upload button to sidebar
-    st.sidebar.markdown("---")  # Add a separator
-    st.sidebar.subheader("Upload File")
-    uploaded_file = st.sidebar.file_uploader("Choose a file", type=["csv", "xlsx", "pdf", "txt"])
-    if uploaded_file is not None:
-        document_type = st.sidebar.selectbox("Select Document Type", ["Transcript", "SAT Score", "ACT Score", "Certification", "Other"])
-        if st.sidebar.button("Process File"):
-            rt.process_uploaded_file(uploaded_file, document_type, user_id)
-            st.sidebar.success("File processed successfully!")
+    #st.sidebar.markdown("---")  # Add a separator
+    #st.sidebar.subheader("Upload File")
+    #uploaded_file = st.sidebar.file_uploader("Choose a file", type=["csv", "xlsx", "pdf", "txt"])
+    #if uploaded_file is not None:
+    #    document_type = st.sidebar.selectbox("Select Document Type", ["Transcript", "SAT Score", "ACT Score", "Certification", "Other"])
+    #    if st.sidebar.button("Process File"):
+    #        rt.process_uploaded_file(uploaded_file, document_type, user_id)
+    #        st.sidebar.success("File processed successfully!")
     """
 
     st.subheader("Upload File")
@@ -301,41 +300,28 @@ def assessment_page():
         # Insert user assessment responses into the database
         dba.insert_user_responses(st.session_state.user.user_id, user_responses)
 
+        # Generate strengths summary
+        user_prompt = '[question] | Score: [score]\n'
+        for question, score in user_responses.items():
+            user_prompt += f'{question} | Score: {score}\n'
+        response = agent.quick_call(
+            model='gpt-4o-mini',
+            system_prompt=prompts.SUMMARIZE_ASSESSMENT_PROMPT,
+            user_prompt=user_prompt)
+        print('\n---------\n')
+        ic(response)
+
         #  Insert strengths and weaknesses into the database
         dba.insert_strengths(st.session_state.user.user_id, theme_scores)
 
+        # Insert assessment analysis into the database
+        dba.insert_assessment_analysis(st.session_state.user.user_id, response)
+
         # Load the assessment responses from the database into the user object
-        st.session_state.user.load_assessment_responses()
+        #st.session_state.user.load_assessment_responses()
 
         # Load the strengths and weaknesses from the database into the user object
-        st.session_state.user.load_topbot_strengths()
-
-        if 0:
-            # Insert summary into the database
-            prompt = '**Strengths Finders Assessment Test**\n'
-            for question, answer in st.session_state.user.assessment_responses:
-                prompt += f'{question}: {answer}\n'
-            response = agent.quick_call(
-                model='gpt-4o-mini',
-                system_prompt=prompts.SUMMARIZE_ASSESSMENT_PROMPT,
-                user_prompt=prompt,
-                json_mode=False
-            )
-        else:
-            response = prompts.TEMP_RESPONSE
-
-        conn = dba.get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            'INSERT INTO student_summaries (user_id, summary) VALUES (?, ?)',
-            (st.session_state.user.user_id, response)
-        )
-        conn.commit()
-
-        #print('Response:', response)
-
-        # Reload all user data
-        st.session_state.user.reload_all_data()
+        #st.session_state.user.load_topbot_strengths()
 
         st.rerun()
 

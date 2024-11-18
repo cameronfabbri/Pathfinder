@@ -97,16 +97,6 @@ def load_assessment_responses(user_id: int):
     ]
 
 
-def load_user_summary(user_id: int):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT summary FROM student_summaries WHERE user_id=?", (user_id,))
-    result = cursor.fetchone()
-    if result:
-        return result[0]
-    return None
-
-
 def get_topbot_strengths(user_id: int, k: int) -> Tuple[list, list]:
     """
     Get the top k strengths and bottom k strengths of the user.
@@ -305,6 +295,23 @@ def insert_user_responses(user_id, responses):
         )
 
     conn.commit()
+
+
+def insert_assessment_analysis(user_id: int, analysis: str) -> None:
+    """
+    Insert the assessment analysis into the assessment_analysis table.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO assessment_analysis (user_id, analysis) VALUES (?, ?)", (user_id, analysis))
+    conn.commit()
+
+def load_assessment_analysis(user_id: int) -> str:
+    """
+    Load the assessment analysis from the assessment_analysis table.
+    """
+    query = "SELECT analysis FROM assessment_analysis WHERE user_id=? ORDER BY analysis_id DESC LIMIT 1;"
+    return execute_query(query, (user_id,))[0][0]
 
 
 def insert_strengths(user_id, strengths):
