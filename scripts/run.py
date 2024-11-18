@@ -5,7 +5,6 @@ Main script
 
 import os
 import sys
-import icecream as ic
 import streamlit as st
 from icecream import ic
 
