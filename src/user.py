@@ -4,7 +4,6 @@
 from src.database import db_access as dba
 
 
-
 class UserProfile:
     """
     """
