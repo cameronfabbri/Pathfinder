@@ -123,11 +123,14 @@ def main_chat_interface():
     with chat_container:
         st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
         #for idx, msg in enumerate(st.session_state.counselor_user_messages):
+        #print('printing counselor agent messages...')
         for idx, msg in enumerate(st.session_state.counselor_agent.messages):
-            if msg['role'] == 'user':
-                streamlit_chat.message(msg['content'], is_user=True, key=f'user_{idx}')
-            elif msg['role'] == 'counselor' and msg['recipient'] == 'user':
-                streamlit_chat.message(msg['content'], is_user=False, key=f'assistant_{idx}')
+            #ic(idx, msg)
+            if msg.sender == 'student':
+                streamlit_chat.message(msg.message, is_user=True, key=f'user_{idx}')
+            elif msg.sender == 'counselor' and msg.recipient == 'student':
+                message = utils.extract_content_from_message(msg.message)
+                streamlit_chat.message(message, is_user=False, key=f'assistant_{idx}')
         st.markdown("</div>", unsafe_allow_html=True)
 
     # Chat input at the bottom
@@ -137,7 +140,7 @@ def main_chat_interface():
         # Add user message to session
         #st.session_state.counselor_user_messages.append({"role": "user", "content": prompt})
         #st.session_state.counselor_agent.print_messages()
-        key = len([x for x in st.session_state.counselor_agent.messages if x['role'] == 'user'])
+        key = len([x for x in st.session_state.counselor_agent.messages if x.role == 'user'])
         streamlit_chat.message(
             prompt,
             is_user=True,
@@ -162,7 +165,8 @@ def main_chat_interface():
         current_student_info_str = utils.dict_to_str(current_student_info, format=False)
         new_info_prompt = prompts.UPDATE_INFO_PROMPT
         new_info_prompt += f"\n**Student's Current Information:**\n{current_student_info_str}\n\n"
-        new_info_prompt += f"**Conversation History:**\n{st.session_state.counselor_user_messages}\n\n"
+        #new_info_prompt += f"**Conversation History:**\n{st.session_state.counselor_user_messages}\n\n"
+        new_info_prompt += f"**Conversation History:**\n{st.session_state.counselor_agent.messages}\n\n"
         response = st.session_state.counselor_agent.client.chat.completions.create(
             model='gpt-4o-mini',
             messages=[

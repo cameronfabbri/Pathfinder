@@ -18,30 +18,13 @@ sys.path.insert(0, project_root)
 
 from src import prompts, utils
 from src.database import db_access as dba
+from src.agent import Message
 
 opj = os.path.join
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
-
-# TODO - pass session state to this function
-def load_message_history():
-    message_history = dba.load_message_history(st.session_state.user.user_id)
-    for message in message_history:
-        sender = message['sender']
-        recipient = message['recipient']
-        message_content = {'role': sender, 'content': message['message']}
-
-        st.session_state.counselor_agent.add_message(sender, message_content['content'])
-        # Add messages between counselor and user
-        #if (sender, recipient) in [('counselor', 'user'), ('user', 'counselor')]:
-            #st.session_state.counselor_user_messages.append(message_content)
-        #    st.session_state.counselor_agent.add_message(sender, message_content['content'])
-
-        # Add messages between counselor and suny
-        if (sender, recipient) in [('counselor', 'suny'), ('suny', 'counselor')]:
-            st.session_state.suny_agent.add_message(sender, message_content['content'])
 
 def type_text(text, char_speed=0.03, sentence_pause=0.5):
     placeholder = st.empty()
@@ -62,7 +45,25 @@ def type_text(text, char_speed=0.03, sentence_pause=0.5):
     placeholder.markdown(full_text)
 
 
-def log_message(user_id, session_id, sender, recipient, message):
+# TODO - pass session state to this function
+def load_message_history():
+    message_history = dba.load_message_history(st.session_state.user.user_id)
+    for message in message_history:
+
+        m = Message(
+            sender=message['sender'],
+            recipient=message['recipient'],
+            role=message['role'],
+            message=message['message']
+        )
+
+        if message['agent_name'] == 'counselor':
+            st.session_state.counselor_agent.add_message(m)
+        elif message['agent_name'] == 'suny':
+            st.session_state.suny_agent.add_message(m)
+
+
+def log_message(user_id, session_id, message, agent_name):#role, sender, recipient, message, agent_name):
     """
     Store a message in the conversation history.
 
@@ -75,9 +76,9 @@ def log_message(user_id, session_id, sender, recipient, message):
     conn = dba.get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO conversation_history (user_id, session_id, sender, recipient, message)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (user_id, session_id, sender, recipient, message))
+        INSERT INTO conversation_history (user_id, session_id, role, sender, recipient, message, agent_name)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (user_id, session_id, message.role, message.sender, message.recipient, message.message, agent_name))
     conn.commit()
 
 
@@ -97,51 +98,85 @@ def process_user_input(counselor_agent, suny_agent, prompt: str, stm):
     Process the user input and send it to the counselor agent
     """
 
+    message = Message(
+        sender="student",
+        recipient="counselor",
+        role="user",
+        message=prompt
+    )
+
     # Log user input
     if stm is not None:
-        log_message(stm.session_state.user.user_id, stm.session_state.user.session_id, 'user', 'counselor', prompt)
-
-    counselor_agent.add_message("user", prompt)
+        log_message(
+            stm.session_state.user.user_id,
+            stm.session_state.user.session_id,
+            message=message,
+            agent_name='counselor'
+        )
+    counselor_agent.add_message(message)
     counselor_response = counselor_agent.invoke()
 
     counselor_response_str = counselor_response.choices[0].message.content
     counselor_response_json = utils.parse_json(counselor_response_str)
 
     recipient = counselor_response_json.get("recipient")
-    counselor_message = counselor_response_json.get("message")
+    #counselor_message = counselor_response_json.get("message")
     #phase = counselor_response_json.get("phase")
 
     if recipient.lower() == "suny":
 
+        message = Message(
+            sender="counselor",
+            recipient="suny",
+            role="user",
+            message=counselor_response_str
+        )
+
         # Log the counselor message to the suny agent
         if stm is not None:
-            log_message(stm.session_state.user.user_id, stm.session_state.user.session_id, 'counselor', 'suny', counselor_message)
+            log_message(
+                stm.session_state.user.user_id,
+                stm.session_state.user.session_id,
+                message=message,
+                agent_name='suny'
+            )
 
             stm.chat_message('assistant').write('Contacting SUNY Agent...')
-            stm.session_state.counselor_suny_messages.append({"role": "counselor", "content": counselor_message})
+            #stm.session_state.counselor_suny_messages.append({"role": "counselor", "content": counselor_message})
 
-        suny_agent.add_message("user", counselor_message)
+        suny_agent.add_message(message)
         suny_response = suny_agent.invoke()
 
         if suny_response.choices[0].message.tool_calls:
             _, suny_response = suny_agent.handle_tool_call(suny_response)
 
-        suny_response_str = utils.format_for_json(suny_response.choices[0].message.content)
-        if stm is not None:
-            stm.session_state.counselor_suny_messages.append({"role": "suny", "content": suny_response_str})
-        suny_agent.add_message("assistant", suny_response_str)
+        #suny_response_str = utils.format_for_json(suny_response.choices[0].message.content)
+        #if stm is not None:
+        #    stm.session_state.counselor_suny_messages.append({"role": "suny", "content": suny_response_str})
+        message = Message(
+            sender="suny",
+            recipient="counselor",
+            role="assistant",
+            message=suny_response.choices[0].message.content,
+        )
+        suny_agent.add_message(message)
 
         if stm is not None:
-            # Log the suny response to the counselor
-            log_message(stm.session_state.user.user_id, stm.session_state.user.session_id, 'suny', 'counselor', suny_response_str)
+            log_message(
+                stm.session_state.user.user_id,
+                stm.session_state.user.session_id,
+                message=message,
+                agent_name='suny'
+            )
 
         # Add the suny response to the counselor agent and invoke it so it rewords it
-        counselor_agent.add_message("assistant", 'SUNY Agent responded with the following information:\n' + suny_response_str + '}')
+        counselor_agent.add_message(message)
+
         counselor_response = counselor_agent.invoke()
 
         counselor_response_str = counselor_response.choices[0].message.content
-        counselor_response_json = utils.parse_json(counselor_response_str)
-        counselor_message = counselor_response_json.get("message")
+        #counselor_response_json = utils.parse_json(counselor_response_str)
+        #counselor_message = counselor_response_json.get("message")
 
         # The response from the suny agent is added to the list of messages for
         # the counselor agent, and then we invoke the counselor agent so it
@@ -150,13 +185,22 @@ def process_user_input(counselor_agent, suny_agent, prompt: str, stm):
         # counselor agent, which is why we delete the last message.
         counselor_agent.delete_last_message()
 
-    # TODO - add the full JSON response message here, not just the message
-    counselor_agent.add_message("assistant", counselor_message)
+    message = Message(
+        sender="counselor",
+        recipient="student",
+        role="assistant",
+        message=counselor_response_str
+    )
+    counselor_agent.add_message(message)
     if stm is not None:
-        stm.session_state.counselor_user_messages.append({"role": "assistant", "content": counselor_message})
 
         # Log the counselor message to the user
-        log_message(stm.session_state.user.user_id, stm.session_state.user.session_id, 'counselor', 'user', counselor_message)
+        log_message(
+            stm.session_state.user.user_id,
+            stm.session_state.user.session_id,
+            message=message,
+            agent_name='counselor'
+        )
 
 
 def summarize_chat():

@@ -59,7 +59,7 @@ sure your message is formatted correctly for JSON.
 
 {
     "phase": "introductory" | "analysis" | "exploring" | "matching" | "reviewing",
-    "recipient": "user" | "suny",
+    "recipient": "student" | "suny",
     "message": "..."
 }
 

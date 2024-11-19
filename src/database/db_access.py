@@ -59,7 +59,7 @@ def load_message_history(user_id: int):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT user_id, sender, recipient, message, session_id, timestamp FROM conversation_history
+        SELECT user_id, session_id, sender, recipient, role, message, timestamp, agent_name FROM conversation_history
         WHERE user_id = ?
         ORDER BY timestamp ASC
     """, (user_id,))
