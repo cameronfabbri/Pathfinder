@@ -10,8 +10,6 @@ from functools import lru_cache
 from contextlib import contextmanager
 from dataclasses import dataclass
 
-import chromadb
-
 import src.assessment as assessment
 
 from src.database.db_access import get_db_connection

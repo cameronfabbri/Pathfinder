@@ -79,7 +79,6 @@ class Agent:
         self.model = model
         self.json_mode = json_mode
         self.temperature = temperature
-        #self.messages = [{"role": "system", "content": self.system_prompt}]
         self.messages = [Message(role="system", sender="", recipient="", message=self.system_prompt)]
         self.color = get_color(self.name)
 
@@ -95,8 +94,7 @@ class Agent:
         self.system_prompt = new_prompt
         self.messages[0].message['content'] = self.system_prompt
 
-    def add_message(self, message: Message):#role: str, sender: str, recipient: str, message: str) -> None:
-        #self.messages.append({"role": role, "content": content})
+    def add_message(self, message: Message):
         self.messages.append(message)
 
     def delete_last_message(self) -> None:
@@ -114,26 +112,22 @@ class Agent:
                 "role": msg.role,
                 "content": content
             }
+            # Only the role assisstant can have the tool calling stuff in it,
+            # but when the role is tool, it needs the tool call id
             if msg.tool_call is not None and msg.role == 'assistant':
                 message_dict['tool_calls'] = msg.tool_call
             if msg.role == 'tool':
                 message_dict['tool_call_id'] = msg.tool_call[0]['id']
             result.append(message_dict)
-        print('\n\nRESULT\n')
-        [print(x) for x in result]
-        print('\nEND\n')
         return result
 
     def invoke(self) -> str:
         """ Call the model and return the response. """
 
         print('Calling messages_to_llm_messages...')
-        messages = self.messages_to_llm_messages()
-        #print('messages:')
-        #[print(x) for x in messages]
         return self.client.chat.completions.create(
             model=self.model,
-            messages=messages,
+            messages=self.messages_to_llm_messages(),
             tools=self.tools,
             response_format={"type": "json_object"} if self.json_mode else None,
             temperature=self.temperature
@@ -217,7 +211,5 @@ class Agent:
                 tool_call=tool_call_message
             )
             self.add_message(fc_message)
-            #self.messages.append({"role": "assistant", "tool_calls": tool_call_message})
-            #self.messages.append(function_call_result_message)
 
         return function_result, self.invoke()
