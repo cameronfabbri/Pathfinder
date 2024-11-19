@@ -89,7 +89,12 @@ def main_chat_interface():
     )
 
     # Initialize the conversation if it's empty
+    """
     if not st.session_state.counselor_user_messages:
+
+        # TODO - COME BACK TO THIS
+
+        print('\nInitializing conversation...\n')
 
         # First time logging in
         if st.session_state.user.session_id == 0:
@@ -109,18 +114,20 @@ def main_chat_interface():
         rt.log_message(st.session_state.user.user_id, st.session_state.user.session_id, 'counselor', 'user', first_message)
         st.session_state.counselor_user_messages = [{"role": "assistant", "content": first_message}]
         st.session_state.counselor_agent.add_message("assistant", first_message)
+    else:
+        print('\nConversation already initialized...\n')
+    """
 
     # Chat container with scrollable area
     chat_container = st.container()
     with chat_container:
         st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
-        for idx, msg in enumerate(st.session_state.counselor_user_messages):
-            if isinstance(msg, dict) and 'role' in msg and 'content' in msg:
-                if isinstance(msg['content'], str):
-                    if msg["role"] == "user":
-                        streamlit_chat.message(msg["content"], is_user=True, key=f'user_{idx}')
-                    else:
-                        streamlit_chat.message(msg["content"], is_user=False, key=f'assistant_{idx}')
+        #for idx, msg in enumerate(st.session_state.counselor_user_messages):
+        for idx, msg in enumerate(st.session_state.counselor_agent.messages):
+            if msg['role'] == 'user':
+                streamlit_chat.message(msg['content'], is_user=True, key=f'user_{idx}')
+            elif msg['role'] == 'counselor' and msg['recipient'] == 'user':
+                streamlit_chat.message(msg['content'], is_user=False, key=f'assistant_{idx}')
         st.markdown("</div>", unsafe_allow_html=True)
 
     # Chat input at the bottom
@@ -128,11 +135,17 @@ def main_chat_interface():
 
     if prompt:
         # Add user message to session
-        st.session_state.counselor_user_messages.append({"role": "user", "content": prompt})
-        streamlit_chat.message(prompt, is_user=True, key=f'user_input_{len(st.session_state.counselor_user_messages)}')
+        #st.session_state.counselor_user_messages.append({"role": "user", "content": prompt})
+        #st.session_state.counselor_agent.print_messages()
+        key = len([x for x in st.session_state.counselor_agent.messages if x['role'] == 'user'])
+        streamlit_chat.message(
+            prompt,
+            is_user=True,
+            key=f'user_input_{key}'
+        )
 
         # Process user input and get response
-        rt.process_user_input(prompt)
+        rt.process_user_input(st.session_state.counselor_agent, st.session_state.suny_agent, prompt, st)
         st.session_state.messages_since_update += 1
 
         # Rerun to display the new messages
@@ -167,13 +180,13 @@ def main_chat_interface():
         dba.update_student_info(st.session_state.user.user_id, current_student_info)
 
         # Load new info into the user object
-        st.session_state.user.reload_all_data()
+        st.session_state.user_profile.reload_all_data()
         #student_info = dba.get_student_info(st.session_state.user.user_id)
         #student_info_str = utils.dict_to_str(student_info, format=False)
         #st.session_state.counselor_agent.update_system_prompt(prompts.COUNSELOR_SYSTEM_PROMPT + student_info_str)
         # Update the counselor agent's system prompt
         st.session_state.counselor_agent.system_prompt = prompts.COUNSELOR_SYSTEM_PROMPT.replace(
-            '{{student_md_profile}}', st.session_state.user.student_md_profile
+            '{{student_md_profile}}', st.session_state.user_profile.student_md_profile
         )
         print('NEW COUNSELOR SYSTEM PROMPT:')
         print(st.session_state.counselor_agent.system_prompt)

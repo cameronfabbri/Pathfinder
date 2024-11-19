@@ -32,8 +32,21 @@ suny_tools = [
     }
 ]
 
+from functools import lru_cache
 
-def retrieve_content_from_question(question: str, school_name: str = None) -> str:
+@lru_cache(maxsize=1)
+def get_db_and_reranker():
+    model = 'jina'
+    embedding_model = qdrant_db.get_embedding_model(model)
+    client_qdrant = qdrant_db.get_qdrant_client()
+    db = qdrant_db.get_qdrant_db(client_qdrant, 'suny', embedding_model.emb_dim)
+    reranker = qdrant_db.get_reranker()
+    return db, embedding_model, reranker
+
+
+def retrieve_content_from_question(
+        question: str,
+        school_name: str = None) -> str:
     """
     Retrieve relevant content from the database based on the user's question.
 
@@ -45,11 +58,7 @@ def retrieve_content_from_question(question: str, school_name: str = None) -> st
         str: The formatted documents.
     """
 
-    model = 'jina'
-    embedding_model = qdrant_db.get_embedding_model(model)
-    client_qdrant = qdrant_db.get_qdrant_client()
-    db = qdrant_db.get_qdrant_db(client_qdrant, 'suny', embedding_model.emb_dim)
-    reranker = qdrant_db.get_reranker()
+    db, embedding_model, reranker = get_db_and_reranker()
 
     # Initialize the RAG instance
     rag = RAG(db=db, top_n=20, top_k=2, embedding_model=embedding_model, reranker=reranker)

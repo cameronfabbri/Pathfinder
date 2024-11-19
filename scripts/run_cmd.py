@@ -82,15 +82,13 @@ def main():
     suny_agent = initialize_suny_agent(client)
     print('\n\n')
 
-    first_user_msg = 'My GPA is a 3.4, and my favorite subjects are math and science.'
-    first_user_msg += 'I\'m in the band and play lacrosse as my extracurriculars.'
-    first_user_msg += 'I\'m thinking about accounting as a career option.'
-    user_prompt = first_user_msg
     while True:
 
-        rt.process_user_input(counselor_agent, suny_agent, user_prompt, None)
-        print(counselor_agent.messages[-1]['content'], '\n')
         user_prompt = input('> ')
+        rt.process_user_input(counselor_agent, suny_agent, user_prompt, None)
+        print(counselor_agent.messages)
+        exit()
+        #print(counselor_agent.messages[-1]['content'], '\n')
 
 
 

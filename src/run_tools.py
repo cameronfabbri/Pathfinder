@@ -33,14 +33,15 @@ def load_message_history():
         recipient = message['recipient']
         message_content = {'role': sender, 'content': message['message']}
 
+        st.session_state.counselor_agent.add_message(sender, message_content['content'])
         # Add messages between counselor and user
-        if (sender, recipient) in [('counselor', 'user'), ('user', 'counselor')]:
-            st.session_state.counselor_user_messages.append(message_content)
+        #if (sender, recipient) in [('counselor', 'user'), ('user', 'counselor')]:
+            #st.session_state.counselor_user_messages.append(message_content)
+        #    st.session_state.counselor_agent.add_message(sender, message_content['content'])
 
         # Add messages between counselor and suny
-        elif (sender, recipient) in [('counselor', 'suny'), ('suny', 'counselor')]:
-            st.session_state.counselor_suny_messages.append(message_content)
-
+        if (sender, recipient) in [('counselor', 'suny'), ('suny', 'counselor')]:
+            st.session_state.suny_agent.add_message(sender, message_content['content'])
 
 def type_text(text, char_speed=0.03, sentence_pause=0.5):
     placeholder = st.empty()
@@ -91,16 +92,14 @@ def parse_counselor_response(response):
     return recipient, counselor_message
 
 
-def process_user_input(prompt: str):
+def process_user_input(counselor_agent, suny_agent, prompt: str, stm):
     """
     Process the user input and send it to the counselor agent
     """
 
-    counselor_agent = st.session_state.counselor_agent
-    suny_agent = st.session_state.suny_agent
-
     # Log user input
-    log_message(st.session_state.user.user_id, st.session_state.user.session_id, 'user', 'counselor', prompt)
+    if stm is not None:
+        log_message(stm.session_state.user.user_id, stm.session_state.user.session_id, 'user', 'counselor', prompt)
 
     counselor_agent.add_message("user", prompt)
     counselor_response = counselor_agent.invoke()
@@ -115,10 +114,12 @@ def process_user_input(prompt: str):
     if recipient.lower() == "suny":
 
         # Log the counselor message to the suny agent
-        log_message(st.session_state.user.user_id, st.session_state.user.session_id, 'counselor', 'suny', counselor_message)
+        if stm is not None:
+            log_message(stm.session_state.user.user_id, stm.session_state.user.session_id, 'counselor', 'suny', counselor_message)
 
-        st.chat_message('assistant').write('Contacting SUNY Agent...')
-        st.session_state.counselor_suny_messages.append({"role": "counselor", "content": counselor_message})
+            stm.chat_message('assistant').write('Contacting SUNY Agent...')
+            stm.session_state.counselor_suny_messages.append({"role": "counselor", "content": counselor_message})
+
         suny_agent.add_message("user", counselor_message)
         suny_response = suny_agent.invoke()
 
@@ -126,11 +127,13 @@ def process_user_input(prompt: str):
             _, suny_response = suny_agent.handle_tool_call(suny_response)
 
         suny_response_str = utils.format_for_json(suny_response.choices[0].message.content)
-        st.session_state.counselor_suny_messages.append({"role": "suny", "content": suny_response_str})
+        if stm is not None:
+            stm.session_state.counselor_suny_messages.append({"role": "suny", "content": suny_response_str})
         suny_agent.add_message("assistant", suny_response_str)
 
-        # Log the suny response to the counselor
-        log_message(st.session_state.user.user_id, st.session_state.user.session_id, 'suny', 'counselor', suny_response_str)
+        if stm is not None:
+            # Log the suny response to the counselor
+            log_message(stm.session_state.user.user_id, stm.session_state.user.session_id, 'suny', 'counselor', suny_response_str)
 
         # Add the suny response to the counselor agent and invoke it so it rewords it
         counselor_agent.add_message("assistant", 'SUNY Agent responded with the following information:\n' + suny_response_str + '}')
@@ -147,11 +150,13 @@ def process_user_input(prompt: str):
         # counselor agent, which is why we delete the last message.
         counselor_agent.delete_last_message()
 
+    # TODO - add the full JSON response message here, not just the message
     counselor_agent.add_message("assistant", counselor_message)
-    st.session_state.counselor_user_messages.append({"role": "assistant", "content": counselor_message})
+    if stm is not None:
+        stm.session_state.counselor_user_messages.append({"role": "assistant", "content": counselor_message})
 
-    # Log the counselor message to the user
-    log_message(st.session_state.user.user_id, st.session_state.user.session_id, 'counselor', 'user', counselor_message)
+        # Log the counselor message to the user
+        log_message(stm.session_state.user.user_id, stm.session_state.user.session_id, 'counselor', 'user', counselor_message)
 
 
 def summarize_chat():

@@ -195,22 +195,18 @@ def get_fastembed_embedding(
     return list(embedding_model.embed(text))
 
 
-@lru_cache(maxsize=None)
 def get_embedding_model(model: str) -> EmbeddingModel:
     return EmbeddingModel(model)
 
 
-@lru_cache(maxsize=None)
 def get_qdrant_client(host: str = "localhost", port: int = 6333) -> QdrantClient:
     return QdrantClient(host=host, port=port)
 
 
-@lru_cache(maxsize=None)
 def get_qdrant_db(client: QdrantClient, collection_name: str, emb_dim: int) -> QdrantDB:
     return QdrantDB(client, collection_name, emb_dim)
 
 
-@lru_cache(maxsize=None)
 def get_reranker(model: str='BAAI/bge-reranker-v2-m3') -> FlagReranker:
     return FlagReranker(model, use_fp16=True)
 

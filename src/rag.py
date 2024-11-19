@@ -95,7 +95,9 @@ class RAG:
         for doc in filtered_docs:
 
             # Match was a chunk, get the full parent document
-            if doc['id'] != doc['payload']['parent_point_id']:
+            # In the case of HTML, the parent document is the whole webpage.
+            # In the case of PDF, the parent document is the page the chunk was taken from.
+            if 'chunk_id' in doc['payload']:
                 doc = self.db.get_document_by_id(doc['payload']['parent_point_id']).dict()
 
             content += 'University: ' + doc['payload']['university'] + '\n'

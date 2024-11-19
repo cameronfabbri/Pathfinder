@@ -46,8 +46,8 @@ class UserProfile:
         self.load_student_info()
         self.load_topbot_strengths()
         self.load_assessment_responses()
-        self.build_student_profile()
         self.assessment_analysis = dba.load_assessment_analysis(self.user_id)
+        self.build_student_profile()
 
     def build_student_profile(self):
         """
@@ -94,8 +94,6 @@ class UserProfile:
         print('TOP STRENGTHS:', top_strengths)
 
         assessment_results = f"""
-    ## Assessment Results
-
     ### Assessment Analysis
     {self.assessment_analysis}
 

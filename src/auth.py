@@ -82,7 +82,7 @@ def signup(first_name: str, last_name: str, age: int, gender: str, username: str
     Returns:
         User: The newly created user object or None if signup fails.
     """
-    dba.initialize_db()
+    dbs.initialize_db()
 
     try:
         conn = dba.get_db_connection()
