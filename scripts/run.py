@@ -27,8 +27,8 @@ from src import interfaces as itf
 from src import pdf_tools as pdft
 from src.database import db_access as dba
 
-#MODEL = 'gpt-4o'
-MODEL = 'gpt-4o-mini'
+MODEL = 'gpt-4o'
+#MODEL = 'gpt-4o-mini'
 #MODEL = 'gpt-4o-2024-08-06'
 
 FIRST_LOGIN = 0
@@ -50,10 +50,10 @@ def initialize_st_vars():
         st.session_state.counselor_agent = None
     if 'suny_agent' not in st.session_state:
         st.session_state.suny_agent = None
-    if 'counselor_user_messages' not in st.session_state:
-        st.session_state.counselor_user_messages = []
-    if 'counselor_suny_messages' not in st.session_state:
-        st.session_state.counselor_suny_messages = []
+    #if 'counselor_user_messages' not in st.session_state:
+    #    st.session_state.counselor_user_messages = []
+    #if 'counselor_suny_messages' not in st.session_state:
+    #    st.session_state.counselor_suny_messages = []
     if 'counselor_persona' not in st.session_state:
         st.session_state.counselor_persona = None
     if 'is_new_session' not in st.session_state:
@@ -66,12 +66,13 @@ def initialize_counselor_agent(client: OpenAI, student_md_profile: str):
 
     counselor_system_prompt = prompts.COUNSELOR_SYSTEM_PROMPT
 
-    if st.session_state.counselor_persona == 'David - The Mentor':
-        persona_prompt = personas.DAVID + '\n\n' + personas.DAVID_TRAITS
-    elif st.session_state.counselor_persona == 'Emma - The Strategist':
-        persona_prompt = personas.EMMA + '\n\n' + personas.EMMA_TRAITS
-    elif st.session_state.counselor_persona == 'Liam - The Explorer':
-        persona_prompt = personas.LIAM + '\n\n' + personas.LIAM_TRAITS
+    persona_prompt = personas.DAVID + '\n\n' + personas.DAVID_TRAITS
+    #if st.session_state.counselor_persona == 'David - The Mentor':
+    #    persona_prompt = personas.DAVID + '\n\n' + personas.DAVID_TRAITS
+    #elif st.session_state.counselor_persona == 'Emma - The Strategist':
+    #    persona_prompt = personas.EMMA + '\n\n' + personas.EMMA_TRAITS
+    #elif st.session_state.counselor_persona == 'Liam - The Explorer':
+    #    persona_prompt = personas.LIAM + '\n\n' + personas.LIAM_TRAITS
 
     # TODO - make a function build_counselor_prompt()
     counselor_system_prompt = counselor_system_prompt.replace('{{persona}}', persona_prompt)
@@ -159,6 +160,13 @@ def main():
         # TODO - should we summarize the message history so we aren't using up tokens?
         if st.session_state.is_new_session:
             rt.load_message_history()
+            print('COUNSELOR AGENT')
+            [print(m, '\n') for m in st.session_state.counselor_agent.messages]
+            print('\n=====================================\n')
+            print('SUNY AGENT')
+            [print(m, '\n') for m in st.session_state.suny_agent.messages]
+            print('\n=====================================\n')
+
             st.session_state.is_new_session = False
 
         itf.main_chat_interface()

@@ -136,6 +136,12 @@ questions = [
     (34, "I am skilled at quickly assessing the best path forward in complex situations.")
 ]
 
+theme_questions = {}
+for theme, question in questions:
+    if theme not in theme_questions:
+        theme_questions[theme] = []
+    theme_questions[theme].append(question)
+
 # Sample answers for testing
 answers = {
     'I feel accomplished when I complete tasks on my to-do list.': 4,

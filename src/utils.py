@@ -353,7 +353,7 @@ def format_for_json(input_string):
     return formatted_string[1:-1]
 
 
-def parse_json(message):
+def parse_json(message: str):
     """
     Parses a string as JSON, with special handling for the JSON format used by the agents.
     """
@@ -362,4 +362,15 @@ def parse_json(message):
     except:
         print('Could not parse message as JSON')
         print(message)
+        return message
+
+
+def extract_content_from_message(message: str):
+    """
+    Extract the content from a message.
+    """
+    try:
+        return parse_json(message)['message']
+    except:
+        print('Could not extract content from message')
         return message

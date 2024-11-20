@@ -89,7 +89,12 @@ def main_chat_interface():
     )
 
     # Initialize the conversation if it's empty
+    """
     if not st.session_state.counselor_user_messages:
+
+        # TODO - COME BACK TO THIS
+
+        print('\nInitializing conversation...\n')
 
         # First time logging in
         if st.session_state.user.session_id == 0:
@@ -109,18 +114,22 @@ def main_chat_interface():
         rt.log_message(st.session_state.user.user_id, st.session_state.user.session_id, 'counselor', 'user', first_message)
         st.session_state.counselor_user_messages = [{"role": "assistant", "content": first_message}]
         st.session_state.counselor_agent.add_message("assistant", first_message)
+    else:
+        print('\nConversation already initialized...\n')
+    """
 
     # Chat container with scrollable area
     chat_container = st.container()
     with chat_container:
         st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
-        for idx, msg in enumerate(st.session_state.counselor_user_messages):
-            if isinstance(msg, dict) and 'role' in msg and 'content' in msg:
-                if isinstance(msg['content'], str):
-                    if msg["role"] == "user":
-                        streamlit_chat.message(msg["content"], is_user=True, key=f'user_{idx}')
-                    else:
-                        streamlit_chat.message(msg["content"], is_user=False, key=f'assistant_{idx}')
+        #for idx, msg in enumerate(st.session_state.counselor_user_messages):
+        #print('printing counselor agent messages...')
+        for idx, msg in enumerate(st.session_state.counselor_agent.messages):
+            if msg.sender == 'student':
+                streamlit_chat.message(msg.message, is_user=True, key=f'user_{idx}')
+            elif msg.sender == 'counselor' and msg.recipient == 'student':
+                message = utils.extract_content_from_message(msg.message)
+                streamlit_chat.message(message, is_user=False, key=f'assistant_{idx}')
         st.markdown("</div>", unsafe_allow_html=True)
 
     # Chat input at the bottom
@@ -128,11 +137,17 @@ def main_chat_interface():
 
     if prompt:
         # Add user message to session
-        st.session_state.counselor_user_messages.append({"role": "user", "content": prompt})
-        streamlit_chat.message(prompt, is_user=True, key=f'user_input_{len(st.session_state.counselor_user_messages)}')
+        #st.session_state.counselor_user_messages.append({"role": "user", "content": prompt})
+        #st.session_state.counselor_agent.print_messages()
+        key = len([x for x in st.session_state.counselor_agent.messages if x.role == 'user'])
+        streamlit_chat.message(
+            prompt,
+            is_user=True,
+            key=f'user_input_{key}'
+        )
 
         # Process user input and get response
-        rt.process_user_input(prompt)
+        rt.process_user_input(st.session_state.counselor_agent, st.session_state.suny_agent, st.session_state.user, st.chat_message, prompt)
         st.session_state.messages_since_update += 1
 
         # Rerun to display the new messages
@@ -149,7 +164,8 @@ def main_chat_interface():
         current_student_info_str = utils.dict_to_str(current_student_info, format=False)
         new_info_prompt = prompts.UPDATE_INFO_PROMPT
         new_info_prompt += f"\n**Student's Current Information:**\n{current_student_info_str}\n\n"
-        new_info_prompt += f"**Conversation History:**\n{st.session_state.counselor_user_messages}\n\n"
+        #new_info_prompt += f"**Conversation History:**\n{st.session_state.counselor_user_messages}\n\n"
+        new_info_prompt += f"**Conversation History:**\n{st.session_state.counselor_agent.messages}\n\n"
         response = st.session_state.counselor_agent.client.chat.completions.create(
             model='gpt-4o-mini',
             messages=[
@@ -167,13 +183,13 @@ def main_chat_interface():
         dba.update_student_info(st.session_state.user.user_id, current_student_info)
 
         # Load new info into the user object
-        st.session_state.user.reload_all_data()
+        st.session_state.user_profile.reload_all_data()
         #student_info = dba.get_student_info(st.session_state.user.user_id)
         #student_info_str = utils.dict_to_str(student_info, format=False)
         #st.session_state.counselor_agent.update_system_prompt(prompts.COUNSELOR_SYSTEM_PROMPT + student_info_str)
         # Update the counselor agent's system prompt
         st.session_state.counselor_agent.system_prompt = prompts.COUNSELOR_SYSTEM_PROMPT.replace(
-            '{{student_md_profile}}', st.session_state.user.student_md_profile
+            '{{student_md_profile}}', st.session_state.user_profile.student_md_profile
         )
         print('NEW COUNSELOR SYSTEM PROMPT:')
         print(st.session_state.counselor_agent.system_prompt)
@@ -308,8 +324,6 @@ def assessment_page():
             model='gpt-4o-mini',
             system_prompt=prompts.SUMMARIZE_ASSESSMENT_PROMPT,
             user_prompt=user_prompt)
-        print('\n---------\n')
-        ic(response)
 
         #  Insert strengths and weaknesses into the database
         dba.insert_strengths(st.session_state.user.user_id, theme_scores)

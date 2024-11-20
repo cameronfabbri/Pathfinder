@@ -10,8 +10,6 @@ from functools import lru_cache
 from contextlib import contextmanager
 from dataclasses import dataclass
 
-import chromadb
-
 import src.assessment as assessment
 
 from src.database.db_access import get_db_connection
@@ -102,14 +100,18 @@ def create_chat_tables():
     cursor = conn.cursor()
 
     # Table to store user-counselor-suny interactions
+    # agent_name is the name of the agent that holds the message in its messages list
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS conversation_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             session_id INTEGER NOT NULL,
-            sender TEXT NOT NULL, -- user, counselor, or suny_agent
-            recipient TEXT NOT NULL, -- user, counselor, or suny_agent
+            role TEXT NOT NULL, -- user, assistant, or tool
+            sender TEXT NOT NULL, -- student, counselor, or suny
+            recipient TEXT NOT NULL, -- student, counselor, or suny
             message TEXT NOT NULL,
+            agent_name TEXT NOT NULL, -- counselor, or suny
+            tool_call TEXT,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users (id)
         )

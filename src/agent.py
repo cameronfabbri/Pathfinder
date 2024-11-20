@@ -4,8 +4,12 @@ File containing the Agent class and functionality for the Agent
 # Cameron Fabbri
 import json
 
+from dataclasses import dataclass
+
 from src.tools import function_map
 from src.utils import RESET, get_color, get_openai_client
+
+from src import utils
 
 
 def format_content(content):
@@ -44,6 +48,16 @@ def quick_call(
         response_format={ "type": "json_object" } if json_mode else None
     ).choices[0].message.content
 
+from typing import List
+
+@dataclass
+class Message:
+    sender: str # student, counselor, or suny
+    recipient: str # student, counselor, or suny
+    role: str # user, assistant, or tool
+    message: str
+    tool_call: List[dict] | None = None
+
 
 class Agent:
     def __init__(
@@ -66,7 +80,7 @@ class Agent:
         self.model = model
         self.json_mode = json_mode
         self.temperature = temperature
-        self.messages = [{"role": "system", "content": self.system_prompt}]
+        self.messages = [Message(role="system", sender="", recipient="", message=self.system_prompt)]
         self.color = get_color(self.name)
 
     def update_system_prompt(self, new_prompt: str) -> None:
@@ -79,21 +93,42 @@ class Agent:
             None
         """
         self.system_prompt = new_prompt
-        self.messages[0]["content"] = self.system_prompt
+        self.messages[0].message['content'] = self.system_prompt
 
-    def add_message(self, role: str, content: str) -> None:
-        self.messages.append({"role": role, "content": content})
+    def add_message(self, message: Message):
+        self.messages.append(message)
 
     def delete_last_message(self) -> None:
         if len(self.messages) > 1:
             self.messages.pop()
 
+    def messages_to_llm_messages(self) -> list[dict]:
+        result = []
+        for msg in self.messages:
+            if msg.sender == 'counselor' and msg.recipient == 'suny':
+                content = utils.extract_content_from_message(msg.message)
+            else:
+                content = msg.message
+            message_dict = {
+                "role": msg.role,
+                "content": content
+            }
+            # Only the role assisstant can have the tool calling stuff in it,
+            # but when the role is tool, it needs the tool call id
+            if msg.tool_call is not None and msg.role == 'assistant':
+                message_dict['tool_calls'] = msg.tool_call
+            if msg.role == 'tool':
+                message_dict['tool_call_id'] = msg.tool_call[0]['id']
+            result.append(message_dict)
+        return result
+
     def invoke(self) -> str:
         """ Call the model and return the response. """
 
+        #print('Calling messages_to_llm_messages...')
         return self.client.chat.completions.create(
             model=self.model,
-            messages=self.messages,
+            messages=self.messages_to_llm_messages(),
             tools=self.tools,
             response_format={"type": "json_object"} if self.json_mode else None,
             temperature=self.temperature
@@ -125,6 +160,7 @@ class Agent:
         """
         """
 
+        tc_messages = []
         for tool_call in response.choices[0].message.tool_calls:
             print(f"{self.color}{self.name}{RESET}: Handling tool call: {tool_call.function.name}")
             arguments = json.loads(tool_call.function.arguments)
@@ -155,7 +191,26 @@ class Agent:
                 }
             ]
 
-            self.messages.append({"role": "assistant", "tool_calls": tool_call_message})
-            self.messages.append(function_call_result_message)
+            tc_message = Message(
+                sender="",
+                recipient="",
+                role="assistant",
+                message="",
+                tool_call=tool_call_message
+            )
 
-        return function_result, self.invoke()
+            fc_message = Message(
+                sender="",
+                recipient="",
+                role="tool",
+                message=function_call_result_message['content'],
+                tool_call=tool_call_message
+            )
+
+            self.add_message(tc_message)
+            self.add_message(fc_message)
+
+            tc_messages.append(tc_message)
+            tc_messages.append(fc_message)
+
+        return function_result, self.invoke(), tc_messages

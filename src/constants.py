@@ -3,6 +3,8 @@ from functools import lru_cache
 
 opj = os.path.join
 
+FASTEMBED_CACHE_DIR = opj('data', 'fastembed')
+
 SYSTEM_DATA_DIR = opj('/Volumes', 'External', 'system_data')
 
 CHROMA_DB_PATH = opj('data', 'chromadb')

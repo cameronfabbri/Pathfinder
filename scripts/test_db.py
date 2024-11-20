@@ -1,6 +1,6 @@
 """
 """
-from src.database import execute_query
+from src.database.db_access import execute_query
 
 # Show tables in the database
 #cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
@@ -20,6 +20,7 @@ from src.database import execute_query
 
 #cursor.execute("SELECT summary FROM chat_summary WHERE user_id=? ORDER BY id DESC;", (user.user_id,))
 queries = [
+    "SELECT * FROM conversation_history;",
     "SELECT * FROM domains;",
     "SELECT * FROM themes;",
     "SELECT * FROM questions;",
@@ -32,4 +33,6 @@ for query in queries:
     for row in res:
         for key in row.keys():
             print(key, ':', row[key])
+        print(50*'-')
     print('\n', '='*100, '\n')
+    exit()
