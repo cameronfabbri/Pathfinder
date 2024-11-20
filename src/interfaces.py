@@ -125,7 +125,6 @@ def main_chat_interface():
         #for idx, msg in enumerate(st.session_state.counselor_user_messages):
         #print('printing counselor agent messages...')
         for idx, msg in enumerate(st.session_state.counselor_agent.messages):
-            #ic(idx, msg)
             if msg.sender == 'student':
                 streamlit_chat.message(msg.message, is_user=True, key=f'user_{idx}')
             elif msg.sender == 'counselor' and msg.recipient == 'student':
@@ -148,7 +147,7 @@ def main_chat_interface():
         )
 
         # Process user input and get response
-        rt.process_user_input(st.session_state.counselor_agent, st.session_state.suny_agent, prompt, st)
+        rt.process_user_input(st.session_state.counselor_agent, st.session_state.suny_agent, st.session_state.user, st.chat_message, prompt)
         st.session_state.messages_since_update += 1
 
         # Rerun to display the new messages
@@ -325,8 +324,6 @@ def assessment_page():
             model='gpt-4o-mini',
             system_prompt=prompts.SUMMARIZE_ASSESSMENT_PROMPT,
             user_prompt=user_prompt)
-        print('\n---------\n')
-        ic(response)
 
         #  Insert strengths and weaknesses into the database
         dba.insert_strengths(st.session_state.user.user_id, theme_scores)

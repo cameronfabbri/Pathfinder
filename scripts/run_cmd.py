@@ -5,14 +5,18 @@ Run the system without the UI
 import os
 from icecream import ic
 from openai import OpenAI
+import readline
 
 from src.user import UserProfile
 from scripts.run import initialize_counselor_agent, initialize_suny_agent
 
-from src import assessment
 from src import agent
 from src import prompts
+from src import assessment
+from src import utils
 from src import run_tools as rt
+from src.database import db_access as dba
+from src.database import db_setup as dbs
 
 MODEL = 'gpt-4o-mini'
 
@@ -58,16 +62,14 @@ def load_assessment_responses(assessment_responses):
 
 def main():
     """ Main function """
-    from src.database import db_access as dba
-    from src.database import db_setup as dbs
 
     dbs.initialize_db()
 
     user_id = 1
+    from src.user import User
+    user = User(user_id, username='test', session_id=1)
 
     theme_scores = load_assessment_responses(assessment.answers)
-
-    ic(theme_scores)
 
     dba.insert_user_responses(user_id, assessment.answers)
     dba.insert_strengths(user_id, theme_scores)
@@ -75,21 +77,39 @@ def main():
 
     user_profile = UserProfile(user_id)
 
-    #ic(user_profile.student_md_profile)
-
     client = OpenAI(api_key=os.getenv('PATHFINDER_OPENAI_API_KEY'))
     counselor_agent = initialize_counselor_agent(client, user_profile.student_md_profile)
     suny_agent = initialize_suny_agent(client)
     print('\n\n')
 
+    user_prompts = [
+        'hi',
+        '3.4',
+        'I like math and finance',
+        'band and lacrosse',
+        'not right now',
+        'that makes sense',
+        'my dad is an accountant, so maybe that',
+        'yes',
+        'which school has the best economics program?'
+    ]
+
+    idx = 0
     while True:
 
-        user_prompt = input('> ')
-        rt.process_user_input(counselor_agent, suny_agent, user_prompt, None)
-        print(counselor_agent.messages)
-        exit()
-        #print(counselor_agent.messages[-1]['content'], '\n')
+        if idx < len(user_prompts):
+            user_prompt = user_prompts[idx]
+            print('>', user_prompt)
+            idx += 1
+        else:
+            user_prompt = input('> ')
 
+        rt.process_user_input(counselor_agent, suny_agent, user, None, user_prompt)
+        m = utils.extract_content_from_message(
+            counselor_agent.messages[-1].message
+        )
+        print(m, '\n')
+        #[print(x, '\n') for x in counselor_agent.messages]
 
 
 

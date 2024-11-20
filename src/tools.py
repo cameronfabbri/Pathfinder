@@ -61,7 +61,7 @@ def retrieve_content_from_question(
     db, embedding_model, reranker = get_db_and_reranker()
 
     # Initialize the RAG instance
-    rag = RAG(db=db, top_n=20, top_k=2, embedding_model=embedding_model, reranker=reranker)
+    rag = RAG(db=db, top_n=30, top_k=5, embedding_model=embedding_model, reranker=reranker)
 
     return rag.run(question, school_name)
 

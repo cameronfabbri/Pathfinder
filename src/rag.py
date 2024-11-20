@@ -86,6 +86,11 @@ class RAG:
         filtered_docs = []
         for doc in documents:
             doc = doc.dict()
+
+            # TODO - revisit this maybe
+            if doc['payload']['type'] == 'pdf' and 'chunk_id' not in doc['payload']:
+                continue
+
             if doc['payload']['parent_point_id'] not in doc_ids:
                 doc_ids.append(doc['payload']['parent_point_id'])
                 filtered_docs.append(doc)
@@ -97,7 +102,7 @@ class RAG:
             # Match was a chunk, get the full parent document
             # In the case of HTML, the parent document is the whole webpage.
             # In the case of PDF, the parent document is the page the chunk was taken from.
-            if 'chunk_id' in doc['payload']:
+            if 'chunk_id' in doc['payload'] and doc['payload']['type'] == 'html':
                 doc = self.db.get_document_by_id(doc['payload']['parent_point_id']).dict()
 
             content += 'University: ' + doc['payload']['university'] + '\n'

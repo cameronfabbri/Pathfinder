@@ -111,6 +111,7 @@ def create_chat_tables():
             recipient TEXT NOT NULL, -- student, counselor, or suny
             message TEXT NOT NULL,
             agent_name TEXT NOT NULL, -- counselor, or suny
+            tool_call TEXT,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users (id)
         )

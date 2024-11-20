@@ -19,7 +19,7 @@ from qdrant_client.http.models import (FieldCondition, Filter, MatchValue,
                                        PointStruct)
 
 from src import utils
-from src.constants import METADATA_PATH, UNIVERSITY_DATA_DIR
+from src.constants import METADATA_PATH, UNIVERSITY_DATA_DIR, FASTEMBED_CACHE_DIR
 
 opj = os.path.join
 
@@ -153,12 +153,14 @@ class EmbeddingModel:
         self.model_name = model_name
         if model_name == 'bge-small':
             self.embedding_model = TextEmbedding(
-                model_name="BAAI/bge-small-en-v1.5")
+                model_name="BAAI/bge-small-en-v1.5",
+                cache_dir=FASTEMBED_CACHE_DIR)
             self.emb_dim = 384
             self.max_tokens = 512
         elif model_name == 'jina':
             self.embedding_model = TextEmbedding(
-                model_name="jinaai/jina-embeddings-v2-base-en")
+                model_name="jinaai/jina-embeddings-v2-base-en",
+                cache_dir=FASTEMBED_CACHE_DIR)
             self.emb_dim = 768
             self.max_tokens = 8192
 

@@ -48,6 +48,7 @@ def quick_call(
         response_format={ "type": "json_object" } if json_mode else None
     ).choices[0].message.content
 
+from typing import List
 
 @dataclass
 class Message:
@@ -55,7 +56,7 @@ class Message:
     recipient: str # student, counselor, or suny
     role: str # user, assistant, or tool
     message: str
-    tool_call: dict | None = None
+    tool_call: List[dict] | None = None
 
 
 class Agent:
@@ -124,7 +125,7 @@ class Agent:
     def invoke(self) -> str:
         """ Call the model and return the response. """
 
-        print('Calling messages_to_llm_messages...')
+        #print('Calling messages_to_llm_messages...')
         return self.client.chat.completions.create(
             model=self.model,
             messages=self.messages_to_llm_messages(),
@@ -159,6 +160,7 @@ class Agent:
         """
         """
 
+        tc_messages = []
         for tool_call in response.choices[0].message.tool_calls:
             print(f"{self.color}{self.name}{RESET}: Handling tool call: {tool_call.function.name}")
             arguments = json.loads(tool_call.function.arguments)
@@ -189,11 +191,6 @@ class Agent:
                 }
             ]
 
-            print('TOOL_CALL_MESSAGE')
-            print(tool_call_message, '\n\n')
-            print('FUNCTION_CALL_RESULT_MESSAGE')
-            print(function_call_result_message, '\n\n')
-
             tc_message = Message(
                 sender="",
                 recipient="",
@@ -201,7 +198,6 @@ class Agent:
                 message="",
                 tool_call=tool_call_message
             )
-            self.add_message(tc_message)
 
             fc_message = Message(
                 sender="",
@@ -210,6 +206,11 @@ class Agent:
                 message=function_call_result_message['content'],
                 tool_call=tool_call_message
             )
+
+            self.add_message(tc_message)
             self.add_message(fc_message)
 
-        return function_result, self.invoke()
+            tc_messages.append(tc_message)
+            tc_messages.append(fc_message)
+
+        return function_result, self.invoke(), tc_messages

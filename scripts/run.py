@@ -27,8 +27,8 @@ from src import interfaces as itf
 from src import pdf_tools as pdft
 from src.database import db_access as dba
 
-#MODEL = 'gpt-4o'
-MODEL = 'gpt-4o-mini'
+MODEL = 'gpt-4o'
+#MODEL = 'gpt-4o-mini'
 #MODEL = 'gpt-4o-2024-08-06'
 
 FIRST_LOGIN = 0
@@ -160,6 +160,12 @@ def main():
         # TODO - should we summarize the message history so we aren't using up tokens?
         if st.session_state.is_new_session:
             rt.load_message_history()
+            print('COUNSELOR AGENT')
+            [print(m, '\n') for m in st.session_state.counselor_agent.messages]
+            print('\n=====================================\n')
+            print('SUNY AGENT')
+            [print(m, '\n') for m in st.session_state.suny_agent.messages]
+            print('\n=====================================\n')
 
             st.session_state.is_new_session = False
 
