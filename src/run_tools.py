@@ -87,12 +87,12 @@ def log_message(user_id, session_id, message, agent_name):
     if message.tool_call is not None:
         tool_call = json.dumps(message.tool_call)
 
-    conn = dba.get_db_connection()
+    conn = dba.get_user_db_connection(user_id)
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO conversation_history (user_id, session_id, role, sender, recipient, message, agent_name, tool_call)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (user_id, session_id, message.role, message.sender, message.recipient, message.message, agent_name, tool_call))
+        INSERT INTO conversation_history (session_id, role, sender, recipient, message, agent_name, tool_call)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (session_id, message.role, message.sender, message.recipient, message.message, agent_name, tool_call))
     conn.commit()
 
 
