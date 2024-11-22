@@ -46,7 +46,7 @@ def main():
     dba.insert_assessment_analysis(user_id, run_cmd.ASSESSMENT_ANALYSIS)
 
     suny = lambda x: ev.run_suny(x, client)
-    suny = ev.caching(suny, cache)
+    suny = ev.wrap_cache(suny, cache)
 
     # question = 'Could you provide information on which SUNY schools have the best economics programs?'
     # question = 'What is the cheapest school to get a computer science degree at?'

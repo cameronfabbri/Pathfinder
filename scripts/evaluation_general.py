@@ -66,7 +66,7 @@ def main():
         ev.save_pickle(messages, counselor_messages_file_name)
 
     counselor = lambda x: ev.run_counselor(x, messages, client, user_profile.student_md_profile)
-    counselor = ev.caching(counselor, cache)
+    counselor = ev.wrap_cache(counselor, cache)
 
     question = 'which school has the best economics program?'
 
@@ -80,6 +80,9 @@ def main():
 
 
 def _prep_counselor_conversation(user_prompts: List[str], client: OpenAI, student_md_profile: str):
+    """
+    Run a sequence of user messages to prepare a starting
+    message history state for the counselor agent."""
 
     counselor_agent = run.initialize_counselor_agent(client, student_md_profile)
     suny_agent = run.initialize_suny_agent(client)

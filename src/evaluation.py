@@ -100,7 +100,7 @@ def save_pickle(obj: Any, file_path: str) -> None:
         pickle.dump(obj, f)
 
 
-def caching(func: Callable, cache: Dict):
+def wrap_cache(func: Callable, cache: Dict):
     """Cache the results of a single argument function."""
     def wrap(x):
         """Wrap the function."""
