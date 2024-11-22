@@ -3,7 +3,7 @@ Functions for calculating faithfulness of a RAG system.
 Based on the RAGAS library.
 """
 
-from typing import Callable, List, Tuple, Dict
+from typing import Callable, List, Tuple, Dict, Any
 import json
 
 import numpy as np
@@ -125,22 +125,24 @@ def faithfulness(
         docs: str,
         answer: str,
         llm: Callable
-        ) -> Tuple[float, List[Dict]]:
+        ) -> Tuple[float, List[Dict], List[float]]:
     """
     Given RAG inputs and outputs, calculate faithfulness.
     """
 
-    # TODO: additional error handling
+    # TODO: handle additional error cases
 
     prompt = generate_statments_prompt(question, answer)
+    response = llm(prompt)
+    print(response)
 
-    statements: List[Dict] = json.loads(llm(prompt))['statements']
+    statements: List[Dict] = _parse_json(response)['statements']
     if not statements:
-        return np.nan, []
+        return np.nan, [], []
 
     prompt = evaluate_statements_prompt(docs, statements)
 
-    verdicts: List[Dict] = json.loads(llm(prompt))
+    verdicts: List[Dict] = _parse_json(llm(prompt))
 
     verdict_scores_map = {
         'yes': 1.,
@@ -153,5 +155,12 @@ def faithfulness(
         score = verdict_scores_map.get(verdict, np.nan)
         scores.append(score)
 
-    score_final = sum(scores) / len(scores)
-    return score_final, verdicts
+    total_score = sum(scores) / len(scores)
+
+    return total_score, verdicts, scores
+
+
+def _parse_json(x: str) -> Any:
+    if x.startswith('```json') and x.endswith('```'):
+        x = x[7:-3]
+    return json.loads(x)
