@@ -163,6 +163,8 @@ def main():
     print('~~~~ ' * 8)
 
     def llm(prompt: str) -> str:
+        """Call an LLM."""
+        # TODO: handle errors gracefully
         return agent.quick_call(
             model=MODEL_DEFAULT,
             system_prompt='You are a helpful AI assistant.',

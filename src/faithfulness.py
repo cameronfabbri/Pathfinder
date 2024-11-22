@@ -130,9 +130,11 @@ def faithfulness(
     Given RAG inputs and outputs, calculate faithfulness.
     """
 
+    # TODO: additional error handling
+
     prompt = generate_statments_prompt(question, answer)
 
-    statements: Dict = json.loads(llm(prompt))['statements']
+    statements: List[Dict] = json.loads(llm(prompt))['statements']
     if not statements:
         return np.nan, []
 
