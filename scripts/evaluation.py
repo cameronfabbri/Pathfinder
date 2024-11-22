@@ -2,16 +2,18 @@
 Evaluation methods!
 """
 
-from typing import List
-from typing import Any
+from typing import Any, List, Tuple
 import os
 import json
 import pickle
 
 from openai import OpenAI
 
+from src import agent
+from src import utils
 from src import assessment
-from src.user import User
+from src import faithfulness
+# from src.user import User
 from src.agent import Message
 from src.database import db_access as dba
 from src.database import db_setup as dbs
@@ -26,6 +28,7 @@ USER = 'user'
 ASSISTANT = 'assistant'
 
 
+MODEL_DEFAULT = 'gpt-4o-mini'
 OPENAI_API_KEY_ENV = 'PATHFINDER_OPENAI_API_KEY'
 
 
@@ -84,6 +87,27 @@ def caching(func, cache):
     return wrap
 
 
+def _extract_rag_info(messages: List[Message]) -> Tuple[str, str, str]:
+
+    assert len(messages) == 5
+
+    # first message is system prompt
+    assert messages[0].role == 'system'
+
+    assert messages[1].role == 'user'
+    question = utils.extract_content_from_message(messages[1].message)
+
+    assert messages[2].role == 'assistant'
+
+    assert messages[3].role == 'tool'
+    docs = json.loads(messages[3].message)['result']
+
+    assert messages[4].role == 'assistant'
+    answer = messages[4].message
+
+    return question, docs, answer
+
+
 def main():
     """Main program."""
 
@@ -96,7 +120,7 @@ def main():
     client = OpenAI(api_key=os.getenv(OPENAI_API_KEY_ENV))
 
     user_id = 1
-    user = User(user_id, username='test', session_id=1)
+    # user = User(user_id, username='test', session_id=1)
 
     # set up user
 
@@ -110,10 +134,53 @@ def main():
     suny = lambda x: run_suny(client, x)
     suny = caching(suny, suny_cache)
 
-    question = 'Could you provide information on which SUNY schools have the best economics programs?'
+    # question = 'Could you provide information on which SUNY schools have the best economics programs?'
+    # question = 'What is the cheapest school to get a computer science degree at?'
+    # question = 'Which school should I go to if I want to study piano?'
+    # question = 'What is the best school?'
+    question = 'What is the best school for nursing?'   # fail with too many tokens
+
     messages = suny(question)
 
     print(messages)
+
+    # TODO: faithfulness evaluation
+
+    question, docs, answer = _extract_rag_info(messages)
+    print()
+    print('~~~~ ' * 8)
+
+    print(question)
+
+    print('~~~~ ' * 8)
+
+    print(docs)
+
+    print('~~~~ ' * 8)
+
+    print(answer)
+
+    print('~~~~ ' * 8)
+
+    def llm(prompt: str) -> str:
+        return agent.quick_call(
+            model=MODEL_DEFAULT,
+            system_prompt='You are a helpful AI assistant.',
+            user_prompt=prompt,
+            json_mode=False,
+            temperature=0.0
+        )
+
+    score, verdicts = faithfulness.faithfulness(question, docs, answer, llm)
+
+    for x in verdicts:
+        print(x)
+
+    print('~~~~ ' * 8)
+
+    print()
+
+    print(score)
 
     save_pickle(suny_cache, suny_cache_file_name)
 
