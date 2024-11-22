@@ -23,40 +23,19 @@ from scripts import run
 from scripts import run_cmd
 
 
-def _extract_rag_info(messages: List[Message]) -> Tuple[str, str, str]:
-
-    assert len(messages) == 5
-
-    # first message is system prompt
-    assert messages[0].role == 'system'
-
-    assert messages[1].role == 'user'
-    question = utils.extract_content_from_message(messages[1].message)
-
-    assert messages[2].role == 'assistant'
-
-    assert messages[3].role == 'tool'
-    docs = json.loads(messages[3].message)['result']
-
-    assert messages[4].role == 'assistant'
-    answer = messages[4].message
-
-    return question, docs, answer
-
-
 def main():
     """Main program."""
 
     suny_cache_file_name = 'suny_cache.pkl'
     if os.path.isfile(suny_cache_file_name):
-        suny_cache = ev.load_pickle(suny_cache_file_name)
+        cache = ev.load_pickle(suny_cache_file_name)
     else:
-        suny_cache = {}
+        cache = {}
 
     client = OpenAI(api_key=os.getenv(ev.OPENAI_API_KEY_ENV))
 
     user_id = 1
-    # user = User(user_id, username='test', session_id=1)
+    # ser = User(user_id, username='test', session_id=1)
 
     # set up user
 
@@ -67,8 +46,8 @@ def main():
     dba.insert_strengths(user_id, theme_scores)
     dba.insert_assessment_analysis(user_id, run_cmd.ASSESSMENT_ANALYSIS)
 
-    suny = lambda x: ev.run_suny(client, x)
-    suny = ev.caching(suny, suny_cache)
+    suny = lambda x: ev.run_suny(x, client)
+    suny = ev.caching(suny, cache)
 
     # question = 'Could you provide information on which SUNY schools have the best economics programs?'
     # question = 'What is the cheapest school to get a computer science degree at?'
@@ -120,7 +99,29 @@ def main():
 
     print(total_score)
 
-    ev.save_pickle(suny_cache, suny_cache_file_name)
+    ev.save_pickle(cache, suny_cache_file_name)
+
+
+def _extract_rag_info(messages: List[Message]) -> Tuple[str, str, str]:
+    # TODO: gracefully handle case where there is no tool call
+
+    assert len(messages) == 5
+
+    # first message is system prompt
+    assert messages[0].role == 'system'
+
+    assert messages[1].role == 'user'
+    question = utils.extract_content_from_message(messages[1].message)
+
+    assert messages[2].role == 'assistant'
+
+    assert messages[3].role == 'tool'
+    docs = json.loads(messages[3].message)['result']
+
+    assert messages[4].role == 'assistant'
+    answer = messages[4].message
+
+    return question, docs, answer
 
 
 if __name__ == '__main__':

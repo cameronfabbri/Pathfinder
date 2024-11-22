@@ -13,6 +13,7 @@ from src import agent
 from src import utils
 from src import assessment
 from src import faithfulness
+from src import run_tools
 # from src.user import User
 from src.agent import Message
 from src.database import db_access as dba
@@ -33,10 +34,30 @@ MODEL_DEFAULT = 'gpt-4o-mini'
 OPENAI_API_KEY_ENV = 'PATHFINDER_OPENAI_API_KEY'
 
 
-def run_suny(client: OpenAI, question: str) -> List[Message]:
+
+def run_counselor(
+        message: str,
+        prev_messages: List[Message],
+        client: OpenAI,
+        student_md_profile: str,
+        ) -> List[Message]:
     """
-    Functionally run SUNY client,
-    using logic from run_tools.process_user_input.
+    Functionally run counselor agent,
+    using run_tools.process_user_input
+    """
+
+    counselor_agent = run.initialize_counselor_agent(client, student_md_profile)
+    suny_agent = run.initialize_suny_agent(client)
+
+    counselor_agent.messages = prev_messages
+    run_tools.process_user_input(counselor_agent, suny_agent, None, None, message)
+    return counselor_agent.messages
+
+
+def run_suny(question: str, client: OpenAI) -> List[Message]:
+    """
+    Functionally run SUNY agent,
+    using logic copied from run_tools.process_user_input.
     """
 
     suny_agent = run.initialize_suny_agent(client)
