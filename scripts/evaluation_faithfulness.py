@@ -25,14 +25,13 @@ from scripts import run_cmd
 
 def main():
     """Main program."""
+    client = OpenAI(api_key=os.getenv(ev.OPENAI_API_KEY_ENV))
 
     suny_cache_file_name = 'suny_cache.pkl'
     if os.path.isfile(suny_cache_file_name):
         cache = ev.load_pickle(suny_cache_file_name)
     else:
         cache = {}
-
-    client = OpenAI(api_key=os.getenv(ev.OPENAI_API_KEY_ENV))
 
     user_id = 1
     # ser = User(user_id, username='test', session_id=1)

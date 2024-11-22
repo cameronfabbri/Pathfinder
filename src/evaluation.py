@@ -34,9 +34,8 @@ MODEL_DEFAULT = 'gpt-4o-mini'
 OPENAI_API_KEY_ENV = 'PATHFINDER_OPENAI_API_KEY'
 
 
-
 def run_counselor(
-        message: str,
+        question: str,
         prev_messages: List[Message],
         client: OpenAI,
         student_md_profile: str,
@@ -46,11 +45,15 @@ def run_counselor(
     using run_tools.process_user_input
     """
 
+    # create new agents
     counselor_agent = run.initialize_counselor_agent(client, student_md_profile)
     suny_agent = run.initialize_suny_agent(client)
 
+    # patch in messages
     counselor_agent.messages = prev_messages
-    run_tools.process_user_input(counselor_agent, suny_agent, None, None, message)
+
+    # run
+    run_tools.process_user_input(counselor_agent, suny_agent, None, None, question)
     return counselor_agent.messages
 
 
