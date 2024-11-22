@@ -14,6 +14,7 @@ from src import agent
 from src import prompts
 from src import assessment
 from src import utils
+from src.user import User
 from src import run_tools as rt
 from src.database import db_access as dba
 from src.database import db_setup as dbs
@@ -63,10 +64,9 @@ def load_assessment_responses(assessment_responses):
 def main():
     """ Main function """
 
-    dbs.initialize_db()
+    dbs.create_auth_tables()
+    user_id = dbs.initialize_test_user('test')
 
-    user_id = 1
-    from src.user import User
     user = User(user_id, username='test', session_id=1)
 
     theme_scores = load_assessment_responses(assessment.answers)
@@ -109,7 +109,6 @@ def main():
             counselor_agent.messages[-1].message
         )
         print(m, '\n')
-        #[print(x, '\n') for x in counselor_agent.messages]
 
 
 
