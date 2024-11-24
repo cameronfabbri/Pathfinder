@@ -2,7 +2,7 @@
 General functions for use in evaluation.
 """
 
-from typing import Any, List, Tuple, Callable, Dict
+from typing import Any, List, Tuple, Callable, Dict, Optional
 import os
 import json
 import pickle
@@ -39,7 +39,8 @@ def run_counselor(
         prev_messages: List[Message],
         client: OpenAI,
         student_md_profile: str,
-        ) -> List[Message]:
+        temperature: float
+        ) -> Optional[List[Message]]:
     """
     Functionally run counselor agent,
     using run_tools.process_user_input
@@ -49,12 +50,28 @@ def run_counselor(
     counselor_agent = run.initialize_counselor_agent(client, student_md_profile)
     suny_agent = run.initialize_suny_agent(client)
 
+    counselor_agent.temperature = temperature
+    suny_agent.temperature = temperature
+
     # patch in messages
-    counselor_agent.messages = prev_messages
+    counselor_agent.messages = list(prev_messages)
 
     # run
-    run_tools.process_user_input(counselor_agent, suny_agent, None, None, question)
-    return counselor_agent.messages
+    try:
+        run_tools.process_user_input(counselor_agent, suny_agent, None, None, question)
+    except Exception as e:
+        print(e)
+        # probably some kind of request too long or rate limit error. IMO this should be handled by the agent
+        return None
+
+    # this makes a couple assumptions but I think they are safe
+    assert len(counselor_agent.messages) == len(prev_messages) + 2
+
+    print('previous messages:', len(prev_messages))
+    print('total messages:', len(counselor_agent.messages))
+
+    # return the two new messages
+    return counselor_agent.messages[-2:]
 
 
 def run_suny(question: str, client: OpenAI) -> List[Message]:

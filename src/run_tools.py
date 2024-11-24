@@ -158,6 +158,8 @@ def process_user_input(counselor_agent, suny_agent, user: User | None, chat_fn: 
         if chat_fn is not None:
             chat_fn('assistant').write('Contacting SUNY Agent...')
 
+        print('message for suny agent:', message)
+
         suny_agent.add_message(message)
         suny_response = suny_agent.invoke()
 
@@ -185,6 +187,8 @@ def process_user_input(counselor_agent, suny_agent, user: User | None, chat_fn: 
             message=suny_response.choices[0].message.content,
         )
         suny_agent.add_message(message)
+
+        print('message from suny agent:', message)
 
         if user is not None:
             log_message(
@@ -217,6 +221,8 @@ def process_user_input(counselor_agent, suny_agent, user: User | None, chat_fn: 
         message=counselor_response_str
     )
     counselor_agent.add_message(message)
+
+    print('final response from counselor:', message)
 
     if user is not None:
         # Log the counselor message to the user
