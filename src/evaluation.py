@@ -56,6 +56,8 @@ def run_counselor(
     # patch in messages
     counselor_agent.messages = list(prev_messages)
 
+    print('suny messages before:', len(suny_agent.messages))
+
     # run
     try:
         run_tools.process_user_input(counselor_agent, suny_agent, None, None, question)
@@ -69,6 +71,10 @@ def run_counselor(
 
     print('previous messages:', len(prev_messages))
     print('total messages:', len(counselor_agent.messages))
+
+    print('suny messages after:', len(suny_agent.messages))
+    print('---')
+
 
     # return the two new messages
     return counselor_agent.messages[-2:]
