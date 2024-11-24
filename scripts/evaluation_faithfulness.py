@@ -37,6 +37,8 @@ def main():
     else:
         cache = {}
 
+    print(list(cache.keys()))
+
     user_id = 1
     # ser = User(user_id, username='test', session_id=1)
 
@@ -48,22 +50,27 @@ def main():
     dba.insert_strengths(user_id, theme_scores)
     dba.insert_assessment_analysis(user_id, run_cmd.ASSESSMENT_ANALYSIS)
 
-    suny = lambda x: ev.run_suny(x, client)
+    suny = lambda x: ev.run_suny(x, client, temperature)
 
     questions = [
         'Could you provide information on which SUNY schools have the best economics programs?',
-        'What is the cheapest school to get a computer science degree at?',
-        'Which school should I go to if I want to study piano?',
-        'What is the best school?',              # doesn't invoke tool
-        'What is the best school for nursing?'   # fail with too many tokens
+        # 'What is the cheapest school to get a computer science degree at?',
+        # 'Which school should I go to if I want to study piano?',
+        # 'What is the best school?',              # doesn't invoke tool
+        # 'What is the best school for nursing?'   # fail with too many tokens
     ]
 
     rows = []
 
-    for question in questions:
+    for question_org in questions:
         for idx in range(n_iter):
 
-            messages = suny(question)
+            key = (question_org, idx)
+            messages = cache.get(key)
+
+            if messages is None:
+                messages = suny(question_org)
+                cache[key] = messages
 
             print(messages)
 
@@ -85,6 +92,7 @@ def main():
 
             print('~~~~ ' * 8)
 
+            # TODO: we could cache this too
             def llm(prompt: str) -> str:
                 """Call an LLM."""
                 # TODO: handle errors gracefully
@@ -107,9 +115,15 @@ def main():
 
             print(total_score)
 
-            # TODO: add row
+            row = dict(
+                question=question,
+                idx=idx,
+                answer=answer,
+                score=total_score
+            )
+            rows.append(row)
 
-    # TODO: save xlsx file
+    ev.save_xlsx('faithfulness.xlsx', rows)
 
     ev.save_pickle(cache, suny_cache_file_name)
 

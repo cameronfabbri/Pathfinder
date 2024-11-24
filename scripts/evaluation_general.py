@@ -2,24 +2,18 @@
 General evaluation of conselor agent.
 """
 
-from typing import Any, Dict, List, Optional
 from typing import Any, List, Tuple
 import os
 import json
-import pickle
 
 from openai import OpenAI
 
-from src import agent
-from src import utils
 from src import assessment
-from src import faithfulness
 from src import evaluation as ev
 from src.user import User, UserProfile
 from src.agent import Message
 from src.database import db_access as dba
 from src.database import db_setup as dbs
-
 from src import run_tools
 
 from scripts import run
@@ -100,7 +94,7 @@ def main():
             'Which school has the best economics program?',
             lambda x: True
             # lambda x: (
-            #     'buffalow state college' in x.lower() or
+            #     'buffalo state college' in x.lower() or
             #     'jamestown community college' in x.lower()
             # )
         ),
@@ -150,7 +144,7 @@ def main():
     for row in rows:
         print(row)
 
-    # TODO: save xlsx file
+    ev.save_xlsx('general.xlsx', rows)
 
     ev.save_pickle(cache, counselor_cache_file_name)
 

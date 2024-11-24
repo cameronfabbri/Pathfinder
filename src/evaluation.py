@@ -7,6 +7,7 @@ import os
 import json
 import pickle
 
+import xlsxwriter
 from openai import OpenAI
 
 from src import agent
@@ -80,13 +81,14 @@ def run_counselor(
     return counselor_agent.messages[-2:]
 
 
-def run_suny(question: str, client: OpenAI) -> List[Message]:
+def run_suny(question: str, client: OpenAI, temperature: float) -> List[Message]:
     """
     Functionally run SUNY agent,
     using logic copied from run_tools.process_user_input.
     """
 
     suny_agent = run.initialize_suny_agent(client)
+    suny_agent.temperature = temperature
 
     message_dict = dict(
         phase='reviewing',
@@ -134,3 +136,17 @@ def wrap_cache(func: Callable, cache: Dict):
         cache[x] = res
         return res
     return wrap
+
+
+def save_xlsx(file_path: str, rows: List[Dict]) -> None:
+    """Save records to an excel file."""
+
+    workbook = xlsxwriter.Workbook(file_path)
+    worksheet = workbook.add_worksheet(name='Results')
+
+    worksheet.write_row(0, 0, list(rows[0].keys()))
+    for idx, row in enumerate(rows):
+        worksheet.write_row(idx + 1, 0, list(row.values()))
+
+    workbook.close()
+
