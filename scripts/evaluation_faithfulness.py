@@ -5,7 +5,6 @@ Faithfulness evaluation of SUNY agent.
 from typing import Any, List, Tuple
 import os
 import json
-import pickle
 
 from openai import OpenAI
 
@@ -19,7 +18,6 @@ from src.agent import Message
 from src.database import db_access as dba
 from src.database import db_setup as dbs
 
-from scripts import run
 from scripts import run_cmd
 
 
@@ -71,10 +69,6 @@ def main():
             if messages is None:
                 messages = suny(question_org)
                 cache[key] = messages
-
-            print(messages)
-
-            # TODO: faithfulness evaluation
 
             question, docs, answer = _extract_rag_info(messages)
             print()
