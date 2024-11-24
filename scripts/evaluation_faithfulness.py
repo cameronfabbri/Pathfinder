@@ -107,6 +107,10 @@ def main():
 
             print(total_score)
 
+            # TODO: add row
+
+    # TODO: save xlsx file
+
     ev.save_pickle(cache, suny_cache_file_name)
 
 
