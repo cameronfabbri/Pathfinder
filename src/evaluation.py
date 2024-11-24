@@ -3,25 +3,16 @@ General functions for use in evaluation.
 """
 
 from typing import Any, List, Tuple, Callable, Dict, Optional
-import os
 import json
 import pickle
 
 import xlsxwriter
 from openai import OpenAI
 
-from src import agent
-from src import utils
-from src import assessment
-from src import faithfulness
 from src import run_tools
-# from src.user import User
 from src.agent import Message
-from src.database import db_access as dba
-from src.database import db_setup as dbs
 
 from scripts import run
-from scripts import run_cmd
 
 
 COUNSELOR = 'counselor'
@@ -75,7 +66,6 @@ def run_counselor(
 
     print('suny messages after:', len(suny_agent.messages))
     print('---')
-
 
     # return the two new messages
     return counselor_agent.messages[-2:]
@@ -149,4 +139,3 @@ def save_xlsx(file_path: str, rows: List[Dict]) -> None:
         worksheet.write_row(idx + 1, 0, list(row.values()))
 
     workbook.close()
-
