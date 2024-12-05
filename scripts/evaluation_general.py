@@ -48,15 +48,15 @@ def main():
     else:
         cache = {}
 
-    user_id = 1
+    dbs.create_auth_tables()
+    user_id = dbs.initialize_test_user('test')
 
-    dbs.initialize_db()
     theme_scores = run_cmd.load_assessment_responses(assessment.answers)
     dba.insert_user_responses(user_id, assessment.answers)
     dba.insert_strengths(user_id, theme_scores)
     dba.insert_assessment_analysis(user_id, run_cmd.ASSESSMENT_ANALYSIS)
 
-    user = User(user_id, username='test', session_id=1)
+    # user = User(user_id, username='test', session_id=1)
     user_profile = UserProfile(user_id)
 
     if os.path.isfile(counselor_messages_file_name):
@@ -78,18 +78,23 @@ def main():
     # to perform RAG by specifying a school when there
     # is no reason to, and then no documents are found.
     # So the counselor agent asks the SUNY agent again.
+    # (NOTE: this problem was caused by leftover messages
+    # in the SUNY agent since it was being cached between evals.
+    # I removed the caching but it still may be a problem
+    # in real use cases.)
 
     # But the counselor agent also asks the SUNY agent again
     # even when this doesn't happen, so I'm not sure
-    # if those two issues are related.
+    # if those two issues are related. (NOTE: they probably aren't)
 
     # There is also the case where the counselor responds
     # to the user but tells them to wait while
     # they query the SUNY agent.
 
     questions_and_evals = [
-        # this particular question consistently makes up schools for the
-        # rag queries
+        # this particular question was really good at demonstrating the problem
+        # with school names being erroneously aded to RAG tool calls (from previous
+        # SUNY agent messages)
         (
             'Which school has the best economics program?',
             lambda x: True

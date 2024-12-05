@@ -37,12 +37,11 @@ def main():
 
     print(list(cache.keys()))
 
-    user_id = 1
-    # ser = User(user_id, username='test', session_id=1)
-
     # set up user
 
-    dbs.initialize_db()
+    dbs.create_auth_tables()
+    user_id = dbs.initialize_test_user('test')
+
     theme_scores = run_cmd.load_assessment_responses(assessment.answers)
     dba.insert_user_responses(user_id, assessment.answers)
     dba.insert_strengths(user_id, theme_scores)
