@@ -222,7 +222,7 @@ def process_user_input(counselor_agent, suny_agent, user: User | None, chat_fn: 
     )
     counselor_agent.add_message(message)
 
-    print('final response from counselor:', message)
+    # print('final response from counselor:', message)
 
     if user is not None:
         # Log the counselor message to the user
