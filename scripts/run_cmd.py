@@ -105,10 +105,9 @@ def main():
             user_prompt = input('> ')
 
         rt.process_user_input(counselor_agent, suny_agent, user, None, user_prompt)
-        message = counselor_agent.messages[-1]
-        m = utils.extract_content_from_message(message.message)
-        print('~~~~ ~~~~ ~~~~')
-        print(message.sender, '->', message.recipient)
+        m = utils.extract_content_from_message(
+            counselor_agent.messages[-1].message
+        )
         print(m, '\n')
 
 

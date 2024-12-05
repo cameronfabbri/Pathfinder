@@ -35,8 +35,6 @@ def main():
     else:
         cache = {}
 
-    print(list(cache.keys()))
-
     # set up user
 
     dbs.create_auth_tables()
