@@ -50,10 +50,6 @@ def initialize_st_vars():
         st.session_state.counselor_agent = None
     if 'suny_agent' not in st.session_state:
         st.session_state.suny_agent = None
-    #if 'counselor_user_messages' not in st.session_state:
-    #    st.session_state.counselor_user_messages = []
-    #if 'counselor_suny_messages' not in st.session_state:
-    #    st.session_state.counselor_suny_messages = []
     if 'counselor_persona' not in st.session_state:
         st.session_state.counselor_persona = None
     if 'is_new_session' not in st.session_state:
@@ -118,6 +114,8 @@ def main():
     Main function to run the Streamlit app
     `streamlit run scripts/run.py`
     """
+    from src.database import db_setup as dbs
+    dbs.create_auth_tables()
 
     st.set_page_config(page_title="SUNY Counselor Chat", page_icon="💬", layout="wide")
     initialize_st_vars()
@@ -159,12 +157,12 @@ def main():
         # TODO - should we summarize the message history so we aren't using up tokens?
         if st.session_state.is_new_session:
             rt.load_message_history()
-            print('COUNSELOR AGENT')
-            [print(m, '\n') for m in st.session_state.counselor_agent.messages]
-            print('\n=====================================\n')
-            print('SUNY AGENT')
-            [print(m, '\n') for m in st.session_state.suny_agent.messages]
-            print('\n=====================================\n')
+            #print('COUNSELOR AGENT')
+            #[print(m, '\n') for m in st.session_state.counselor_agent.messages]
+            #print('\n=====================================\n')
+            #print('SUNY AGENT')
+            #[print(m, '\n') for m in st.session_state.suny_agent.messages]
+            #print('\n=====================================\n')
 
             st.session_state.is_new_session = False
 

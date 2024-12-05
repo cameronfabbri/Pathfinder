@@ -37,7 +37,6 @@ def login(username: str, password: str) -> User:
     Returns:
         User: The authenticated user object or None if authentication fails.
     """
-    dbs.initialize_db()
 
     try:
         conn = dba.get_db_connection()
@@ -82,7 +81,6 @@ def signup(first_name: str, last_name: str, age: int, gender: str, username: str
     Returns:
         User: The newly created user object or None if signup fails.
     """
-    dbs.initialize_db()
 
     try:
         conn = dba.get_db_connection()
@@ -106,10 +104,13 @@ def signup(first_name: str, last_name: str, age: int, gender: str, username: str
         result = cursor.fetchone()
         user_id, session_id = result
 
+        # Create the user databases
+        dbs.initialize_user_dbs(user_id)
+
         # Insert default student information
-        user_vars = '(user_id, first_name, last_name, age, gender)'
-        user_vals = (user_id, first_name, last_name, age, gender)
-        cursor.execute(f"INSERT INTO students {user_vars} VALUES (?, ?, ?, ?, ?)", user_vals)
+        user_vars = '(first_name, last_name, age, gender)'
+        user_vals = (first_name, last_name, age, gender)
+        cursor.execute(f"INSERT INTO students {user_vars} VALUES (?, ?, ?, ?)", user_vals)
         conn.commit()
         logging.info(f"User created successfully: {username}")
 

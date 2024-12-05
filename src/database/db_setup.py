@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 import src.assessment as assessment
 
-from src.database.db_access import get_db_connection
+from src.database.db_access import get_db_connection, get_user_db_connection
 
 
 @dataclass
@@ -26,9 +26,9 @@ class Document:
     processed: bool
 
 
-def create_user_tables():
+def create_auth_tables():
     """
-    Creates the tables for the users.
+    Creates the tables for authentication.
     """
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -43,10 +43,19 @@ def create_user_tables():
         )
     ''')
 
+    conn.commit()
+
+
+def create_user_tables(user_id: int):
+    """
+    Creates the tables for the users.
+    """
+    conn = get_user_db_connection(user_id)
+    cursor = conn.cursor()
+
     # Create students table for user info
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS students (
-            user_id INTEGER NOT NULL,
             first_name TEXT,
             last_name TEXT,
             email TEXT,
@@ -69,8 +78,7 @@ def create_user_tables():
             other_majors TEXT,
             top_school TEXT,
             safety_school TEXT,
-            other_schools TEXT,
-            FOREIGN KEY (user_id) REFERENCES users (id)
+            other_schools TEXT
         );
     ''')
 
@@ -83,20 +91,18 @@ def create_user_tables():
             filepath TEXT NOT NULL,
             upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             extracted_text TEXT DEFAULT '',
-            processed BOOLEAN DEFAULT FALSE,
-            user_id INTEGER NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users(id)
+            processed BOOLEAN DEFAULT FALSE
         );
     ''')
 
     conn.commit()
 
 
-def create_chat_tables():
+def create_chat_tables(user_id: int):
     """
     Creates tables for chat history, counselor-SUNY interactions, and chat summaries.
     """
-    conn = get_db_connection()
+    conn = get_user_db_connection(user_id)
     cursor = conn.cursor()
 
     # Table to store user-counselor-suny interactions
@@ -104,7 +110,6 @@ def create_chat_tables():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS conversation_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
             session_id INTEGER NOT NULL,
             role TEXT NOT NULL, -- user, assistant, or tool
             sender TEXT NOT NULL, -- student, counselor, or suny
@@ -112,8 +117,7 @@ def create_chat_tables():
             message TEXT NOT NULL,
             agent_name TEXT NOT NULL, -- counselor, or suny
             tool_call TEXT,
-            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id)
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
 
@@ -121,21 +125,19 @@ def create_chat_tables():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS chat_summary (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
             summary TEXT NOT NULL,
-            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id)
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
 
     conn.commit()
 
 
-def create_assessment_tables():
+def create_assessment_tables(user_id: int):
     """
     Creates the tables for the assessment.
     """
-    conn = get_db_connection()
+    conn = get_user_db_connection(user_id)
     cursor = conn.cursor()
 
     # Table to store the four key domains
@@ -170,10 +172,8 @@ def create_assessment_tables():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS user_responses (
             response_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
             question_id INTEGER NOT NULL,
             response INTEGER CHECK(response BETWEEN 1 AND 5),
-            FOREIGN KEY (user_id) REFERENCES users(user_id),
             FOREIGN KEY (question_id) REFERENCES questions(question_id)
         );
     ''')
@@ -182,11 +182,9 @@ def create_assessment_tables():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS theme_results (
             result_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
             theme_id INTEGER NOT NULL,
             total_score INTEGER CHECK(total_score BETWEEN 3 AND 15),
             strength_level TEXT,
-            FOREIGN KEY (user_id) REFERENCES users(user_id),
             FOREIGN KEY (theme_id) REFERENCES themes(theme_id)
         );
     ''')
@@ -195,43 +193,9 @@ def create_assessment_tables():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS assessment_analysis (
             analysis_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            analysis TEXT NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users(user_id)
+            analysis TEXT NOT NULL
         );
     ''')
-    conn.commit()
-
-
-def initialize_db():
-    """
-    Initializes the database with the necessary tables and data.
-    """
-    create_user_tables()
-    create_chat_tables()
-    create_assessment_tables()
-
-    # TODO - remove after testing
-    from src.auth import hash_password
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM users WHERE username = ?", ("test",))
-    if cursor.fetchone()[0] == 0:
-        hashed_password = hash_password("test")
-
-        cursor.execute(
-            "INSERT INTO users (username, session_id, hashed_password) VALUES (?, ?, ?)",
-            ("test", -1, hashed_password)
-        )
-        user_vars = '(user_id, first_name, last_name, age, gender, high_school, high_school_grad_year, address, city, state, zip_code)'
-        user_vals = (1, 'Cameron', 'Fabbri', 16, 'Male', 'Northport High School', 2024, '123 Main St', 'Northport', 'New York', 11768)
-        cursor.execute(f"INSERT INTO students {user_vars} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", user_vals)
-        conn.commit()
-    # End of TODO
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
 
     # Check if domains table is empty
     cursor.execute("SELECT COUNT(*) FROM domains")
@@ -242,3 +206,53 @@ def initialize_db():
         print("Assessment data initialized successfully.")
     else:
         print("Assessment data already exists. Skipping initialization.")
+
+    conn.commit()
+
+
+def initialize_user_dbs(user_id: int):
+    """
+    Initializes the user databases.
+    """
+    create_user_tables(user_id)
+    create_chat_tables(user_id)
+    create_assessment_tables(user_id)
+
+
+def initialize_test_user(username: str):
+    """
+    Initializes the database with the necessary tables and data.
+    """
+
+    # TODO - remove after testing
+    from src.auth import hash_password
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM users WHERE username = ?", (username,))
+
+    if cursor.fetchone()[0] == 0:
+        hashed_password = hash_password('test_password')
+
+        cursor.execute(
+            "INSERT INTO users (username, session_id, hashed_password) VALUES (?, ?, ?)",
+            (username, -1, hashed_password)
+        )
+
+    conn.commit()
+
+    cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+    user_id = cursor.fetchone()[0]
+
+    initialize_user_dbs(user_id)
+
+    conn2 = get_user_db_connection(user_id)
+    cursor2 = conn2.cursor()
+    cursor2.execute("SELECT COUNT(*) FROM students")
+    if cursor2.fetchone()[0] == 0:
+        user_vars = '(first_name, last_name, age, gender, high_school, high_school_grad_year, address, city, state, zip_code)'
+        user_vals = ('Cameron', 'Fabbri', 16, 'Male', 'Northport High School', 2024, '123 Main St', 'Northport', 'New York', 11768)
+        cursor2.execute(f"INSERT INTO students {user_vars} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", user_vals)
+        conn2.commit()
+
+    return user_id
