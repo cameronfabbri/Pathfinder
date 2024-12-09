@@ -86,7 +86,6 @@ def initialize_counselor_agent(client: OpenAI, student_md_profile: str):
     )
 
 
-@lru_cache(maxsize=None)
 def initialize_suny_agent(client: OpenAI):
     suny_system_prompt = prompts.SUNY_SYSTEM_PROMPT + '\n'
     for name in constants.UNIVERSITY_NAMES:
