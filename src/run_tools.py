@@ -107,7 +107,7 @@ def parse_counselor_response(response):
     return recipient, counselor_message
 
 
-def process_user_input(counselor_agent, suny_agent, user: User, chat_fn: Callable | None, prompt: str):
+def process_user_input(counselor_agent, suny_agent, user: User | None, chat_fn: Callable | None, prompt: str):
     """
     Process the user input and send it to the counselor agent
     """
@@ -119,13 +119,14 @@ def process_user_input(counselor_agent, suny_agent, user: User, chat_fn: Callabl
         message=prompt
     )
 
-    # Log user input
-    log_message(
-        user.user_id,
-        user.session_id,
-        message=message,
-        agent_name='counselor'
-    )
+    if user is not None:
+        # Log user input
+        log_message(
+            user.user_id,
+            user.session_id,
+            message=message,
+            agent_name='counselor'
+        )
     counselor_agent.add_message(message)
     counselor_response = counselor_agent.invoke()
 
@@ -145,16 +146,19 @@ def process_user_input(counselor_agent, suny_agent, user: User, chat_fn: Callabl
             message=counselor_response_str
         )
 
-        # Log the counselor message to the suny agent
-        log_message(
-            user.user_id,
-            user.session_id,
-            message=message,
-            agent_name='suny'
-            )
+        if user is not None:
+            # Log the counselor message to the suny agent
+            log_message(
+                user.user_id,
+                user.session_id,
+                message=message,
+                agent_name='suny'
+                )
 
         if chat_fn is not None:
             chat_fn('assistant').write('Contacting SUNY Agent...')
+
+        # print('message for suny agent:', message)
 
         suny_agent.add_message(message)
         suny_response = suny_agent.invoke()
@@ -164,13 +168,14 @@ def process_user_input(counselor_agent, suny_agent, user: User, chat_fn: Callabl
                 suny_response
             )
 
-            for tcm in tc_messages:
-                log_message(
-                    user.user_id,
-                    user.session_id,
-                    tcm,
-                    'suny'
-                )
+            if user is not None:
+                for tcm in tc_messages:
+                    log_message(
+                        user.user_id,
+                        user.session_id,
+                        tcm,
+                        'suny'
+                    )
 
         #suny_response_str = utils.format_for_json(suny_response.choices[0].message.content)
         #if stm is not None:
@@ -183,12 +188,15 @@ def process_user_input(counselor_agent, suny_agent, user: User, chat_fn: Callabl
         )
         suny_agent.add_message(message)
 
-        log_message(
-            user.user_id,
-            user.session_id,
-            message=message,
-            agent_name='suny'
-        )
+        # print('message from suny agent:', message)
+
+        if user is not None:
+            log_message(
+                user.user_id,
+                user.session_id,
+                message=message,
+                agent_name='suny'
+            )
 
         # Add the suny response to the counselor agent and invoke it so it rewords it
         counselor_agent.add_message(message)
@@ -214,13 +222,16 @@ def process_user_input(counselor_agent, suny_agent, user: User, chat_fn: Callabl
     )
     counselor_agent.add_message(message)
 
-    # Log the counselor message to the user
-    log_message(
-        user.user_id,
-        user.session_id,
-        message=message,
-        agent_name='counselor'
-    )
+    # print('final response from counselor:', message)
+
+    if user is not None:
+        # Log the counselor message to the user
+        log_message(
+            user.user_id,
+            user.session_id,
+            message=message,
+            agent_name='counselor'
+        )
 
 
 def summarize_chat():
