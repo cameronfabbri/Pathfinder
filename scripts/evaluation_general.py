@@ -150,8 +150,10 @@ def main():
         print(row)
 
     ev.save_xlsx('general.xlsx', rows)
+    print('Saved results to general.xlsx')
 
     ev.save_pickle(cache, counselor_cache_file_name)
+    print('Saved cache to counselor_cache.pkl')
 
 
 def evaluate(

@@ -115,8 +115,10 @@ def main():
             rows.append(row)
 
     ev.save_xlsx('faithfulness.xlsx', rows)
+    print('Saved results to faithfulness.xlsx')
 
     ev.save_pickle(cache, suny_cache_file_name)
+    print('Saved cache to suny_cache.pkl')
 
 
 def _extract_rag_info(messages: List[Message]) -> Tuple[str, str, str]:
