@@ -1,3 +1,7 @@
+"""
+Constants for the application.
+"""
+# Cameron Fabbri
 import os
 from functools import lru_cache
 from src import personas

@@ -1,5 +1,5 @@
 """
-
+File holding the database access functions.
 """
 # Cameron Fabbri
 import logging

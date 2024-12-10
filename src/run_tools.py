@@ -1,4 +1,5 @@
 """
+Tools for running the application.
 """
 # Cameron Fabbri
 import os
@@ -7,21 +8,21 @@ import sys
 import json
 import time
 import logging
+from typing import Callable
 
 import streamlit as st
 
-from openai import OpenAI
 from icecream import ic
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
+from src.user import User
+from src.agent import Message, Agent
+from src.database import db_access as dba
+
 from src import constants
 from src import prompts, utils
-from src.database import db_access as dba
-from src.agent import Message
-from src.user import User
-from typing import Callable
 
 opj = os.path.join
 
@@ -48,8 +49,10 @@ def type_text(text, char_speed=0.03, sentence_pause=0.5):
     placeholder.markdown(full_text)
 
 
-def build_counselor_prompt(student_md_profile: str):
-    """ """
+def build_counselor_prompt(student_md_profile: str) -> str:
+    """
+    Builds the counselor system prompt using the student's info and counselor persona.
+    """
     counselor_system_prompt = prompts.COUNSELOR_SYSTEM_PROMPT
     counselor_system_prompt = counselor_system_prompt.replace('{{persona}}', constants.PERSONA_PROMPT)
     counselor_system_prompt = counselor_system_prompt.replace('{{student_md_profile}}', student_md_profile)
@@ -82,15 +85,17 @@ def load_message_history() -> None:
             st.session_state.suny_agent.add_message(m)
 
 
-def log_message(user_id, session_id, message, agent_name):
+def log_message(user_id: int, session_id: int, message: Message, agent_name: str) -> None:
     """
-    Store a message in the conversation history.
+    Logs a message to the database.
 
     Args:
         user_id (int): The ID of the user.
         session_id (int): The ID of the session.
         message (Message): The message to log.
         agent_name (str): The name of the agent that sent the message.
+    Returns:
+        None
     """
     tool_call = None
     if message.tool_call is not None:
@@ -105,20 +110,24 @@ def log_message(user_id, session_id, message, agent_name):
     conn.commit()
 
 
-def parse_counselor_response(response):
-
-    counselor_response_str = response.choices[0].message.content
-    counselor_response_json = utils.parse_json(counselor_response_str)
-
-    recipient = counselor_response_json.get("recipient")
-    counselor_message = counselor_response_json.get("message")
-
-    return recipient, counselor_message
-
-
-def process_user_input(counselor_agent, suny_agent, user: User | None, chat_fn: Callable | None, prompt: str):
+def process_user_input(
+        counselor_agent: Agent,
+        suny_agent: Agent,
+        user: User | None,
+        chat_fn: Callable | None,
+        prompt: str
+) -> None:
     """
     Process the user input and send it to the counselor agent
+
+    Args:
+        counselor_agent (Agent): The counselor agent
+        suny_agent (Agent): The suny agent
+        user (User): The user
+        chat_fn (Callable): The chat function
+        prompt (str): The prompt from the user
+    Returns:
+        None
     """
 
     message = Message(
@@ -143,12 +152,7 @@ def process_user_input(counselor_agent, suny_agent, user: User | None, chat_fn: 
     counselor_response_json = utils.parse_json(counselor_response_str)
 
     recipient = counselor_response_json.get("recipient")
-    #counselor_message = counselor_response_json.get("message")
     phase = counselor_response_json.get("phase")
-
-    #print('user_prompt:', prompt, '\n')
-    #print('counselor_response_str:', counselor_response_str, '\n')
-    #input('\nPress Enter to continue...\n')
 
     if recipient.lower() == "suny":
 
@@ -171,9 +175,6 @@ def process_user_input(counselor_agent, suny_agent, user: User | None, chat_fn: 
         if chat_fn is not None:
             chat_fn('assistant').write('Contacting SUNY Agent...')
 
-        #print('message for suny agent:', message)
-        #input('\nPress Enter to continue...\n')
-
         suny_agent.add_message(message)
         suny_response = suny_agent.invoke()
 
@@ -191,21 +192,13 @@ def process_user_input(counselor_agent, suny_agent, user: User | None, chat_fn: 
                         'suny'
                     )
 
-        #suny_response_str = utils.format_for_json(suny_response.choices[0].message.content)
-        #if stm is not None:
-        #    stm.session_state.counselor_suny_messages.append({"role": "suny", "content": suny_response_str})
         message = Message(
             sender="suny",
             recipient="counselor",
             role="assistant",
             message=suny_response.choices[0].message.content,
         )
-
-        #print('\nmessage from suny agent:', message, '\n')
-        #input('\nPress Enter to continue...\n')
         suny_agent.add_message(message)
-
-        # print('message from suny agent:', message)
 
         if user is not None:
             log_message(
@@ -215,48 +208,11 @@ def process_user_input(counselor_agent, suny_agent, user: User | None, chat_fn: 
                 agent_name='suny'
             )
 
-        # Add the suny response to the counselor agent and invoke it so it rewords it
-        #counselor_agent.add_message(message)
-        #new_message = Message(
-        #    sender="counselor",
-        #    recipient="student",
-        #    role="assistant",
-        #    message=suny_response.choices[0].message.content
-        #)
-        #counselor_agent.add_message(new_message)
-
         counselor_response_str = json.dumps({
-            'phase': 'reviewing',
+            'phase': phase,
             'recipient': 'student',
             'message': suny_response.choices[0].message.content
         })
-        #print('COUNSELOR RESPONSE STR')
-        #print(counselor_response_str, '\n')
-
-        #counselor_response = counselor_agent.invoke()
-        #counselor_response_str = counselor_response.choices[0].message.content
-
-        #print('COUNSELOR AGENT MESSAGES')
-        #print('--------------------------------')
-        #counselor_agent.print_messages(verbose=True)
-        #print('--------------------------------\n')
-        #print('COUNSELOR RESPONSE STR')
-        #print(counselor_response_str)
-        #print('--------------------------------\n')
-        #input('\nPress Enter to continue...\n')
-
-
-        #counselor_response_json = utils.parse_json(counselor_response_str)
-        #counselor_message = counselor_response_json.get("message")
-
-        # The response from the suny agent is added to the list of messages for
-        # the counselor agent, and then we invoke the counselor agent so it
-        # rephrases the information from the suny agent. We then want to replace
-        # the information from the suny agent with the response from the
-        # counselor agent, which is why we delete the last message.
-        #counselor_agent.delete_last_message()
-
-    #print('counselor_response_str:', counselor_response_str)
 
     message = Message(
         sender="counselor",
@@ -265,11 +221,6 @@ def process_user_input(counselor_agent, suny_agent, user: User | None, chat_fn: 
         message=counselor_response_str
     )
     counselor_agent.add_message(message)
-    #print('COUNSELOR AGENT MESSAGES')
-    #counselor_agent.print_messages()
-    #print('--------------------------------')
-
-    # print('final response from counselor:', message)
 
     if user is not None:
         # Log the counselor message to the user
@@ -294,7 +245,6 @@ def summarize_chat():
     summary = None
 
     # Only summarize the chat if the counselor agent has received user messages
-    #num_user_messages = len([msg for msg in st.session_state.counselor_user_messages if msg['role'] == 'user'])
     num_user_messages = len([x for x in st.session_state.counselor_agent.messages if x.role == 'user'])
     if num_user_messages > 0:
         message = Message(
@@ -308,20 +258,13 @@ def summarize_chat():
         st.session_state.counselor_agent.delete_last_message()
         summary = response.choices[0].message.content
         summary = utils.parse_json(summary)['message']
-
-        #print("SUMMARY")
-        #print(summary)
-        #print('\n')
-        #print('\n------------------------MESSAGES----------------------------------\n')
-        #[print(x) for x in st.session_state.counselor_agent.messages]
-        #print('\n------------------------------------------------------------------\n')
     else:
         print("No summary to write")
 
     return summary
 
 
-def write_summary_to_db(summary):
+def write_summary_to_db(summary) -> None:
     """
     Write the summary to the database
 
@@ -339,8 +282,10 @@ def write_summary_to_db(summary):
     print('Result:', res)
 
 
-def logout():
-
+def logout() -> None:
+    """
+    Logout the user and clear the session state
+    """
     summary = summarize_chat()
 
     if summary:

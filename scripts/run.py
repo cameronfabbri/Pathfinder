@@ -24,6 +24,7 @@ from src import tools
 from src import constants
 from src import run_tools as rt
 from src import interfaces as itf
+from src.user import UserProfile
 from src.database import db_setup as dbs
 from src.database import db_access as dba
 
@@ -32,7 +33,7 @@ MODEL = 'gpt-4o'
 #MODEL = 'gpt-4o-2024-08-06'
 
 
-def initialize_st_vars():
+def initialize_st_vars() -> None:
     """
     Initialize session state variables if they don't exist
     """
@@ -55,10 +56,10 @@ def initialize_st_vars():
         st.session_state.user_profile = None
 
 
-def initialize_counselor_agent(client: OpenAI, student_md_profile: str):
-
-    #counselor_system_prompt = counselor_system_prompt.replace('{{persona}}', constants.PERSONA_PROMPT)
-    #counselor_system_prompt = counselor_system_prompt.replace('{{student_md_profile}}', student_md_profile)
+def initialize_counselor_agent(client: OpenAI, student_md_profile: str) -> agent.Agent:
+    """
+    Initialize the counselor agent
+    """
     counselor_system_prompt = rt.build_counselor_prompt(student_md_profile)
 
     return agent.Agent(
@@ -119,7 +120,6 @@ def main():
     if not check_assessment_completed(st.session_state.user.user_id):
         itf.assessment_page()
     else:
-        from src.user import UserProfile
         st.session_state.user_profile = UserProfile(st.session_state.user.user_id)
         col1, col2 = st.columns([6, 1])
         with col2:
@@ -142,16 +142,10 @@ def main():
         # TODO - should we summarize the message history so we aren't using up tokens?
         if st.session_state.is_new_session:
             rt.load_message_history()
-            #print('COUNSELOR AGENT')
-            #[print(m, '\n') for m in st.session_state.counselor_agent.messages]
-            #print('\n=====================================\n')
-            #print('SUNY AGENT')
-            #[print(m, '\n') for m in st.session_state.suny_agent.messages]
-            #print('\n=====================================\n')
-
             st.session_state.is_new_session = False
 
         itf.main_chat_interface()
+
 
 if __name__ == "__main__":
     main()

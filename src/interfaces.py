@@ -1,10 +1,12 @@
 """
+File holding the main Streamlit interface.
 """
+# Cameron Fabbri
 import os
 import sys
+import json
 import pickle
 import streamlit_chat
-
 import streamlit as st
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -12,11 +14,12 @@ sys.path.insert(0, project_root)
 
 from icecream import ic
 
-from src import agent, auth, prompts, run_tools as rt, utils
+from src.agent import Message
+from src.user import UserProfile
+from src.assessment import answers
 from src.database import db_access as dba
 from src.constants import SYSTEM_DATA_DIR
-from src.assessment import answers
-from src.user import UserProfile
+from src import agent, auth, prompts, run_tools as rt, utils
 
 opj = os.path.join
 
@@ -24,7 +27,7 @@ opj = os.path.join
 DEBUG = False
 
 
-def move_focus():
+def move_focus() -> None:
     """
     Move the focus to the chat input area.
     """
@@ -39,7 +42,8 @@ def move_focus():
         """,
     )
 
-def place_header():
+
+def place_header() -> None:
     """
     Place the header at the top of the page with no extra gap.
     """
@@ -73,7 +77,7 @@ def place_header():
 
 
 # TODO: pass in session state as a parameter
-def main_chat_interface():
+def main_chat_interface() -> None:
     """
     The main chat interface.
     """
@@ -89,8 +93,6 @@ def main_chat_interface():
     )
 
     # Initialize the conversation if it's empty
-    from src.agent import Message
-    import json
     if len(st.session_state.counselor_agent.messages) == 1:
         first_message_content = json.dumps({
             'phase': 'introductory',
