@@ -90,7 +90,7 @@ def signup(first_name: str, last_name: str, age: int, gender: str, username: str
         cursor.execute("SELECT id FROM users WHERE username=?", (username,))
         if cursor.fetchone():
             logging.warning(f"Username already exists: {username}")
-            return None
+            return -1
 
         hashed_password = hash_password(password)
 
@@ -105,17 +105,20 @@ def signup(first_name: str, last_name: str, age: int, gender: str, username: str
         user_id, session_id = result
 
         # Create the user databases
+        print(f'Initializing user databases for {username} with user_id {user_id}')
         dbs.initialize_user_dbs(user_id)
+        print('Done')
 
         # Insert default student information
+        conn2 = dba.get_user_db_connection(user_id)
+        cursor2 = conn2.cursor()
         user_vars = '(first_name, last_name, age, gender)'
         user_vals = (first_name, last_name, age, gender)
-        cursor.execute(f"INSERT INTO students {user_vars} VALUES (?, ?, ?, ?)", user_vals)
-        conn.commit()
+        cursor2.execute(f"INSERT INTO students {user_vars} VALUES (?, ?, ?, ?)", user_vals)
+        conn2.commit()
         logging.info(f"User created successfully: {username}")
 
         return User(user_id, username, session_id)
-
     except sqlite3.Error as e:
         logging.error(f"Database error during signup for user {username}: {e}")
     except Exception as e:

@@ -16,11 +16,12 @@ from icecream import ic
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
+from src import constants
 from src import prompts, utils
 from src.database import db_access as dba
 from src.agent import Message
 from src.user import User
-from typing import Callable, Optional
+from typing import Callable
 
 opj = os.path.join
 
@@ -45,6 +46,14 @@ def type_text(text, char_speed=0.03, sentence_pause=0.5):
             time.sleep(sentence_pause)
 
     placeholder.markdown(full_text)
+
+
+def build_counselor_prompt(student_md_profile: str):
+    """ """
+    counselor_system_prompt = prompts.COUNSELOR_SYSTEM_PROMPT
+    counselor_system_prompt = counselor_system_prompt.replace('{{persona}}', constants.PERSONA_PROMPT)
+    counselor_system_prompt = counselor_system_prompt.replace('{{student_md_profile}}', student_md_profile)
+    return counselor_system_prompt
 
 
 # TODO - pass session state to this function
@@ -135,7 +144,11 @@ def process_user_input(counselor_agent, suny_agent, user: User | None, chat_fn: 
 
     recipient = counselor_response_json.get("recipient")
     #counselor_message = counselor_response_json.get("message")
-    #phase = counselor_response_json.get("phase")
+    phase = counselor_response_json.get("phase")
+
+    #print('user_prompt:', prompt, '\n')
+    #print('counselor_response_str:', counselor_response_str, '\n')
+    #input('\nPress Enter to continue...\n')
 
     if recipient.lower() == "suny":
 
@@ -158,7 +171,8 @@ def process_user_input(counselor_agent, suny_agent, user: User | None, chat_fn: 
         if chat_fn is not None:
             chat_fn('assistant').write('Contacting SUNY Agent...')
 
-        # print('message for suny agent:', message)
+        #print('message for suny agent:', message)
+        #input('\nPress Enter to continue...\n')
 
         suny_agent.add_message(message)
         suny_response = suny_agent.invoke()
@@ -186,6 +200,9 @@ def process_user_input(counselor_agent, suny_agent, user: User | None, chat_fn: 
             role="assistant",
             message=suny_response.choices[0].message.content,
         )
+
+        #print('\nmessage from suny agent:', message, '\n')
+        #input('\nPress Enter to continue...\n')
         suny_agent.add_message(message)
 
         # print('message from suny agent:', message)
@@ -199,11 +216,36 @@ def process_user_input(counselor_agent, suny_agent, user: User | None, chat_fn: 
             )
 
         # Add the suny response to the counselor agent and invoke it so it rewords it
-        counselor_agent.add_message(message)
+        #counselor_agent.add_message(message)
+        #new_message = Message(
+        #    sender="counselor",
+        #    recipient="student",
+        #    role="assistant",
+        #    message=suny_response.choices[0].message.content
+        #)
+        #counselor_agent.add_message(new_message)
 
-        counselor_response = counselor_agent.invoke()
+        counselor_response_str = json.dumps({
+            'phase': 'reviewing',
+            'recipient': 'student',
+            'message': suny_response.choices[0].message.content
+        })
+        #print('COUNSELOR RESPONSE STR')
+        #print(counselor_response_str, '\n')
 
-        counselor_response_str = counselor_response.choices[0].message.content
+        #counselor_response = counselor_agent.invoke()
+        #counselor_response_str = counselor_response.choices[0].message.content
+
+        #print('COUNSELOR AGENT MESSAGES')
+        #print('--------------------------------')
+        #counselor_agent.print_messages(verbose=True)
+        #print('--------------------------------\n')
+        #print('COUNSELOR RESPONSE STR')
+        #print(counselor_response_str)
+        #print('--------------------------------\n')
+        #input('\nPress Enter to continue...\n')
+
+
         #counselor_response_json = utils.parse_json(counselor_response_str)
         #counselor_message = counselor_response_json.get("message")
 
@@ -212,7 +254,9 @@ def process_user_input(counselor_agent, suny_agent, user: User | None, chat_fn: 
         # rephrases the information from the suny agent. We then want to replace
         # the information from the suny agent with the response from the
         # counselor agent, which is why we delete the last message.
-        counselor_agent.delete_last_message()
+        #counselor_agent.delete_last_message()
+
+    #print('counselor_response_str:', counselor_response_str)
 
     message = Message(
         sender="counselor",
@@ -221,6 +265,9 @@ def process_user_input(counselor_agent, suny_agent, user: User | None, chat_fn: 
         message=counselor_response_str
     )
     counselor_agent.add_message(message)
+    #print('COUNSELOR AGENT MESSAGES')
+    #counselor_agent.print_messages()
+    #print('--------------------------------')
 
     # print('final response from counselor:', message)
 

@@ -24,22 +24,19 @@ from src import tools
 from src import constants
 from src import run_tools as rt
 from src import interfaces as itf
-from src import pdf_tools as pdft
+from src.database import db_setup as dbs
 from src.database import db_access as dba
 
 MODEL = 'gpt-4o'
 #MODEL = 'gpt-4o-mini'
 #MODEL = 'gpt-4o-2024-08-06'
 
-FIRST_LOGIN = 0
-ASSESSMENT_COMPLETE = 1
-
 
 def initialize_st_vars():
     """
     Initialize session state variables if they don't exist
     """
-    # TODO - remove after testing
+
     st.session_state.counselor_persona = 'David - The Mentor'
 
     if 'messages_since_update' not in st.session_state:
@@ -60,21 +57,9 @@ def initialize_st_vars():
 
 def initialize_counselor_agent(client: OpenAI, student_md_profile: str):
 
-    counselor_system_prompt = prompts.COUNSELOR_SYSTEM_PROMPT
-
-    persona_prompt = personas.DAVID + '\n\n' + personas.DAVID_TRAITS
-    #if st.session_state.counselor_persona == 'David - The Mentor':
-    #    persona_prompt = personas.DAVID + '\n\n' + personas.DAVID_TRAITS
-    #elif st.session_state.counselor_persona == 'Emma - The Strategist':
-    #    persona_prompt = personas.EMMA + '\n\n' + personas.EMMA_TRAITS
-    #elif st.session_state.counselor_persona == 'Liam - The Explorer':
-    #    persona_prompt = personas.LIAM + '\n\n' + personas.LIAM_TRAITS
-
-    # TODO - make a function build_counselor_prompt()
-    counselor_system_prompt = counselor_system_prompt.replace('{{persona}}', persona_prompt)
-    counselor_system_prompt = counselor_system_prompt.replace('{{student_md_profile}}', student_md_profile)
-
-    #ic(counselor_system_prompt)
+    #counselor_system_prompt = counselor_system_prompt.replace('{{persona}}', constants.PERSONA_PROMPT)
+    #counselor_system_prompt = counselor_system_prompt.replace('{{student_md_profile}}', student_md_profile)
+    counselor_system_prompt = rt.build_counselor_prompt(student_md_profile)
 
     return agent.Agent(
         client,
@@ -114,7 +99,8 @@ def main():
     Main function to run the Streamlit app
     `streamlit run scripts/run.py`
     """
-    from src.database import db_setup as dbs
+
+    os.makedirs(constants.SQL_DB_DIR, exist_ok=True)
     dbs.create_auth_tables()
 
     st.set_page_config(page_title="SUNY Counselor Chat", page_icon="💬", layout="wide")
@@ -130,7 +116,6 @@ def main():
     st.sidebar.success(f"Logged in as: {st.session_state.user.username}")
 
     # If the assessment isn't finished
-    #if not st.session_state.user_profile.top_strengths:
     if not check_assessment_completed(st.session_state.user.user_id):
         itf.assessment_page()
     else:

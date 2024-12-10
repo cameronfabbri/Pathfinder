@@ -373,4 +373,6 @@ def extract_content_from_message(message: str):
         return parse_json(message)['message']
     except:
         print('Could not extract content from message')
+        print('MESSAGE:')
+        print(message, '\n')
         return message

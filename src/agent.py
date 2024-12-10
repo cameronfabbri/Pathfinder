@@ -66,7 +66,8 @@ class Agent:
             name: str,
             tools,
             system_prompt: str,
-            model: str = 'gpt-4o-2024-08-06',
+            #model: str = 'gpt-4o-2024-08-06',
+            model: str,
             json_mode: bool = False,
             temperature: float = 0.0) -> None:
         """
@@ -141,18 +142,18 @@ class Agent:
             [print(x, '\n') for x in self.messages]
         else:
             for message in self.messages:
-                print(f"Role: {message['role']}")
-                if 'content' in message and message['content'] is not None:
+                print(f"Role: {message.role}")
+                if message.message is not None:
                     print("Content:")
-                    formatted_content = format_content(message['content'])
+                    formatted_content = format_content(message.message)
                     print(f"{formatted_content}\n")
-                if 'tool_calls' in message:
+                if message.tool_call is not None:
                     print("Tool Calls:")
-                    for tool_call in message['tool_calls']:
+                    for tool_call in message.tool_call:
                         print(f"Tool: {tool_call['function']['name']}")
                         print(f"Arguments: {format_content(tool_call['function']['arguments'])}\n")
-                if 'tool_call_id' in message:
-                    print(f"Tool Call ID: {message['tool_call_id']}")
+                #if message.tool_call_id is not None:
+                #    print(f"Tool Call ID: {message.tool_call_id}")
                 print('-' * 40)
         print('\n', 100 * '=', '\n')
 
