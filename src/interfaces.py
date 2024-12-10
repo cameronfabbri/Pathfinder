@@ -142,12 +142,10 @@ def main_chat_interface():
         # Rerun to display the new messages
         st.rerun()
 
+    # Update the student info every 5 messages if the student info is not complete
     si = st.session_state.user_profile.student_info.values()
     nsi = None in si or 'None' in si
-    ic(nsi)
-    ic(st.session_state.messages_since_update)
-    if st.session_state.messages_since_update >= 1 and nsi:
-        print('Updating student info...')
+    if st.session_state.messages_since_update >= 5 and nsi:
         st.session_state.messages_since_update = 0
         current_student_info = dba.get_student_info(st.session_state.user.user_id)
         current_student_info_str = utils.dict_to_str(current_student_info, format=False)
@@ -217,27 +215,6 @@ def display_student_info(user_profile: UserProfile):
     st.sidebar.subheader("Top 5 Weaknesses")
     for strength_dict in user_profile.bot_strengths:
         st.sidebar.text(f"{strength_dict['theme_name']}: {strength_dict['total_score']} ({strength_dict['strength_level']})")
-
-    # Add transcript upload button to sidebar
-    #st.sidebar.markdown("---")  # Add a separator
-    #st.sidebar.subheader("Upload File")
-    #uploaded_file = st.sidebar.file_uploader("Choose a file", type=["csv", "xlsx", "pdf", "txt"])
-    #if uploaded_file is not None:
-    #    document_type = st.sidebar.selectbox("Select Document Type", ["Transcript", "SAT Score", "ACT Score", "Certification", "Other"])
-    #    if st.sidebar.button("Process File"):
-    #        rt.process_uploaded_file(uploaded_file, document_type, user_id)
-    #        st.sidebar.success("File processed successfully!")
-    """
-
-    st.subheader("Upload File")
-    uploaded_file = st.file_uploader("Choose a file", type=["csv", "xlsx", "pdf", "txt"])
-    if uploaded_file is not None:
-        document_type = st.selectbox("Select Document Type", ["Transcript", "SAT Score", "ACT Score", "Certification", "Other"])
-        if st.button("Process File"):
-            rt.process_uploaded_file(uploaded_file, document_type, user_id)
-            st.success("File processed successfully!")
-    st.markdown("---")  # Add a separator
-    """
 
 
 def assessment_page():
