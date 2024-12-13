@@ -6,6 +6,7 @@ import os
 import sys
 import json
 import pickle
+
 import streamlit_chat
 import streamlit as st
 
@@ -14,18 +15,22 @@ sys.path.insert(0, project_root)
 
 from icecream import ic
 
-from src.agent import Message
-from src.user import UserProfile
-from src.assessment import answers
-from src.database import db_access as dba
-from src.constants import SYSTEM_DATA_DIR
 from src import agent, auth, prompts, run_tools as rt, utils
+from src.user import UserProfile
+from src.agent import Message
+from src.database import db_access as dba
+from src.constants import (COUNSELOR_AVATAR_STYLE, STUDENT_AVATAR_STYLE,
+                           SYSTEM_DATA_DIR)
+from src.assessment import answers
 
 opj = os.path.join
 
 
 DEBUG = False
 
+# TODO - remove after testing
+DEFAULT_USERNAME = 'cameronfabbri'
+DEFAULT_PASSWORD = ''
 
 def move_focus() -> None:
     """
@@ -85,7 +90,7 @@ def main_chat_interface() -> None:
     st.markdown(
         """
         <div class='fixed-header'>
-            <h1>💬 User-Counselor Chat</h1>
+            <h1>💬 SUNY Counselor Chat</h1>
             <p>🚀 Chat with your SUNY counselor</p>
         </div>
         """,
@@ -119,10 +124,10 @@ def main_chat_interface() -> None:
         st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
         for idx, msg in enumerate(st.session_state.counselor_agent.messages):
             if msg.sender == 'student':
-                streamlit_chat.message(msg.message, is_user=True, key=f'user_{idx}')
+                streamlit_chat.message(msg.message, is_user=True, key=f'user_{idx}', avatar_style=STUDENT_AVATAR_STYLE)
             elif msg.sender == 'counselor' and msg.recipient == 'student':
                 message = utils.extract_content_from_message(msg.message)
-                streamlit_chat.message(message, is_user=False, key=f'assistant_{idx}')
+                streamlit_chat.message(message, is_user=False, key=f'assistant_{idx}', avatar_style=COUNSELOR_AVATAR_STYLE)
         st.markdown("</div>", unsafe_allow_html=True)
 
     # Chat input at the bottom
@@ -134,7 +139,8 @@ def main_chat_interface() -> None:
         streamlit_chat.message(
             prompt,
             is_user=True,
-            key=f'user_input_{key}'
+            key=f'user_input_{key}',
+            avatar_style=STUDENT_AVATAR_STYLE
         )
 
         # Process user input and get response
@@ -382,8 +388,8 @@ def streamlit_login():
     with login_tab:
         with st.form("login_form"):
             st.markdown("#### Login")
-            username = st.text_input("Username", value='test')
-            password = st.text_input("Password", type="password", value='test')
+            username = st.text_input("Username", value=DEFAULT_USERNAME)
+            password = st.text_input("Password", type="password", value=DEFAULT_PASSWORD)
             login_submit = st.form_submit_button("Login")
 
         if login_submit:
@@ -404,7 +410,7 @@ def streamlit_login():
             if not any(c.isupper() for c in password):
                 return False, "Password must contain at least one uppercase letter"
             if not any(c.islower() for c in password):
-                return False, "Password must contain at least one lowercase letter" 
+                return False, "Password must contain at least one lowercase letter"
             if not any(c.isdigit() for c in password):
                 return False, "Password must contain at least one number"
             if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in password):
@@ -418,7 +424,7 @@ def streamlit_login():
             age = st.number_input("Age", min_value=1, max_value=100)
             gender = st.selectbox("Gender", options=["Male", "Female", "Other"])
             new_username = st.text_input("Username")
-            new_password = st.text_input("Password", type="password", 
+            new_password = st.text_input("Password", type="password",
                 help="Password must be at least 8 characters and contain uppercase, lowercase, numbers and special characters")
             signup_submit = st.form_submit_button("Sign Up")
 

@@ -21,14 +21,11 @@ from scripts import run_cmd
 
 
 USER_PROMPTS = [
-    'hi',
-    '3.4',
-    'I like math and finance',
-    'band and lacrosse',
-    'not right now',
-    'that makes sense',
-    'my dad is an accountant, so maybe that',
-    'yes'
+    'Sounds good',
+    'My gpa is a 3.4, I like math and finance, and I\'m in the school band and play lacrosse',
+    'I feel strongly about them',
+    'My dad is an accountant, so maybe that',
+    'Let\'s focus on accounting for now.'
 ]
 
 
@@ -95,14 +92,18 @@ def main():
         # this particular question was really good at demonstrating the problem
         # with school names being erroneously aded to RAG tool calls (from previous
         # SUNY agent messages)
-        (
-            'Which school has the best economics program?',
-            lambda x: True
+        #(
+        #    'Which school has the best economics program?',
+        #    lambda x: True
             # lambda x: (
             #     'buffalo state college' in x.lower() or
             #     'jamestown community college' in x.lower()
             # )
-        ),
+        #),
+        ('Does Binghamton have a good accounting program?', lambda x: True),
+        ('What\'s the cost of tuition at Buffalo state?', lambda x: x is not None and 'university at buffalo' not in x.lower()),
+        ('Which school has a good veterinary program?', lambda x: True),
+        ('Does alfred state have financial aid?', lambda x: True)
         # (
         #     'Which school will give me the best economics degree?',
         #     lambda x: True
@@ -198,8 +199,26 @@ def _prep_counselor_conversation(user_prompts: List[str], client: OpenAI, studen
     counselor_agent = run.initialize_counselor_agent(client, student_md_profile)
     suny_agent = run.initialize_suny_agent(client)
 
+    from src import prompts
+    first_message_content = json.dumps({
+        'phase': 'introductory',
+        'recipient': 'student',
+        #'message': prompts.FIRST_MESSAGE.format(name='JohnJacobJingleheimerSchmidt')
+        'message': prompts.FIRST_MESSAGE.format(name='Cameron')
+    })
+    first_message = Message(
+        role='assistant',
+        sender='counselor',
+        recipient='student',
+        message=first_message_content
+    )
+    counselor_agent.add_message(first_message)
+
     for user_prompt in user_prompts:
+        print('USER PROMPT:', user_prompt)
         run_tools.process_user_input(counselor_agent, suny_agent, None, None, user_prompt)
+        print('Counselor agent:', counselor_agent.messages[-1].message, '\n')
+        #input()
 
     return counselor_agent.messages
 

@@ -125,8 +125,6 @@ class Agent:
 
     def invoke(self) -> str:
         """ Call the model and return the response. """
-
-        #print('Calling messages_to_llm_messages...')
         return self.client.chat.completions.create(
             model=self.model,
             messages=self.messages_to_llm_messages(),
