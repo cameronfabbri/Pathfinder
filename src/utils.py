@@ -37,18 +37,29 @@ EMBEDDING_COST_PER_MILLION_TOKENS = {
     'ada v2': 0.10
 }
 
+# context window and max output
+TOKEN_LIMITS = {
+    'gpt-4o': (128000, 16384),
+    'gpt-4o-2024-08-06': (128000, 16384),
+    'gpt-4o-2024-05-13': (128000, 4096),
+    'gpt-4o-mini': (128000, 16384),
+    'gpt-4o-mini-2024-07-18': (128000, 16384),
+    'o1-preview': (128000, 32768)
+}
 
-def count_tokens(text: str, model: str = 'cl100k_base') -> int:
+
+def count_tokens(
+        text: str,
+        encoding: tiktoken.Encoding = tiktoken.get_encoding('cl100k_base')) -> int:
     """
     Count the tokens in the text using tiktoken.
 
     Args:
         text (str): The text to count the tokens for.
-        model (str): The model to use. Defaults to 'cl100k_base'.
+        encoding (tiktoken.Encoding): The encoding to use. Defaults to 'cl100k_base'.
     Returns:
         int: The number of tokens in the text.
     """
-    encoding = tiktoken.get_encoding(model)
     return len(encoding.encode(text))
 
 
