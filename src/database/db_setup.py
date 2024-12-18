@@ -111,6 +111,7 @@ def create_chat_tables(user_id: int):
         CREATE TABLE IF NOT EXISTS conversation_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             session_id INTEGER NOT NULL,
+            chat_id INTEGER NOT NULL,
             role TEXT NOT NULL, -- user, assistant, or tool
             sender TEXT NOT NULL, -- student, counselor, or suny
             recipient TEXT NOT NULL, -- student, counselor, or suny

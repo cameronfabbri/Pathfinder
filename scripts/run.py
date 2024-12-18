@@ -40,6 +40,8 @@ def initialize_st_vars() -> None:
 
     st.session_state.counselor_persona = 'David - The Mentor'
 
+    if 'chat_id' not in st.session_state:
+        st.session_state.chat_id = 0
     if 'messages_since_update' not in st.session_state:
         st.session_state.messages_since_update = 0
     if 'user' not in st.session_state:
@@ -91,7 +93,6 @@ def check_assessment_completed(user_id):
     Check if the user has completed the assessment.
     """
     top_strengths, _ = dba.get_topbot_strengths(user_id, k=1)
-    ic(top_strengths)
     return bool(top_strengths)
 
 

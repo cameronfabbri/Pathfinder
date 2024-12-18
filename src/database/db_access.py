@@ -74,7 +74,7 @@ def load_message_history(user_id: int):
     conn = get_user_db_connection(user_id)
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT session_id, sender, recipient, role, message, timestamp, agent_name, tool_call FROM conversation_history
+        SELECT session_id, chat_id, sender, recipient, role, message, timestamp, agent_name, tool_call FROM conversation_history
         ORDER BY timestamp ASC
     """)
     return parse_sql_result(cursor)

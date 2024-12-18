@@ -65,7 +65,11 @@ def load_message_history() -> None:
     Load the message history from the database and add it to the session state
     """
     message_history = dba.load_message_history(st.session_state.user.user_id)
+
     for message in message_history:
+
+        if message['chat_id'] != st.session_state.chat_id:
+            continue
 
         tool_call = message['tool_call']
         if tool_call is not None:
@@ -76,6 +80,7 @@ def load_message_history() -> None:
             recipient=message['recipient'],
             role=message['role'],
             message=message['message'],
+            chat_id=message['chat_id'],
             tool_call=tool_call
         )
 
@@ -85,7 +90,7 @@ def load_message_history() -> None:
             st.session_state.suny_agent.add_message(m)
 
 
-def log_message(user_id: int, session_id: int, message: Message, agent_name: str) -> None:
+def log_message(user_id: int, session_id: int, chat_id: int, message: Message, agent_name: str) -> None:
     """
     Logs a message to the database.
 
@@ -104,9 +109,9 @@ def log_message(user_id: int, session_id: int, message: Message, agent_name: str
     conn = dba.get_user_db_connection(user_id)
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO conversation_history (session_id, role, sender, recipient, message, agent_name, tool_call)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (session_id, message.role, message.sender, message.recipient, message.message, agent_name, tool_call))
+        INSERT INTO conversation_history (session_id, chat_id, role, sender, recipient, message, agent_name, tool_call)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (session_id, chat_id, message.role, message.sender, message.recipient, message.message, agent_name, tool_call))
     conn.commit()
 
 
@@ -115,7 +120,8 @@ def process_user_input(
         suny_agent: Agent,
         user: User | None,
         chat_fn: Callable | None,
-        prompt: str
+        prompt: str,
+        chat_id: int
 ) -> None:
     """
     Process the user input and send it to the counselor agent
@@ -134,7 +140,8 @@ def process_user_input(
         sender="student",
         recipient="counselor",
         role="user",
-        message=prompt
+        message=prompt,
+        chat_id=chat_id
     )
 
     if user is not None:
@@ -142,11 +149,12 @@ def process_user_input(
         log_message(
             user.user_id,
             user.session_id,
+            chat_id,
             message=message,
             agent_name='counselor'
         )
     counselor_agent.add_message(message)
-    counselor_response = counselor_agent.invoke()
+    counselor_response = counselor_agent.invoke(chat_id=chat_id)
 
     counselor_response_str = counselor_response.choices[0].message.content
     counselor_response_json = utils.parse_json(counselor_response_str)
@@ -168,6 +176,7 @@ def process_user_input(
             log_message(
                 user.user_id,
                 user.session_id,
+                chat_id,
                 message=message,
                 agent_name='suny'
                 )
@@ -176,7 +185,7 @@ def process_user_input(
             chat_fn('assistant').write('Contacting SUNY Agent...')
 
         suny_agent.add_message(message)
-        suny_response = suny_agent.invoke()
+        suny_response = suny_agent.invoke(chat_id=chat_id)
 
         if suny_response.choices[0].message.tool_calls:
             _, suny_response, tc_messages = suny_agent.handle_tool_call(
@@ -188,6 +197,7 @@ def process_user_input(
                     log_message(
                         user.user_id,
                         user.session_id,
+                        chat_id,
                         tcm,
                         'suny'
                     )
@@ -204,6 +214,7 @@ def process_user_input(
             log_message(
                 user.user_id,
                 user.session_id,
+                chat_id,
                 message=message,
                 agent_name='suny'
             )
@@ -218,7 +229,8 @@ def process_user_input(
         sender="counselor",
         recipient="student",
         role="assistant",
-        message=counselor_response_str
+        message=counselor_response_str,
+        chat_id=chat_id
     )
     counselor_agent.add_message(message)
 
@@ -227,6 +239,7 @@ def process_user_input(
         log_message(
             user.user_id,
             user.session_id,
+            chat_id,
             message=message,
             agent_name='counselor'
         )
@@ -251,10 +264,11 @@ def summarize_chat():
             sender="student",
             recipient="counselor",
             role="user",
-            message=prompts.SUMMARY_PROMPT
+            message=prompts.SUMMARY_PROMPT,
+            chat_id=st.session_state.chat_id
         )
         st.session_state.counselor_agent.add_message(message)
-        response = st.session_state.counselor_agent.invoke()
+        response = st.session_state.counselor_agent.invoke(chat_id=st.session_state.chat_id)
         st.session_state.counselor_agent.delete_last_message()
         summary = response.choices[0].message.content
         summary = utils.parse_json(summary)['message']

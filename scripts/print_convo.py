@@ -22,13 +22,13 @@ def fetch_conversation_history(user_id: int | None = None, session_id: int | Non
     cursor = conn.cursor()
     if session_id is not None:
         cursor.execute("""
-            SELECT sender, recipient, message, session_id, timestamp, tool_call FROM conversation_history
+            SELECT sender, recipient, message, session_id, chat_id, timestamp, tool_call FROM conversation_history
             WHERE session_id = ?
             ORDER BY timestamp ASC
         """, (session_id,))
     else:
         cursor.execute("""
-            SELECT sender, recipient, message, session_id, timestamp, tool_call FROM conversation_history
+            SELECT sender, recipient, message, session_id, chat_id, timestamp, tool_call FROM conversation_history
             ORDER BY timestamp ASC
         """)
     conversation_history = cursor.fetchall()
@@ -45,12 +45,12 @@ def format_and_print_conversation(conversation_history):
     print("\nConversation History:")
     print("=" * 60)
 
-    for (sender, recipient, message, session_id, timestamp, tool_call) in conversation_history:
+    for (sender, recipient, message, session_id, chat_id, timestamp, tool_call) in conversation_history:
 
         # Convert timestamp to a readable format if needed
         timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
 
-        print(f"Session ID: {session_id}")
+        print(f"Session ID: {session_id}, Chat ID: {chat_id}")
         sender_color = get_color(sender)
         recipient_color = get_color(recipient)
         print(f"[{timestamp}] {sender_color}{sender}{RESET} -> {recipient_color}{recipient}{RESET}: {message}")

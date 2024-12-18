@@ -30,8 +30,6 @@ class UserProfile:
     def load_topbot_strengths(self):
         """ Loads the top strengths and weaknesses (bot strengths) of the user. """
         self.top_strengths, self.bot_strengths = dba.get_topbot_strengths(self.user_id, k=5)
-        from icecream import ic
-        #ic(self.top_strengths)
 
     def load_student_info(self):
         """ Loads the `students` table - things like name, address, etc. """
@@ -89,9 +87,6 @@ class UserProfile:
         # Assessment Results
         top_strengths = ", ".join([s['theme_name'] for s in self.top_strengths]) if self.top_strengths else 'N/A'
         bot_strengths = ", ".join([w['theme_name'] for w in self.bot_strengths]) if self.bot_strengths else 'N/A'
-
-        #print('SELF.TOP_STRENGTHS:', self.top_strengths, '\n\n')
-        #print('TOP STRENGTHS:', top_strengths)
 
         assessment_results = f"""
     ### Assessment Analysis

@@ -90,7 +90,7 @@ def run_suny(question: str, client: OpenAI, temperature: float) -> List[Message]
     message = Message(COUNSELOR, SUNY, USER, message_body)
 
     suny_agent.add_message(message)
-    response = suny_agent.invoke()
+    response = suny_agent.invoke(chat_id=None)
 
     if response.choices[0].message.tool_calls:
         # note that in this cases, the original response is NOT

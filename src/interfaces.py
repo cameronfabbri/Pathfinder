@@ -97,6 +97,20 @@ def main_chat_interface() -> None:
         unsafe_allow_html=True
     )
 
+    # Add a clear chat button
+    if st.button("Clear Chat"):
+        # Reset the counselor and suny agent's messages to just the system message
+        #st.session_state.counselor_agent.messages = st.session_state.counselor_agent.messages[2:]
+        #st.session_state.suny_agent.messages = st.session_state.suny_agent.messages[1:]
+        update_student_info_from_chat()
+        st.session_state.messages_since_update = 0
+        print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+        print('Updating chat id')
+        st.session_state.chat_id += 1
+        print('New chat id:', st.session_state.chat_id)
+        print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+        st.rerun()
+
     # Initialize the conversation if it's empty
     if len(st.session_state.counselor_agent.messages) == 1:
         first_message_content = json.dumps({
@@ -108,12 +122,14 @@ def main_chat_interface() -> None:
             role='assistant',
             sender='counselor',
             recipient='student',
-            message=first_message_content
+            message=first_message_content,
+            chat_id=st.session_state.chat_id
         )
         st.session_state.counselor_agent.add_message(first_message)
         rt.log_message(
             st.session_state.user.user_id,
             st.session_state.user.session_id,
+            st.session_state.chat_id,
             message=first_message,
             agent_name='counselor'
         )
@@ -123,11 +139,15 @@ def main_chat_interface() -> None:
     with chat_container:
         st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
         for idx, msg in enumerate(st.session_state.counselor_agent.messages):
-            if msg.sender == 'student':
-                streamlit_chat.message(msg.message, is_user=True, key=f'user_{idx}', avatar_style=STUDENT_AVATAR_STYLE)
-            elif msg.sender == 'counselor' and msg.recipient == 'student':
-                message = utils.extract_content_from_message(msg.message)
-                streamlit_chat.message(message, is_user=False, key=f'assistant_{idx}', avatar_style=COUNSELOR_AVATAR_STYLE)
+            print('st.session_state.chat_id:', st.session_state.chat_id)
+            print('msg.chat_id:', msg.chat_id)
+            print('content:', msg.message, '\n')
+            if msg.chat_id == st.session_state.chat_id:
+                if msg.sender == 'student':
+                    streamlit_chat.message(msg.message, is_user=True, key=f'user_{idx}', avatar_style=STUDENT_AVATAR_STYLE)
+                elif msg.sender == 'counselor' and msg.recipient == 'student':
+                    message = utils.extract_content_from_message(msg.message)
+                    streamlit_chat.message(message, is_user=False, key=f'assistant_{idx}', avatar_style=COUNSELOR_AVATAR_STYLE)
         st.markdown("</div>", unsafe_allow_html=True)
 
     # Chat input at the bottom
@@ -144,7 +164,7 @@ def main_chat_interface() -> None:
         )
 
         # Process user input and get response
-        rt.process_user_input(st.session_state.counselor_agent, st.session_state.suny_agent, st.session_state.user, st.chat_message, prompt)
+        rt.process_user_input(st.session_state.counselor_agent, st.session_state.suny_agent, st.session_state.user, st.chat_message, prompt, st.session_state.chat_id)
         st.session_state.messages_since_update += 1
 
         # Rerun to display the new messages
@@ -153,44 +173,50 @@ def main_chat_interface() -> None:
     # Update the student info every 5 messages if the student info is not complete
     si = st.session_state.user_profile.student_info.values()
     nsi = None in si or 'None' in si
-    if st.session_state.messages_since_update >= 5 and nsi:
-        st.session_state.messages_since_update = 0
-        current_student_info = dba.get_student_info(st.session_state.user.user_id)
-        current_student_info_str = utils.dict_to_str(current_student_info, format=False)
-        new_info_prompt = prompts.UPDATE_INFO_PROMPT
-        new_info_prompt += f"\n**Student's Current Information:**\n{current_student_info_str}\n\n"
-
-        # Taking the [1:] because we don't need the system message
-        convo_history = ''
-        for message in st.session_state.counselor_agent.messages[1:]:
-            convo_history += f"sender: {message.sender}\n"
-            convo_history += f"recipient: {message.recipient}\n"
-            convo_history += f"message: {message.message}\n\n"
-        new_info_prompt += f"**Conversation History:**\n{convo_history}\n\n"
-
-        response = st.session_state.counselor_agent.client.chat.completions.create(
-            model='gpt-4o-mini',
-            messages=[
-                {"role": "assistant", "content": new_info_prompt},
-            ],
-            temperature=0.0,
-            response_format={"type": "json_object"}
-        ).choices[0].message.content
-
-        response_json = utils.parse_json(response)
-        for key, value in response_json.items():
-            if key in current_student_info:
-                current_student_info[key] = value
-
-        dba.update_student_info(st.session_state.user.user_id, current_student_info)
-
-        # Load new info into the user object
-        st.session_state.user_profile.reload_all_data()
-
-        # Update the counselor agent's system prompt
-        st.session_state.counselor_agent.system_prompt = rt.build_counselor_prompt(st.session_state.user_profile.student_md_profile)
-
+    if st.session_state.messages_since_update >= 2 and nsi:
+        update_student_info_from_chat()
         st.rerun()
+
+
+def update_student_info_from_chat():
+
+    st.session_state.messages_since_update = 0
+    current_student_info = dba.get_student_info(st.session_state.user.user_id)
+    current_student_info_str = utils.dict_to_str(current_student_info, format=False)
+    new_info_prompt = prompts.UPDATE_INFO_PROMPT
+    new_info_prompt += f"\n**Student's Current Information:**\n{current_student_info_str}\n\n"
+
+    # Taking the [1:] because we don't need the system message
+    convo_history = ''
+    for message in st.session_state.counselor_agent.messages[1:]:
+        convo_history += f"sender: {message.sender}\n"
+        convo_history += f"recipient: {message.recipient}\n"
+        convo_history += f"message: {message.message}\n\n"
+    new_info_prompt += f"**Conversation History:**\n{convo_history}\n\n"
+
+    response = st.session_state.counselor_agent.client.chat.completions.create(
+        model='gpt-4o-mini',
+        messages=[
+            {"role": "assistant", "content": new_info_prompt},
+        ],
+        temperature=0.0,
+        response_format={"type": "json_object"}
+    ).choices[0].message.content
+
+    response_json = utils.parse_json(response)
+    for key, value in response_json.items():
+        if key in current_student_info:
+            current_student_info[key] = value
+
+    dba.update_student_info(st.session_state.user.user_id, current_student_info)
+
+    # Load new info into the user object
+    st.session_state.user_profile.reload_all_data()
+
+    # Update the counselor agent's system prompt
+    st.session_state.counselor_agent.system_prompt = rt.build_counselor_prompt(st.session_state.user_profile.student_md_profile)
+    st.session_state.counselor_agent.messages[0].message = st.session_state.counselor_agent.system_prompt
+    #print('COUNSELOR FIRST MESSAGE:', st.session_state.counselor_agent.messages[0])
 
 
 def display_student_info(user_profile: UserProfile):
