@@ -26,12 +26,6 @@ from src.assessment import answers
 opj = os.path.join
 
 
-DEBUG = False
-
-# TODO - remove after testing
-DEFAULT_USERNAME = 'cameronfabbri'
-DEFAULT_PASSWORD = ''
-
 def move_focus() -> None:
     """
     Move the focus to the chat input area.
@@ -97,20 +91,6 @@ def main_chat_interface() -> None:
         unsafe_allow_html=True
     )
 
-    # Add a clear chat button
-    if st.button("Clear Chat"):
-        # Reset the counselor and suny agent's messages to just the system message
-        #st.session_state.counselor_agent.messages = st.session_state.counselor_agent.messages[2:]
-        #st.session_state.suny_agent.messages = st.session_state.suny_agent.messages[1:]
-        update_student_info_from_chat()
-        st.session_state.messages_since_update = 0
-        print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-        print('Updating chat id')
-        st.session_state.chat_id += 1
-        print('New chat id:', st.session_state.chat_id)
-        print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-        st.rerun()
-
     # Initialize the conversation if it's empty
     if len(st.session_state.counselor_agent.messages) == 1:
         first_message_content = json.dumps({
@@ -153,6 +133,13 @@ def main_chat_interface() -> None:
     # Chat input at the bottom
     prompt = st.chat_input("Type your message here...")
 
+    # Add a clear chat button
+    if st.button("Clear Chat"):
+        update_student_info_from_chat()
+        st.session_state.messages_since_update = 0
+        st.session_state.chat_id += 1
+        st.rerun()
+
     if prompt:
         # Add user message to session
         key = len([x for x in st.session_state.counselor_agent.messages if x.role == 'user'])
@@ -178,7 +165,10 @@ def main_chat_interface() -> None:
         st.rerun()
 
 
-def update_student_info_from_chat():
+def update_student_info_from_chat() -> None:
+    """
+    Updates the student info from the chat history if there's any new information.
+    """
 
     st.session_state.messages_since_update = 0
     current_student_info = dba.get_student_info(st.session_state.user.user_id)
@@ -219,7 +209,10 @@ def update_student_info_from_chat():
     #print('COUNSELOR FIRST MESSAGE:', st.session_state.counselor_agent.messages[0])
 
 
-def display_student_info(user_profile: UserProfile):
+def display_student_info(user_profile: UserProfile) -> None:
+    """
+    Displays the student info in the sidebar.
+    """
 
     # TODO - pass in sidebar too
 
@@ -414,8 +407,8 @@ def streamlit_login():
     with login_tab:
         with st.form("login_form"):
             st.markdown("#### Login")
-            username = st.text_input("Username", value=DEFAULT_USERNAME)
-            password = st.text_input("Password", type="password", value=DEFAULT_PASSWORD)
+            username = st.text_input("Username", value='')
+            password = st.text_input("Password", type="password", value='')
             login_submit = st.form_submit_button("Login")
 
         if login_submit:
