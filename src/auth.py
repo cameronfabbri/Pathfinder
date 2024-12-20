@@ -66,7 +66,7 @@ def login(username: str, password: str) -> User:
     return None
 
 
-def signup(first_name: str, last_name: str, age: int, gender: str, username: str, password: str) -> User:
+def signup(first_name: str, last_name: str, age: int, gender: str, username: str, password: str, signup_code: str) -> User:
     """
     Register a new user and create corresponding student information.
 
@@ -77,7 +77,7 @@ def signup(first_name: str, last_name: str, age: int, gender: str, username: str
         gender (str): Gender.
         username (str): Desired username.
         password (str): Desired password.
-
+        signup_code (str): The signup code.
     Returns:
         User: The newly created user object or None if signup fails.
     """

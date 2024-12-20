@@ -443,21 +443,25 @@ def streamlit_login():
             age = st.number_input("Age", min_value=1, max_value=100)
             gender = st.selectbox("Gender", options=["Male", "Female", "Other"])
             new_username = st.text_input("Username")
-            new_password = st.text_input("Password", type="password",
+            new_password1 = st.text_input("Password", type="password")
+            new_password2 = st.text_input("Password", type="password",
                 help="Password must be at least 8 characters and contain uppercase, lowercase, numbers and special characters")
+            signup_code = st.text_input("Signup Code")
             signup_submit = st.form_submit_button("Sign Up")
 
         if signup_submit:
-            if not all([first_name, last_name, new_username, new_password]):
+            if new_password1 != new_password2:
+                st.error("Passwords do not match")
+            elif not all([first_name, last_name, new_username, new_password1]):
                 st.error("Please fill in all fields to sign up.")
             else:
                 # Validate password
-                is_valid, error_msg = validate_password(new_password)
+                is_valid, error_msg = validate_password(new_password1)
                 if not is_valid:
                     st.error(error_msg)
                 else:
                     # Attempt signup
-                    user = auth.signup(first_name, last_name, age, gender, new_username, new_password)
+                    user = auth.signup(first_name, last_name, age, gender, new_username, new_password1, signup_code)
                     if user == -1:
                         st.error("Username already exists.")
                     elif user is not None:
