@@ -119,6 +119,7 @@ def signup(first_name: str, last_name: str, age: int, gender: str, username: str
         logging.info(f"User created successfully: {username}")
 
         return User(user_id, username, session_id)
+
     except sqlite3.Error as e:
         logging.error(f"Database error during signup for user {username}: {e}")
     except Exception as e:

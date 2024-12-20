@@ -31,7 +31,6 @@ def get_db_connection() -> sqlite3.Connection:
     """
     Returns a connection to the database.
     """
-    #conn = sqlite3.connect(os.path.join(os.getcwd(), 'data', 'users.db'), check_same_thread=False)
     db_path = os.path.join(constants.SQL_DB_DIR, 'users.db')
     conn = sqlite3.connect(db_path, check_same_thread=False)
     conn.row_factory = sqlite3.Row
