@@ -1,13 +1,27 @@
+"""
+Constants for the application.
+"""
+# Cameron Fabbri
 import os
 from functools import lru_cache
+from src import personas
 
 opj = os.path.join
+
+# https://www.dicebear.com/playground/
+STUDENT_AVATAR_STYLE = 'identicon'
+COUNSELOR_AVATAR_STYLE = 'bottts'
+
+QDRANT_API_KEY = os.getenv('QDRANT_PATHFINDER_API_KEY')
+
+SQL_DB_DIR = opj('data', 'sql_dbs')
+    
+PERSONA_PROMPT = personas.DAVID + '\n\n' + personas.DAVID_TRAITS
 
 FASTEMBED_CACHE_DIR = opj('data', 'fastembed')
 
 SYSTEM_DATA_DIR = opj('/Volumes', 'External', 'system_data')
 
-CHROMA_DB_PATH = opj('data', 'chromadb')
 QDRANT_DB_PATH = opj('data', 'qdrantdb')
 SUNY_DATA_DIR = opj(SYSTEM_DATA_DIR, 'general')
 UNIVERSITY_DATA_DIR = opj(SYSTEM_DATA_DIR, 'suny')

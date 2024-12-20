@@ -1,5 +1,5 @@
 """
-
+File holding the database access functions.
 """
 # Cameron Fabbri
 import logging
@@ -11,7 +11,7 @@ from functools import lru_cache
 from openai import OpenAI
 
 from src import prompts
-
+from src import constants
 import os
 
 
@@ -20,8 +20,8 @@ def get_user_db_connection(user_id: int) -> sqlite3.Connection:
     """
     Returns a connection to the database.
     """
-    path = os.path.join(os.getcwd(), 'data', f'user_{user_id}.db')
-    conn = sqlite3.connect(path, check_same_thread=False)
+    db_path = os.path.join(constants.SQL_DB_DIR, f'user_{user_id}.db')
+    conn = sqlite3.connect(db_path, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -31,7 +31,8 @@ def get_db_connection() -> sqlite3.Connection:
     """
     Returns a connection to the database.
     """
-    conn = sqlite3.connect(os.path.join(os.getcwd(), 'data', 'users.db'), check_same_thread=False)
+    db_path = os.path.join(constants.SQL_DB_DIR, 'users.db')
+    conn = sqlite3.connect(db_path, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -197,7 +198,6 @@ def update_student_info(user_id: int, student_info: dict) -> None:
     # Prepare the parameters tuple
     parameters = tuple(filtered_info.values())
 
-    # Execute the query using a safe method
     try:
         conn = get_user_db_connection(user_id)
         cursor = conn.cursor()

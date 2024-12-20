@@ -1,10 +1,13 @@
 """
+File holding the main Streamlit interface.
 """
+# Cameron Fabbri
 import os
 import sys
+import json
 import pickle
-import streamlit_chat
 
+import streamlit_chat
 import streamlit as st
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -13,18 +16,23 @@ sys.path.insert(0, project_root)
 from icecream import ic
 
 from src import agent, auth, prompts, run_tools as rt, utils
-from src.database import db_access as dba
-from src.constants import SYSTEM_DATA_DIR
-from src.assessment import answers
 from src.user import UserProfile
+from src.agent import Message
+from src.database import db_access as dba
+from src.constants import (COUNSELOR_AVATAR_STYLE, STUDENT_AVATAR_STYLE,
+                           SYSTEM_DATA_DIR)
+from src.assessment import answers
 
 opj = os.path.join
 
 
 DEBUG = False
 
+# TODO - remove after testing
+DEFAULT_USERNAME = 'cameronfabbri'
+DEFAULT_PASSWORD = ''
 
-def move_focus():
+def move_focus() -> None:
     """
     Move the focus to the chat input area.
     """
@@ -39,7 +47,8 @@ def move_focus():
         """,
     )
 
-def place_header():
+
+def place_header() -> None:
     """
     Place the header at the top of the page with no extra gap.
     """
@@ -73,7 +82,7 @@ def place_header():
 
 
 # TODO: pass in session state as a parameter
-def main_chat_interface():
+def main_chat_interface() -> None:
     """
     The main chat interface.
     """
@@ -81,7 +90,7 @@ def main_chat_interface():
     st.markdown(
         """
         <div class='fixed-header'>
-            <h1>💬 User-Counselor Chat</h1>
+            <h1>💬 SUNY Counselor Chat</h1>
             <p>🚀 Chat with your SUNY counselor</p>
         </div>
         """,
@@ -89,47 +98,36 @@ def main_chat_interface():
     )
 
     # Initialize the conversation if it's empty
-    """
-    if not st.session_state.counselor_user_messages:
-
-        # TODO - COME BACK TO THIS
-
-        print('\nInitializing conversation...\n')
-
-        # First time logging in
-        if st.session_state.user.session_id == 0:
-            if not DEBUG:
-                first_message = utils.parse_json(
-                    st.session_state.counselor_agent.invoke().choices[0].message.content
-                )['message']
-            else:
-                first_message = prompts.DEBUG_FIRST_MESSAGE.format('NAME', st.session_state.user.username)
-        else:
-            first_message = st.session_state.user.message_history[0]['content']
-            #try:
-            #    first_message = dba.get_chat_summary_from_db(st.session_state.user.user_id)
-            #except:
-            #    print('\nNo chat summary found in database, did you quit without logging out?\n')
-            #    first_message = f"Hello {st.session_state.user.username}, welcome back to the chat!"
-        rt.log_message(st.session_state.user.user_id, st.session_state.user.session_id, 'counselor', 'user', first_message)
-        st.session_state.counselor_user_messages = [{"role": "assistant", "content": first_message}]
-        st.session_state.counselor_agent.add_message("assistant", first_message)
-    else:
-        print('\nConversation already initialized...\n')
-    """
+    if len(st.session_state.counselor_agent.messages) == 1:
+        first_message_content = json.dumps({
+            'phase': 'introductory',
+            'recipient': 'student',
+            'message': prompts.FIRST_MESSAGE.format(name=st.session_state.user_profile.student_info['first_name'])
+        })
+        first_message = Message(
+            role='assistant',
+            sender='counselor',
+            recipient='student',
+            message=first_message_content
+        )
+        st.session_state.counselor_agent.add_message(first_message)
+        rt.log_message(
+            st.session_state.user.user_id,
+            st.session_state.user.session_id,
+            message=first_message,
+            agent_name='counselor'
+        )
 
     # Chat container with scrollable area
     chat_container = st.container()
     with chat_container:
         st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
-        #for idx, msg in enumerate(st.session_state.counselor_user_messages):
-        #print('printing counselor agent messages...')
         for idx, msg in enumerate(st.session_state.counselor_agent.messages):
             if msg.sender == 'student':
-                streamlit_chat.message(msg.message, is_user=True, key=f'user_{idx}')
+                streamlit_chat.message(msg.message, is_user=True, key=f'user_{idx}', avatar_style=STUDENT_AVATAR_STYLE)
             elif msg.sender == 'counselor' and msg.recipient == 'student':
                 message = utils.extract_content_from_message(msg.message)
-                streamlit_chat.message(message, is_user=False, key=f'assistant_{idx}')
+                streamlit_chat.message(message, is_user=False, key=f'assistant_{idx}', avatar_style=COUNSELOR_AVATAR_STYLE)
         st.markdown("</div>", unsafe_allow_html=True)
 
     # Chat input at the bottom
@@ -137,13 +135,12 @@ def main_chat_interface():
 
     if prompt:
         # Add user message to session
-        #st.session_state.counselor_user_messages.append({"role": "user", "content": prompt})
-        #st.session_state.counselor_agent.print_messages()
         key = len([x for x in st.session_state.counselor_agent.messages if x.role == 'user'])
         streamlit_chat.message(
             prompt,
             is_user=True,
-            key=f'user_input_{key}'
+            key=f'user_input_{key}',
+            avatar_style=STUDENT_AVATAR_STYLE
         )
 
         # Process user input and get response
@@ -153,19 +150,24 @@ def main_chat_interface():
         # Rerun to display the new messages
         st.rerun()
 
+    # Update the student info every 5 messages if the student info is not complete
     si = st.session_state.user_profile.student_info.values()
     nsi = None in si or 'None' in si
-    ic(nsi)
-    ic(st.session_state.messages_since_update)
-    if st.session_state.messages_since_update > 2 and nsi:
-        print('Updating student info...')
+    if st.session_state.messages_since_update >= 5 and nsi:
         st.session_state.messages_since_update = 0
         current_student_info = dba.get_student_info(st.session_state.user.user_id)
         current_student_info_str = utils.dict_to_str(current_student_info, format=False)
         new_info_prompt = prompts.UPDATE_INFO_PROMPT
         new_info_prompt += f"\n**Student's Current Information:**\n{current_student_info_str}\n\n"
-        #new_info_prompt += f"**Conversation History:**\n{st.session_state.counselor_user_messages}\n\n"
-        new_info_prompt += f"**Conversation History:**\n{st.session_state.counselor_agent.messages}\n\n"
+
+        # Taking the [1:] because we don't need the system message
+        convo_history = ''
+        for message in st.session_state.counselor_agent.messages[1:]:
+            convo_history += f"sender: {message.sender}\n"
+            convo_history += f"recipient: {message.recipient}\n"
+            convo_history += f"message: {message.message}\n\n"
+        new_info_prompt += f"**Conversation History:**\n{convo_history}\n\n"
+
         response = st.session_state.counselor_agent.client.chat.completions.create(
             model='gpt-4o-mini',
             messages=[
@@ -184,15 +186,9 @@ def main_chat_interface():
 
         # Load new info into the user object
         st.session_state.user_profile.reload_all_data()
-        #student_info = dba.get_student_info(st.session_state.user.user_id)
-        #student_info_str = utils.dict_to_str(student_info, format=False)
-        #st.session_state.counselor_agent.update_system_prompt(prompts.COUNSELOR_SYSTEM_PROMPT + student_info_str)
+
         # Update the counselor agent's system prompt
-        st.session_state.counselor_agent.system_prompt = prompts.COUNSELOR_SYSTEM_PROMPT.replace(
-            '{{student_md_profile}}', st.session_state.user_profile.student_md_profile
-        )
-        print('NEW COUNSELOR SYSTEM PROMPT:')
-        print(st.session_state.counselor_agent.system_prompt)
+        st.session_state.counselor_agent.system_prompt = rt.build_counselor_prompt(st.session_state.user_profile.student_md_profile)
 
         st.rerun()
 
@@ -228,27 +224,6 @@ def display_student_info(user_profile: UserProfile):
     for strength_dict in user_profile.bot_strengths:
         st.sidebar.text(f"{strength_dict['theme_name']}: {strength_dict['total_score']} ({strength_dict['strength_level']})")
 
-    # Add transcript upload button to sidebar
-    #st.sidebar.markdown("---")  # Add a separator
-    #st.sidebar.subheader("Upload File")
-    #uploaded_file = st.sidebar.file_uploader("Choose a file", type=["csv", "xlsx", "pdf", "txt"])
-    #if uploaded_file is not None:
-    #    document_type = st.sidebar.selectbox("Select Document Type", ["Transcript", "SAT Score", "ACT Score", "Certification", "Other"])
-    #    if st.sidebar.button("Process File"):
-    #        rt.process_uploaded_file(uploaded_file, document_type, user_id)
-    #        st.sidebar.success("File processed successfully!")
-    """
-
-    st.subheader("Upload File")
-    uploaded_file = st.file_uploader("Choose a file", type=["csv", "xlsx", "pdf", "txt"])
-    if uploaded_file is not None:
-        document_type = st.selectbox("Select Document Type", ["Transcript", "SAT Score", "ACT Score", "Certification", "Other"])
-        if st.button("Process File"):
-            rt.process_uploaded_file(uploaded_file, document_type, user_id)
-            st.success("File processed successfully!")
-    st.markdown("---")  # Add a separator
-    """
-
 
 def assessment_page():
 
@@ -267,7 +242,9 @@ def assessment_page():
         submit = st.form_submit_button("Submit BUTTON")
 
         # Fetch questions from the database
-        questions = dba.execute_query("SELECT themes.theme_name, questions.statement FROM questions JOIN themes ON questions.theme_id = themes.theme_id;")
+        conn = dba.get_user_db_connection(st.session_state.user.user_id)
+        query = "SELECT themes.theme_name, questions.statement FROM questions JOIN themes ON questions.theme_id = themes.theme_id;"
+        questions = dba.execute_query(conn, query)
 
         # Group questions by theme
         theme_questions = {}
@@ -411,8 +388,8 @@ def streamlit_login():
     with login_tab:
         with st.form("login_form"):
             st.markdown("#### Login")
-            username = st.text_input("Username", value='test')
-            password = st.text_input("Password", type="password", value='test')
+            username = st.text_input("Username", value=DEFAULT_USERNAME)
+            password = st.text_input("Password", type="password", value=DEFAULT_PASSWORD)
             login_submit = st.form_submit_button("Login")
 
         if login_submit:
@@ -426,28 +403,49 @@ def streamlit_login():
                 st.error("Login failed")
 
     with signup_tab:
+        def validate_password(password: str) -> tuple[bool, str]:
+            """Check password meets minimum requirements"""
+            if len(password) < 8:
+                return False, "Password must be at least 8 characters long"
+            if not any(c.isupper() for c in password):
+                return False, "Password must contain at least one uppercase letter"
+            if not any(c.islower() for c in password):
+                return False, "Password must contain at least one lowercase letter"
+            if not any(c.isdigit() for c in password):
+                return False, "Password must contain at least one number"
+            if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in password):
+                return False, "Password must contain at least one special character"
+            return True, ""
+
         with st.form("signup_form"):
             st.markdown("#### Sign Up")
             first_name = st.text_input("First Name")
             last_name = st.text_input("Last Name")
             age = st.number_input("Age", min_value=1, max_value=100)
             gender = st.selectbox("Gender", options=["Male", "Female", "Other"])
-            new_username = st.text_input("Choose a Username")
-            new_password = st.text_input("Choose a Password", type="password")
+            new_username = st.text_input("Username")
+            new_password = st.text_input("Password", type="password",
+                help="Password must be at least 8 characters and contain uppercase, lowercase, numbers and special characters")
             signup_submit = st.form_submit_button("Sign Up")
 
         if signup_submit:
-            if first_name and last_name and new_username and new_password:
-                user = auth.signup(first_name, last_name, age, gender, new_username, new_password)
-                if user:
-                    st.session_state.user = user
-                    login_placeholder.empty()
-                    st.success("Sign up successful. You are now logged in.")
-                    st.rerun()
-                else:
-                    st.error("Sign up failed. Username may already exist.")
-            else:
+            if not all([first_name, last_name, new_username, new_password]):
                 st.error("Please fill in all fields to sign up.")
+            else:
+                # Validate password
+                is_valid, error_msg = validate_password(new_password)
+                if not is_valid:
+                    st.error(error_msg)
+                else:
+                    # Attempt signup
+                    user = auth.signup(first_name, last_name, age, gender, new_username, new_password)
+                    if user == -1:
+                        st.error("Username already exists.")
+                    elif user is not None:
+                        st.session_state.user = user
+                        login_placeholder.empty()
+                        st.success("Sign up successful. You are now logged in.")
+                        st.rerun()
 
     return st.session_state.user
 

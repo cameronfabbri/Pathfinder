@@ -1,23 +1,17 @@
 """
 Run the system without the UI
 """
-
 import os
-from icecream import ic
-from openai import OpenAI
 import readline
 
-from src.user import UserProfile
+from openai import OpenAI
+from icecream import ic
+
 from scripts.run import initialize_counselor_agent, initialize_suny_agent
 
-from src import agent
-from src import prompts
-from src import assessment
-from src import utils
-from src.user import User
-from src import run_tools as rt
-from src.database import db_access as dba
-from src.database import db_setup as dbs
+from src import agent, assessment, prompts, run_tools as rt, utils
+from src.user import User, UserProfile
+from src.database import db_access as dba, db_setup as dbs
 
 MODEL = 'gpt-4o-mini'
 
@@ -64,6 +58,7 @@ def load_assessment_responses(assessment_responses):
 def main():
     """ Main function """
 
+    os.makedirs(os.path.join('data', 'sql_dbs'), exist_ok=True)
     dbs.create_auth_tables()
     user_id = dbs.initialize_test_user('test')
 
@@ -93,11 +88,11 @@ def main():
         'yes',
         'which school has the best economics program?'
     ]
-
+    user_prompts = []
     idx = 0
     while True:
 
-        if idx < len(user_prompts):
+        if idx < len(user_prompts) and user_prompts:
             user_prompt = user_prompts[idx]
             print('>', user_prompt)
             idx += 1

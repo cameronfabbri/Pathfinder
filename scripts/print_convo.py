@@ -18,23 +18,17 @@ def fetch_conversation_history(user_id: int | None = None, session_id: int | Non
     Returns:
         list: A list of conversation messages.
     """
-    conn = dba.get_db_connection()
+    conn = dba.get_user_db_connection(user_id)
     cursor = conn.cursor()
-    if user_id and session_id:
+    if session_id is not None:
         cursor.execute("""
-            SELECT user_id, sender, recipient, message, session_id, timestamp, tool_call FROM conversation_history
-            WHERE user_id = ? AND session_id = ?
+            SELECT sender, recipient, message, session_id, timestamp, tool_call FROM conversation_history
+            WHERE session_id = ?
             ORDER BY timestamp ASC
-        """, (user_id, session_id))
-    elif user_id:
-        cursor.execute("""
-            SELECT user_id, sender, recipient, message, session_id, timestamp, tool_call FROM conversation_history
-            WHERE user_id = ?
-            ORDER BY timestamp ASC
-        """, (user_id,))
+        """, (session_id,))
     else:
         cursor.execute("""
-            SELECT user_id, sender, recipient, message, session_id, timestamp, tool_call FROM conversation_history
+            SELECT sender, recipient, message, session_id, timestamp, tool_call FROM conversation_history
             ORDER BY timestamp ASC
         """)
     conversation_history = cursor.fetchall()
@@ -51,13 +45,12 @@ def format_and_print_conversation(conversation_history):
     print("\nConversation History:")
     print("=" * 60)
 
-    for (user_id, sender, recipient, message, session_id, timestamp, tool_call) in conversation_history:
+    for (sender, recipient, message, session_id, timestamp, tool_call) in conversation_history:
 
         # Convert timestamp to a readable format if needed
         timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
 
         print(f"Session ID: {session_id}")
-        print(f"User ID: {user_id}")
         sender_color = get_color(sender)
         recipient_color = get_color(recipient)
         print(f"[{timestamp}] {sender_color}{sender}{RESET} -> {recipient_color}{recipient}{RESET}: {message}")
