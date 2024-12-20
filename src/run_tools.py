@@ -8,6 +8,7 @@ import sys
 import json
 import time
 import logging
+
 from typing import Callable
 
 import streamlit as st
@@ -17,12 +18,10 @@ from icecream import ic
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
+from src import constants, prompts, utils
 from src.user import User
-from src.agent import Message, Agent
+from src.agent import Agent, Message
 from src.database import db_access as dba
-
-from src import constants
-from src import prompts, utils
 
 opj = os.path.join
 

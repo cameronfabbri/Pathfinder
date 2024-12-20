@@ -7,8 +7,9 @@ import sys
 import json
 import pickle
 
-import streamlit_chat
 import streamlit as st
+
+import streamlit_chat
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
@@ -24,6 +25,11 @@ from src.constants import (COUNSELOR_AVATAR_STYLE, STUDENT_AVATAR_STYLE,
 from src.assessment import answers
 
 opj = os.path.join
+
+
+# TODO - remove after testing
+DEFAULT_USERNAME = 'cameronfabbri'
+DEFAULT_PASSWORD = ''
 
 
 def move_focus() -> None:

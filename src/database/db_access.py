@@ -2,6 +2,7 @@
 File holding the database access functions.
 """
 # Cameron Fabbri
+import os
 import logging
 import sqlite3
 
@@ -10,9 +11,7 @@ from functools import lru_cache
 
 from openai import OpenAI
 
-from src import prompts
-from src import constants
-import os
+from src import constants, prompts
 
 
 @lru_cache(maxsize=None)
@@ -31,7 +30,6 @@ def get_db_connection() -> sqlite3.Connection:
     """
     Returns a connection to the database.
     """
-    #conn = sqlite3.connect(os.path.join(os.getcwd(), 'data', 'users.db'), check_same_thread=False)
     db_path = os.path.join(constants.SQL_DB_DIR, 'users.db')
     conn = sqlite3.connect(db_path, check_same_thread=False)
     conn.row_factory = sqlite3.Row

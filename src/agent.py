@@ -1,15 +1,20 @@
 """
 File containing the Agent class and functionality for the Agent
 """
+
 # Cameron Fabbri
 import json
 
+from typing import Any, Dict, List
 from dataclasses import dataclass
 
+import tiktoken
+
+from src import utils
 from src.tools import function_map
 from src.utils import RESET, get_color, get_openai_client
 
-from src import utils
+MAX_INPUT_TOKENS = 32000
 
 
 def format_content(content):
@@ -48,13 +53,12 @@ def quick_call(
         response_format={ "type": "json_object" } if json_mode else None
     ).choices[0].message.content
 
-from typing import List
 
 @dataclass
 class Message:
-    sender: str # student, counselor, or suny
-    recipient: str # student, counselor, or suny
-    role: str # user, assistant, or tool
+    sender: str     # student, counselor, or suny
+    recipient: str  # student, counselor, or suny
+    role: str       # user, assistant, or tool
     message: str
     chat_id: int
     tool_call: List[dict] | None = None
@@ -127,18 +131,24 @@ class Agent:
     def invoke(self, chat_id: int | None) -> str:
         """ Call the model and return the response. """
 
+        # Get the messages for the current chat
         messages = self.messages
         if chat_id is not None:
             # chat_id is -1 for the system prompt
             messages = [m for m in self.messages if m.chat_id == chat_id or m.chat_id == -1]
+
+        # Make sure messages don't exceed context length
+        encoding = tiktoken.encoding_for_model(self.model)
         messages = self.messages_to_llm_messages(messages)
 
-        for m in messages:
-            print(m, '\n')
+        # TODO: we could choose max_tokens based on the model
+        messages = filter_messages_token_count(messages, MAX_INPUT_TOKENS, encoding)
+
+        #for m in messages:
+        #    print(m, '\n')
 
         return self.client.chat.completions.create(
             model=self.model,
-            #messages=self.messages_to_llm_messages(),
             messages=messages,
             tools=self.tools,
             response_format={"type": "json_object"} if self.json_mode else None,
@@ -225,3 +235,49 @@ class Agent:
             tc_messages.append(fc_message)
 
         return function_result, self.invoke(chat_id=None), tc_messages
+        #return function_result, self.invoke(), tc_messages
+
+
+def filter_messages_token_count(
+        messages: List[Dict[str, str]],
+        max_tokens: int,
+        encoding: tiktoken.Encoding) -> List[Dict[str, Any]]:
+
+    """
+    Filter messages to fit within a certain token count.
+    Keeps the system message and messages from the end backward
+    until the limit is reached.
+    """
+
+    assert len(messages) > 0
+    system_message, *other_messages = messages
+    print('other messages:', len(other_messages))
+    assert system_message['role'] == 'system', 'expected first message role=system'
+
+    tokens_org = sum([
+        utils.count_tokens(x['content'], encoding)
+        for x in messages
+    ])
+
+    total_tokens = utils.count_tokens(system_message['content'], encoding)
+
+    res = [system_message]
+    if total_tokens > max_tokens:
+        raise Exception(f'System mesage length > {max_tokens}')
+
+    messages_keep = []
+    for msg in reversed(other_messages):
+        tokens = utils.count_tokens(msg['content'], encoding)
+        if total_tokens + tokens > max_tokens:
+            break
+        messages_keep.append(msg)
+        total_tokens += tokens
+
+    res.extend(reversed(messages_keep))
+
+    print(
+        f'token count filter: {len(messages)} messages @ {tokens_org} tokens -> ' +
+        f'{len(res)} messages @ {total_tokens} tokens')
+
+    return res
+>>>>>>> main

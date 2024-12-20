@@ -134,6 +134,13 @@ def save_xlsx(file_path: str, rows: List[Dict]) -> None:
     workbook = xlsxwriter.Workbook(file_path)
     worksheet = workbook.add_worksheet(name='Results')
 
+    # Enable text wrapping for all cells
+    wrap_format = workbook.add_format({'text_wrap': True})
+    worksheet.set_column('A:Z', None, wrap_format)
+
+    # Set width of third column (C) to 40
+    worksheet.set_column('C:C', 80, wrap_format)
+
     worksheet.write_row(0, 0, list(rows[0].keys()))
     for idx, row in enumerate(rows):
         worksheet.write_row(idx + 1, 0, list(row.values()))
