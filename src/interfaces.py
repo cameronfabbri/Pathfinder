@@ -302,15 +302,15 @@ def assessment_page():
     if submit:
         if None in user_responses.values():
             # Load saved responses if they exist
-            user_responses = {}
-            theme_scores = {}
-            if os.path.exists(responses_file):
-                with open(responses_file, 'rb') as f:
-                    saved_data = pickle.load(f)
-                    user_responses = saved_data['user_responses']
-                    theme_scores = saved_data['theme_scores']
-                st.success("Loaded saved responses for testing.")
-            #st.error("Please answer all questions before submitting.")
+            #user_responses = {}
+            #theme_scores = {}
+            #if os.path.exists(responses_file):
+            #    with open(responses_file, 'rb') as f:
+            #        saved_data = pickle.load(f)
+            #        user_responses = saved_data['user_responses']
+            #        theme_scores = saved_data['theme_scores']
+            #    st.success("Loaded saved responses for testing.")
+            st.error("Please answer all questions before submitting.")
 
         # Calculate theme scores
         theme_scores = {}
@@ -319,8 +319,8 @@ def assessment_page():
             theme_scores[theme] = theme_score
 
         # Save responses to pickle file
-        with open(responses_file, 'wb') as f:
-            pickle.dump({'user_responses': user_responses, 'theme_scores': theme_scores}, f)
+        #with open(responses_file, 'wb') as f:
+        #    pickle.dump({'user_responses': user_responses, 'theme_scores': theme_scores}, f)
 
         # Insert user assessment responses into the database
         dba.insert_user_responses(st.session_state.user.user_id, user_responses)
@@ -339,12 +339,6 @@ def assessment_page():
 
         # Insert assessment analysis into the database
         dba.insert_assessment_analysis(st.session_state.user.user_id, response)
-
-        # Load the assessment responses from the database into the user object
-        #st.session_state.user.load_assessment_responses()
-
-        # Load the strengths and weaknesses from the database into the user object
-        #st.session_state.user.load_topbot_strengths()
 
         st.rerun()
 
