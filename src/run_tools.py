@@ -187,7 +187,7 @@ def process_user_input(
             chat_fn('assistant').write('Contacting SUNY Agent...')
 
         suny_agent.add_message(message)
-        suny_response = suny_agent.invoke(chat_id=chat_id)
+        suny_response = suny_agent.invoke()
 
         if suny_response.choices[0].message.tool_calls:
             _, suny_response, tc_messages = suny_agent.handle_tool_call(
