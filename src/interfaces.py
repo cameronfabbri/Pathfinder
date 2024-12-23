@@ -27,11 +27,6 @@ from src.assessment import answers
 opj = os.path.join
 
 
-# TODO - remove after testing
-DEFAULT_USERNAME = 'cameronfabbri'
-DEFAULT_PASSWORD = ''
-
-
 def move_focus() -> None:
     """
     Move the focus to the chat input area.
@@ -302,14 +297,14 @@ def assessment_page():
     if submit:
         if None in user_responses.values():
             # Load saved responses if they exist
-            #user_responses = {}
-            #theme_scores = {}
-            #if os.path.exists(responses_file):
-            #    with open(responses_file, 'rb') as f:
-            #        saved_data = pickle.load(f)
-            #        user_responses = saved_data['user_responses']
-            #        theme_scores = saved_data['theme_scores']
-            #    st.success("Loaded saved responses for testing.")
+            user_responses = {}
+            theme_scores = {}
+            if os.path.exists(responses_file):
+                with open(responses_file, 'rb') as f:
+                    saved_data = pickle.load(f)
+                    user_responses = saved_data['user_responses']
+                    theme_scores = saved_data['theme_scores']
+                st.success("Loaded saved responses for testing.")
             st.error("Please answer all questions before submitting.")
 
         # Calculate theme scores
