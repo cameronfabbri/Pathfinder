@@ -213,8 +213,6 @@ def update_student_info_from_chat() -> None:
 
     # Update the counselor agent's system prompt
     st.session_state.counselor_agent.system_prompt = rt.build_counselor_prompt(st.session_state.user_profile.student_md_profile)
-    st.session_state.counselor_agent.messages[0].message = st.session_state.counselor_agent.system_prompt
-    #print('COUNSELOR FIRST MESSAGE:', st.session_state.counselor_agent.messages[0])
 
 
 def display_student_info(user_profile: UserProfile) -> None:
