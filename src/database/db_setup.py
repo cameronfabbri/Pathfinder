@@ -10,8 +10,8 @@ from functools import lru_cache
 from contextlib import contextmanager
 from dataclasses import dataclass
 
+import src.constants as constants
 import src.assessment as assessment
-
 from src.database.db_access import get_db_connection, get_user_db_connection
 
 
@@ -24,6 +24,31 @@ class Document:
     upload_date: str
     extracted_text: str
     processed: bool
+
+
+def create_signup_code_table():
+    """
+    Creates the table for the signup codes.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS signup_codes (
+            code TEXT PRIMARY KEY,
+            used BOOLEAN DEFAULT FALSE
+        )
+    ''')
+    cursor.execute('SELECT COUNT(*) FROM signup_codes')
+    code_count = cursor.fetchone()[0]
+    
+    if code_count < 20:
+        for code in constants.SIGNUP_CODES:
+            cursor.execute('SELECT code FROM signup_codes WHERE code = ?', (code,))
+            if not cursor.fetchone():
+                cursor.execute('''
+                    INSERT INTO signup_codes (code, used) VALUES (?, FALSE)
+                ''', (code,))
+    conn.commit()
 
 
 def create_auth_tables():

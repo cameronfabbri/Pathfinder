@@ -19,7 +19,7 @@ from qdrant_client.http.models import (FieldCondition, Filter, MatchValue,
                                        PointStruct)
 
 from src import utils
-from src.constants import METADATA_PATH, UNIVERSITY_DATA_DIR, FASTEMBED_CACHE_DIR
+from src.constants import FASTEMBED_CACHE_DIR, QDRANT_URL, QDRANT_API_KEY
 
 opj = os.path.join
 
@@ -201,8 +201,12 @@ def get_embedding_model(model: str) -> EmbeddingModel:
     return EmbeddingModel(model)
 
 
-def get_qdrant_client(host: str = "localhost", port: int = 6333) -> QdrantClient:
+def get_local_qdrant_client(host: str = "localhost", port: int = 6333) -> QdrantClient:
     return QdrantClient(host=host, port=port)
+
+
+def get_remote_qdrant_client() -> QdrantClient:
+    return QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 
 
 def get_qdrant_db(client: QdrantClient, collection_name: str, emb_dim: int) -> QdrantDB:
@@ -211,106 +215,3 @@ def get_qdrant_db(client: QdrantClient, collection_name: str, emb_dim: int) -> Q
 
 def get_reranker(model: str='BAAI/bge-reranker-v2-m3') -> FlagReranker:
     return FlagReranker(model, use_fp16=True)
-
-
-def main():
-
-    #client_qdrant = QdrantClient(
-    #    url="https://b3a175dd-76e6-47e4-a90e-0b76f8f3c526.europe-west3-0.gcp.cloud.qdrant.io:6333",
-    #    api_key="bEnJ-0g3rj4waAA3Ep9M7bcxSQXhH7VtJvkWuAjvxZmB3H4gi6DqhQ",
-    #)
-    #client_qdrant = QdrantClient(path=QDRANT_DB_PATH)
-    client = QdrantClient(host="localhost", port=6333)
-
-    qdrant_db = QdrantDB(client, 'suny', 786)
-
-    import uuid
-    import random
-    import string
-
-    for i in range(10):
-
-        text = ''.join(random.choices(string.ascii_letters + string.digits + string.punctuation, k=random.randint(50, 99)))
-
-        emb = np.random.rand(786)
-        qdrant_db.add_document(
-            content=text,
-            embedding=emb,
-            collection_name='suny',
-            doc_id=i,
-            payload={'university': 'SUNY Adirondack'}
-        )
-    print(client.get_collection('suny'), '\n')
-
-    print(qdrant_db.point_exists(1))
-
-    exit()
-
-    qdrant_db = QdrantDB(client_qdrant, 'suny')
-
-    university = 'SUNY Adirondack'
-    html_file = '/Volumes/External/system_data/suny/sunyacc.smartcatalogiq.com/en/24-25/college-catalog/academic-programs/culinary-arts-aas-cart.html'
-
-    ids, texts, embeddings = process_html_files([html_file], None)
-    print(len(ids))
-    print(len(texts))
-    print(len(embeddings))
-    with open('data.pkl', 'wb') as f:
-        pickle.dump((ids, texts, embeddings), f)
-    exit()
-    for uid, text, embedding in zip(ids, texts, embeddings):
-        print(uid)
-        print(text)
-        print('\n', '-'*100, '\n')
-        input('Press Enter to continue...')
-
-    exit()
-
-    client = utils.get_openai_client()
-
-    text = 'Hello world my name is Cameron Fabbri'
-    embedding = get_openai_embedding(client, text)
-
-    print('operation_info:', operation_info, '\n')
-
-    universities = ['Alfred University', 'Clinton Community College']
-
-    with open(METADATA_PATH, 'r') as f:
-        metadata = json.load(f)
-
-    all_files = []
-    for university_name, data in metadata.items():
-        if university_name not in universities:
-            continue
-
-        files = {
-            'html_files': data.get('html_files', []),
-            'pdf_files': data.get('pdf_files', [])
-        }
-
-        # Process files based on processing instructions
-        if 'processing_instructions' in data and data['processing_instructions']:
-            # Add root directory from src.constants
-            root_directory = opj(UNIVERSITY_DATA_DIR, data.get('root_directory'))
-            if root_directory:
-                selected_files = select_files(
-                    root_directory=root_directory,
-                    instructions=data['processing_instructions']
-                )
-                files['html_files'].extend(selected_files.get('html_files', []))
-                files['pdf_files'].extend(selected_files.get('pdf_files', []))
-            else:
-                print(f"Warning: Root directory not specified for {university_name}")
-
-        #print('University:', university_name)
-        #print('HTML files:', len(files['html_files']))
-        #print('PDF files:', len(files['pdf_files']))
-
-        embeddings = process_html_files(files['html_files'], client)
-
-    #print(embeddings[0] @ embeddings[1].T)
-    exit()
-
-
-if __name__ == '__main__':
-    main()

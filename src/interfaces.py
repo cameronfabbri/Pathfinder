@@ -98,7 +98,7 @@ def main_chat_interface() -> None:
     )
 
     # Initialize the conversation if it's empty
-    if len(st.session_state.counselor_agent.messages) == 1:
+    if len(st.session_state.counselor_agent.messages) == 0:
         first_message_content = json.dumps({
             'phase': 'introductory',
             'recipient': 'student',
@@ -125,9 +125,14 @@ def main_chat_interface() -> None:
     with chat_container:
         st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
         for idx, msg in enumerate(st.session_state.counselor_agent.messages):
-            print('st.session_state.chat_id:', st.session_state.chat_id)
-            print('msg.chat_id:', msg.chat_id)
-            print('content:', msg.message, '\n')
+            #print('st.session_state.chat_id:', st.session_state.chat_id)
+            #print('msg.chat_id:', msg.chat_id)
+            #print('content:', msg.message, '\n')
+            if msg.chat_id == -1:
+                print('&'* 100)
+                print('\n\nskipping system message\n\n')
+                print('&'* 100)
+                continue
             if msg.chat_id == st.session_state.chat_id:
                 if msg.sender == 'student':
                     streamlit_chat.message(msg.message, is_user=True, key=f'user_{idx}', avatar_style=STUDENT_AVATAR_STYLE)
@@ -144,6 +149,8 @@ def main_chat_interface() -> None:
         update_student_info_from_chat()
         st.session_state.messages_since_update = 0
         st.session_state.chat_id += 1
+        st.session_state.counselor_agent.messages = []
+        st.session_state.suny_agent.messages = []
         st.rerun()
 
     if prompt:
@@ -461,20 +468,24 @@ def streamlit_login():
             elif not all([first_name, last_name, new_username, new_password1]):
                 st.error("Please fill in all fields to sign up.")
             else:
-                # Validate password
-                is_valid, error_msg = validate_password(new_password1)
-                if not is_valid:
-                    st.error(error_msg)
+                # Validate signup code
+                if not auth.validate_signup_code(signup_code):
+                    st.error("Invalid signup code")
                 else:
-                    # Attempt signup
-                    user = auth.signup(first_name, last_name, age, gender, new_username, new_password1, signup_code)
-                    if user == -1:
-                        st.error("Username already exists.")
-                    elif user is not None:
-                        st.session_state.user = user
-                        login_placeholder.empty()
-                        st.success("Sign up successful. You are now logged in.")
-                        st.rerun()
+                    # Validate password
+                    is_valid, error_msg = validate_password(new_password1)
+                    if not is_valid:
+                        st.error(error_msg)
+                    else:
+                        # Attempt signup
+                        user = auth.signup(first_name, last_name, age, gender, new_username, new_password1, signup_code)
+                        if user == -1:
+                            st.error("Username already exists.")
+                        elif user is not None:
+                            st.session_state.user = user
+                            login_placeholder.empty()
+                            st.success("Sign up successful. You are now logged in.")
+                            st.rerun()
 
     return st.session_state.user
 

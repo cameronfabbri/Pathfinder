@@ -67,15 +67,24 @@ def parse_sql_result(cursor: sqlite3.Cursor):
     return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
 
-def load_message_history(user_id: int):
+def load_message_history(user_id: int, chat_id: int):
     """ Loads the message history of the user. """
     conn = get_user_db_connection(user_id)
     cursor = conn.cursor()
     cursor.execute("""
         SELECT session_id, chat_id, sender, recipient, role, message, timestamp, agent_name, tool_call FROM conversation_history
+        WHERE chat_id = ?
         ORDER BY timestamp ASC
-    """)
+    """, (chat_id,))
     return parse_sql_result(cursor)
+
+
+def get_latest_chat_id(user_id: int) -> int:
+    """ Get the latest chat ID for the user. """
+    conn = get_user_db_connection(user_id)
+    cursor = conn.cursor()
+    cursor.execute("SELECT MAX(chat_id) FROM conversation_history")
+    return cursor.fetchone()[0]
 
 
 def get_student_info(user_id: int):

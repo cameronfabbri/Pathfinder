@@ -63,7 +63,9 @@ def load_message_history() -> None:
     """
     Load the message history from the database and add it to the session state
     """
-    message_history = dba.load_message_history(st.session_state.user.user_id)
+    
+    last_chat_id = dba.get_latest_chat_id(st.session_state.user.user_id)
+    message_history = dba.load_message_history(st.session_state.user.user_id, last_chat_id)
 
     for message in message_history:
 
@@ -120,7 +122,7 @@ def process_user_input(
         user: User | None,
         chat_fn: Callable | None,
         prompt: str,
-        chat_id: int
+        chat_id: int | None
 ) -> None:
     """
     Process the user input and send it to the counselor agent
@@ -153,7 +155,7 @@ def process_user_input(
             agent_name='counselor'
         )
     counselor_agent.add_message(message)
-    counselor_response = counselor_agent.invoke(chat_id=chat_id)
+    counselor_response = counselor_agent.invoke()
 
     counselor_response_str = counselor_response.choices[0].message.content
     counselor_response_json = utils.parse_json(counselor_response_str)
@@ -188,7 +190,8 @@ def process_user_input(
 
         if suny_response.choices[0].message.tool_calls:
             _, suny_response, tc_messages = suny_agent.handle_tool_call(
-                suny_response
+                suny_response,
+                chat_id=chat_id
             )
 
             if user is not None:

@@ -5,7 +5,7 @@ from FlagEmbedding import FlagReranker
 from typing import Any, Dict, List, Tuple
 
 from src.database import qdrant_db
-
+from src.utils import count_tokens
 
 class RAG:
     def __init__(
@@ -86,27 +86,31 @@ class RAG:
         filtered_docs = []
         for doc in documents:
             doc = doc.dict()
-
-            # TODO - revisit this maybe
-            if doc['payload']['type'] == 'pdf' and 'chunk_id' not in doc['payload']:
-                continue
-
             if doc['payload']['parent_point_id'] not in doc_ids:
                 doc_ids.append(doc['payload']['parent_point_id'])
                 filtered_docs.append(doc)
 
-        content = ''
+        full_content = ''
         print('Doc IDs:', doc_ids)
         for doc in filtered_docs:
 
             # Match was a chunk, get the full parent document
             # In the case of HTML, the parent document is the whole webpage.
             # In the case of PDF, the parent document is the page the chunk was taken from.
-            if 'chunk_id' in doc['payload'] and doc['payload']['type'] == 'html':
+            if 'chunk_id' in doc['payload']:
                 doc = self.db.get_document_by_id(doc['payload']['parent_point_id']).dict()
 
-            content += 'University: ' + doc['payload']['university'] + '\n'
+            content = 'University: ' + doc['payload']['university'] + '\n'
             content += 'URL: ' + str(doc['payload']['url']) + '\n'
             content += 'Content: ' + doc['payload']['content'] + '\n\n'
 
-        return content
+            temp_full_content = full_content + content
+
+            num_tokens = count_tokens(temp_full_content)
+
+            if num_tokens > 10000:
+                break
+
+            full_content = temp_full_content
+
+        return full_content
