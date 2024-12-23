@@ -302,9 +302,9 @@ def logout() -> None:
     """
     Logout the user and clear the session state
     """
-    summary = summarize_chat()
-    if summary:
-        write_summary_to_db(summary)
+    #summary = summarize_chat()
+    #if summary:
+    #    write_summary_to_db(summary)
 
     # Clear the session state
     for key in list(st.session_state.keys()):
