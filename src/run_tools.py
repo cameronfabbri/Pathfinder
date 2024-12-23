@@ -270,7 +270,7 @@ def summarize_chat():
             chat_id=st.session_state.chat_id
         )
         st.session_state.counselor_agent.add_message(message)
-        response = st.session_state.counselor_agent.invoke(chat_id=st.session_state.chat_id)
+        response = st.session_state.counselor_agent.invoke()
         st.session_state.counselor_agent.delete_last_message()
         summary = response.choices[0].message.content
         summary = utils.parse_json(summary)['message']
@@ -303,7 +303,6 @@ def logout() -> None:
     Logout the user and clear the session state
     """
     summary = summarize_chat()
-
     if summary:
         write_summary_to_db(summary)
 
