@@ -8,11 +8,15 @@ from src import personas
 
 opj = os.path.join
 
+COUNSELOR_AGENT_MODEL = 'gpt-4o'
+SUNY_AGENT_MODEL = 'gpt-4o-mini'
+
+QDRANT_URL = str(os.getenv('QDRANT_URL'))
+QDRANT_API_KEY = str(os.getenv('QDRANT_API_KEY'))
+
 # https://www.dicebear.com/playground/
 STUDENT_AVATAR_STYLE = 'identicon'
 COUNSELOR_AVATAR_STYLE = 'bottts'
-
-QDRANT_API_KEY = os.getenv('QDRANT_PATHFINDER_API_KEY')
 
 SQL_DB_DIR = opj('data', 'sql_dbs')
     
@@ -29,6 +33,8 @@ UNIVERSITY_DATA_DIR = opj(SYSTEM_DATA_DIR, 'suny')
 METADATA_PATH = opj('data', 'metadata.json')
 
 EXCLUDE = ['meeting', 'blog', 'news', 'events', 'calendar', 'faculty', '\\uf03f', '?', '_archive', 'alumni']
+
+SIGNUP_CODES = os.getenv('SIGNUP_CODES').split(',')
 
 # Number of threads to use for downloading files using wget2
 MAX_DOWNLOAD_THREADS = 9

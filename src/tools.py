@@ -2,6 +2,8 @@
 """
 import os
 
+from functools import lru_cache
+
 from src.rag import RAG
 from src.database import qdrant_db
 
@@ -32,13 +34,12 @@ suny_tools = [
     }
 ]
 
-from functools import lru_cache
 
 @lru_cache(maxsize=1)
 def get_db_and_reranker():
     model = 'jina'
     embedding_model = qdrant_db.get_embedding_model(model)
-    client_qdrant = qdrant_db.get_qdrant_client()
+    client_qdrant = qdrant_db.get_remote_qdrant_client()
     db = qdrant_db.get_qdrant_db(client_qdrant, 'suny', embedding_model.emb_dim)
     reranker = qdrant_db.get_reranker()
     return db, embedding_model, reranker

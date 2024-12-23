@@ -50,7 +50,7 @@ TOKEN_LIMITS = {
 
 def count_tokens(
         text: str,
-        encoding: tiktoken.Encoding = tiktoken.get_encoding('cl100k_base')) -> int:
+        encoding: tiktoken.Encoding = tiktoken.get_encoding('o200k_base')) -> int:
     """
     Count the tokens in the text using tiktoken.
 

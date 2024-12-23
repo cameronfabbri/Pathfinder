@@ -60,6 +60,7 @@ class Message:
     recipient: str  # student, counselor, or suny
     role: str       # user, assistant, or tool
     message: str
+    chat_id: int
     tool_call: List[dict] | None = None
 
 
@@ -70,7 +71,6 @@ class Agent:
             name: str,
             tools,
             system_prompt: str,
-            #model: str = 'gpt-4o-2024-08-06',
             model: str,
             json_mode: bool = False,
             temperature: float = 0.0) -> None:
@@ -85,7 +85,7 @@ class Agent:
         self.model = model
         self.json_mode = json_mode
         self.temperature = temperature
-        self.messages = [Message(role="system", sender="", recipient="", message=self.system_prompt)]
+        self.messages = []
         self.color = get_color(self.name)
 
     def update_system_prompt(self, new_prompt: str) -> None:
@@ -98,7 +98,6 @@ class Agent:
             None
         """
         self.system_prompt = new_prompt
-        self.messages[0].message['content'] = self.system_prompt
 
     def add_message(self, message: Message):
         self.messages.append(message)
@@ -107,9 +106,9 @@ class Agent:
         if len(self.messages) > 1:
             self.messages.pop()
 
-    def messages_to_llm_messages(self) -> list[dict]:
+    def messages_to_llm_messages(self, messages: list[Message]) -> list[dict]:
         result = []
-        for msg in self.messages:
+        for msg in messages:
             if msg.sender == 'counselor' and msg.recipient == 'suny':
                 content = utils.extract_content_from_message(msg.message)
             else:
@@ -130,9 +129,14 @@ class Agent:
     def invoke(self) -> str:
         """ Call the model and return the response. """
 
-        encoding = tiktoken.encoding_for_model(self.model)
-        messages = self.messages_to_llm_messages()
+        messages = []
+        messages.append(Message(role="system", sender="", recipient="", message=self.system_prompt, chat_id=-1))
+        messages.extend(self.messages)
+
+        # Make sure messages don't exceed context length
         # TODO: we could choose max_tokens based on the model
+        encoding = tiktoken.encoding_for_model(self.model)
+        messages = self.messages_to_llm_messages(messages)
         messages = filter_messages_token_count(messages, MAX_INPUT_TOKENS, encoding)
 
         return self.client.chat.completions.create(
@@ -160,12 +164,10 @@ class Agent:
                     for tool_call in message.tool_call:
                         print(f"Tool: {tool_call['function']['name']}")
                         print(f"Arguments: {format_content(tool_call['function']['arguments'])}\n")
-                #if message.tool_call_id is not None:
-                #    print(f"Tool Call ID: {message.tool_call_id}")
                 print('-' * 40)
         print('\n', 100 * '=', '\n')
 
-    def handle_tool_call(self, response):
+    def handle_tool_call(self, response, chat_id: int):
         """
         """
 
@@ -205,7 +207,8 @@ class Agent:
                 recipient="",
                 role="assistant",
                 message="",
-                tool_call=tool_call_message
+                tool_call=tool_call_message,
+                chat_id=chat_id
             )
 
             fc_message = Message(
@@ -213,7 +216,8 @@ class Agent:
                 recipient="",
                 role="tool",
                 message=function_call_result_message['content'],
-                tool_call=tool_call_message
+                tool_call=tool_call_message,
+                chat_id=chat_id
             )
 
             self.add_message(tc_message)

@@ -28,10 +28,6 @@ from src.user import UserProfile
 from src.database import db_setup as dbs
 from src.database import db_access as dba
 
-MODEL = 'gpt-4o'
-#MODEL = 'gpt-4o-mini'
-#MODEL = 'gpt-4o-2024-08-06'
-
 
 def initialize_st_vars() -> None:
     """
@@ -40,6 +36,8 @@ def initialize_st_vars() -> None:
 
     st.session_state.counselor_persona = 'David - The Mentor'
 
+    if 'chat_id' not in st.session_state:
+        st.session_state.chat_id = 0
     if 'messages_since_update' not in st.session_state:
         st.session_state.messages_since_update = 0
     if 'user' not in st.session_state:
@@ -66,7 +64,7 @@ def initialize_counselor_agent(client: OpenAI, student_md_profile: str) -> agent
         client,
         name="Counselor",
         tools=None,
-        model=MODEL,
+        model=constants.COUNSELOR_AGENT_MODEL,
         system_prompt=counselor_system_prompt,
         json_mode=True
     )
@@ -81,7 +79,7 @@ def initialize_suny_agent(client: OpenAI):
         client,
         name="SUNY",
         tools=tools.suny_tools,
-        model=MODEL,
+        model=constants.SUNY_AGENT_MODEL,
         system_prompt=suny_system_prompt
     )
 
@@ -91,7 +89,6 @@ def check_assessment_completed(user_id):
     Check if the user has completed the assessment.
     """
     top_strengths, _ = dba.get_topbot_strengths(user_id, k=1)
-    ic(top_strengths)
     return bool(top_strengths)
 
 
@@ -103,6 +100,8 @@ def main():
 
     os.makedirs(constants.SQL_DB_DIR, exist_ok=True)
     dbs.create_auth_tables()
+
+    dbs.create_signup_code_table()
 
     st.set_page_config(page_title="SUNY Counselor Chat", page_icon="💬", layout="wide")
     initialize_st_vars()
