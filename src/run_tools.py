@@ -169,7 +169,8 @@ def process_user_input(
             sender="counselor",
             recipient="suny",
             role="user",
-            message=counselor_response_str
+            message=counselor_response_str,
+            chat_id=chat_id
         )
 
         if user is not None:
