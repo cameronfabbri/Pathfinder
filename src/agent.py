@@ -71,7 +71,6 @@ class Agent:
             name: str,
             tools,
             system_prompt: str,
-            #model: str = 'gpt-4o-2024-08-06',
             model: str,
             json_mode: bool = False,
             temperature: float = 0.0) -> None:
@@ -87,7 +86,6 @@ class Agent:
         self.json_mode = json_mode
         self.temperature = temperature
         self.messages = []
-        #self.messages = [Message(role="system", sender="", recipient="", message=self.system_prompt, chat_id=-1)]
         self.color = get_color(self.name)
 
     def update_system_prompt(self, new_prompt: str) -> None:
@@ -100,7 +98,6 @@ class Agent:
             None
         """
         self.system_prompt = new_prompt
-        #self.messages[0].message['content'] = self.system_prompt
 
     def add_message(self, message: Message):
         self.messages.append(message)
@@ -167,8 +164,6 @@ class Agent:
                     for tool_call in message.tool_call:
                         print(f"Tool: {tool_call['function']['name']}")
                         print(f"Arguments: {format_content(tool_call['function']['arguments'])}\n")
-                #if message.tool_call_id is not None:
-                #    print(f"Tool Call ID: {message.tool_call_id}")
                 print('-' * 40)
         print('\n', 100 * '=', '\n')
 
