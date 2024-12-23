@@ -66,6 +66,37 @@ def login(username: str, password: str) -> User:
     return None
 
 
+def validate_signup_code(signup_code: str) -> bool:
+    """
+    Validate a signup code.
+    """
+    conn = dba.get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Check if code exists and hasn't been used
+        cursor.execute("SELECT used FROM signup_codes WHERE code = ?", (signup_code,))
+        result = cursor.fetchone()
+        
+        if result is None:
+            return False
+            
+        # Code has been used
+        if result[0]:
+            return False
+            
+        # Mark code as used
+        cursor.execute("UPDATE signup_codes SET used = TRUE WHERE code = ?", (signup_code,))
+        conn.commit()
+        return True
+        
+    except sqlite3.Error as e:
+        logging.error(f"Database error validating signup code: {e}")
+        return False
+    except Exception as e:
+        logging.error(f"Unexpected error validating signup code: {e}") 
+        return False
+
+
 def signup(first_name: str, last_name: str, age: int, gender: str, username: str, password: str, signup_code: str) -> User:
     """
     Register a new user and create corresponding student information.

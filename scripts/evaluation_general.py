@@ -210,7 +210,8 @@ def _prep_counselor_conversation(user_prompts: List[str], client: OpenAI, studen
         role='assistant',
         sender='counselor',
         recipient='student',
-        message=first_message_content
+        message=first_message_content,
+        chat_id=0
     )
     counselor_agent.add_message(first_message)
 

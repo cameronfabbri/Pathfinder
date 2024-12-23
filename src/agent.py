@@ -86,7 +86,8 @@ class Agent:
         self.model = model
         self.json_mode = json_mode
         self.temperature = temperature
-        self.messages = [Message(role="system", sender="", recipient="", message=self.system_prompt, chat_id=-1)]
+        self.messages = []
+        #self.messages = [Message(role="system", sender="", recipient="", message=self.system_prompt, chat_id=-1)]
         self.color = get_color(self.name)
 
     def update_system_prompt(self, new_prompt: str) -> None:
@@ -99,7 +100,7 @@ class Agent:
             None
         """
         self.system_prompt = new_prompt
-        self.messages[0].message['content'] = self.system_prompt
+        #self.messages[0].message['content'] = self.system_prompt
 
     def add_message(self, message: Message):
         self.messages.append(message)
@@ -128,24 +129,18 @@ class Agent:
             result.append(message_dict)
         return result
 
-    def invoke(self, chat_id: int | None) -> str:
+    def invoke(self) -> str:
         """ Call the model and return the response. """
 
-        # Get the messages for the current chat
-        messages = self.messages
-        if chat_id is not None:
-            # chat_id is -1 for the system prompt
-            messages = [m for m in self.messages if m.chat_id == chat_id or m.chat_id == -1]
+        messages = []
+        messages.append(Message(role="system", sender="", recipient="", message=self.system_prompt, chat_id=-1))
+        messages.extend(self.messages)
 
         # Make sure messages don't exceed context length
+        # TODO: we could choose max_tokens based on the model
         encoding = tiktoken.encoding_for_model(self.model)
         messages = self.messages_to_llm_messages(messages)
-
-        # TODO: we could choose max_tokens based on the model
         messages = filter_messages_token_count(messages, MAX_INPUT_TOKENS, encoding)
-
-        #for m in messages:
-        #    print(m, '\n')
 
         return self.client.chat.completions.create(
             model=self.model,
@@ -177,7 +172,7 @@ class Agent:
                 print('-' * 40)
         print('\n', 100 * '=', '\n')
 
-    def handle_tool_call(self, response):
+    def handle_tool_call(self, response, chat_id: int):
         """
         """
 
@@ -217,7 +212,8 @@ class Agent:
                 recipient="",
                 role="assistant",
                 message="",
-                tool_call=tool_call_message
+                tool_call=tool_call_message,
+                chat_id=chat_id
             )
 
             fc_message = Message(
@@ -225,7 +221,8 @@ class Agent:
                 recipient="",
                 role="tool",
                 message=function_call_result_message['content'],
-                tool_call=tool_call_message
+                tool_call=tool_call_message,
+                chat_id=chat_id
             )
 
             self.add_message(tc_message)
@@ -234,8 +231,7 @@ class Agent:
             tc_messages.append(tc_message)
             tc_messages.append(fc_message)
 
-        return function_result, self.invoke(chat_id=None), tc_messages
-        #return function_result, self.invoke(), tc_messages
+        return function_result, self.invoke(), tc_messages
 
 
 def filter_messages_token_count(
@@ -280,4 +276,3 @@ def filter_messages_token_count(
         f'{len(res)} messages @ {total_tokens} tokens')
 
     return res
->>>>>>> main

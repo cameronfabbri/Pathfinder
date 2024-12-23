@@ -48,7 +48,8 @@ def main():
     suny = lambda x: ev.run_suny(x, client, temperature)
 
     questions = [
-        'Could you provide information on which SUNY schools have the best economics programs?',
+        #'Could you provide information on which SUNY schools have the best economics programs?',
+        'What classes are needed for a computer science degree at Binghamton?'
         # 'What is the cheapest school to get a computer science degree at?',
         # 'Which school should I go to if I want to study piano?',
         # 'What is the best school?',              # doesn't invoke tool
@@ -124,21 +125,18 @@ def main():
 def _extract_rag_info(messages: List[Message]) -> Tuple[str, str, str]:
     # TODO: gracefully handle case where there is no tool call
 
-    assert len(messages) == 5
+    assert len(messages) == 4
 
-    # first message is system prompt
-    assert messages[0].role == 'system'
+    assert messages[0].role == 'user'
+    question = utils.extract_content_from_message(messages[0].message)
 
-    assert messages[1].role == 'user'
-    question = utils.extract_content_from_message(messages[1].message)
+    assert messages[1].role == 'assistant'
 
-    assert messages[2].role == 'assistant'
+    assert messages[2].role == 'tool'
+    docs = json.loads(messages[2].message)['result']
 
-    assert messages[3].role == 'tool'
-    docs = json.loads(messages[3].message)['result']
-
-    assert messages[4].role == 'assistant'
-    answer = messages[4].message
+    assert messages[3].role == 'assistant'
+    answer = messages[3].message
 
     return question, docs, answer
 
