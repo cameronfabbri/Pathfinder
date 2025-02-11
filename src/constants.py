@@ -11,7 +11,7 @@ from src import personas
 opj = os.path.join
 
 COUNSELOR_AGENT_MODEL = 'gpt-4o'
-SUNY_AGENT_MODEL = 'gpt-4o-mini'
+SUNY_AGENT_MODEL = 'gpt-4o'
 
 QDRANT_URL = str(os.getenv('QDRANT_URL'))
 QDRANT_API_KEY = str(os.getenv('QDRANT_API_KEY'))
