@@ -208,6 +208,7 @@ def process_user_input(
             recipient="counselor",
             role="assistant",
             message=suny_response.choices[0].message.content,
+            chat_id=chat_id
         )
         suny_agent.add_message(message)
 
