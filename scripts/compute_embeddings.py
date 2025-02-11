@@ -11,17 +11,13 @@ from difflib import SequenceMatcher
 
 import click
 import requests
+import pymupdf4llm
 
 from bs4 import BeautifulSoup
 from tqdm import tqdm
-
-import pymupdf4llm
-
-from icecream import ic
 from openai import OpenAI
-from qdrant_client import QdrantClient
-
 from unidecode import unidecode
+from qdrant_client import QdrantClient
 
 from src import agent, utils
 from src.database import qdrant_db

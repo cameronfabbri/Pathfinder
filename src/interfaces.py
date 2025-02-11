@@ -7,14 +7,11 @@ import sys
 import json
 import pickle
 
-import streamlit as st
-
 import streamlit_chat
+import streamlit as st
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
-
-from icecream import ic
 
 from src import agent, auth, prompts, run_tools as rt, utils
 from src.user import UserProfile
