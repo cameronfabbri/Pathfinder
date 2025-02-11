@@ -3,7 +3,9 @@ Constants for the application.
 """
 # Cameron Fabbri
 import os
+
 from functools import lru_cache
+
 from src import personas
 
 opj = os.path.join
@@ -19,7 +21,7 @@ STUDENT_AVATAR_STYLE = 'identicon'
 COUNSELOR_AVATAR_STYLE = 'bottts'
 
 SQL_DB_DIR = opj('data', 'sql_dbs')
-    
+
 PERSONA_PROMPT = personas.DAVID + '\n\n' + personas.DAVID_TRAITS
 
 FASTEMBED_CACHE_DIR = opj('data', 'fastembed')
