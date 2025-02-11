@@ -2,31 +2,24 @@
 Main script
 """
 # Cameron Fabbri
-
 import os
 import sys
+
+from functools import lru_cache
+
 import streamlit as st
-from icecream import ic
 
 from openai import OpenAI
-from functools import lru_cache
 
 # Added for streamlit
 # Need to run `streamlit scripts/run.py` to start the app
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
-from src import utils
-from src import prompts
-from src import personas
-from src import agent
-from src import tools
-from src import constants
-from src import run_tools as rt
-from src import interfaces as itf
+from src import (agent, constants, interfaces as itf, personas, prompts,
+                 run_tools as rt, tools, utils)
 from src.user import UserProfile
-from src.database import db_setup as dbs
-from src.database import db_access as dba
+from src.database import db_access as dba, db_setup as dbs
 
 
 def initialize_st_vars() -> None:
@@ -111,7 +104,7 @@ def main():
 
     if not st.session_state.user:
         st.error("Please log in to continue")
-        return 
+        return
 
     st.sidebar.success(f"Logged in as: {st.session_state.user.username}")
 

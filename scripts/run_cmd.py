@@ -5,7 +5,6 @@ import os
 import readline
 
 from openai import OpenAI
-from icecream import ic
 
 from scripts.run import initialize_counselor_agent, initialize_suny_agent
 
@@ -52,7 +51,7 @@ def load_assessment_responses(assessment_responses):
         user_prompt=user_prompt)
 
     print('\n---------\n')
-    ic(response)
+    print(response)
 
 
 def main():
@@ -99,7 +98,13 @@ def main():
         else:
             user_prompt = input('> ')
 
-        rt.process_user_input(counselor_agent, suny_agent, user, None, user_prompt)
+        rt.process_user_input(
+            counselor_agent,
+            suny_agent,
+            user,
+            None,
+            user_prompt
+        )
         m = utils.extract_content_from_message(
             counselor_agent.messages[-1].message
         )

@@ -3,12 +3,12 @@ This script creates a mapping of the original filenames to the new filenames
 for all the html files in the given directory (recursively).
 """
 import os
-import json
 import re
+import json
+
 import click
 
 from tqdm import tqdm
-from icecream import ic
 
 
 def get_files(directory: str, extension: str) -> list[str]:
@@ -64,7 +64,7 @@ def create_filename_mapping(directory: str, mapping_file: str):
 
             # Sanitize the full path (including directories)
             sanitized_path = sanitize_path(filepath)
-            
+
             if sanitized_path in filepath_mapping.values():
                 continue
 
@@ -88,7 +88,7 @@ def create_filename_mapping(directory: str, mapping_file: str):
 def main(directory):
 
     university_dirs = [os.path.join(directory, d) for d in os.listdir(directory) if os.path.isdir(os.path.join(directory, d))]
-    
+
     for dir in university_dirs:
         create_filename_mapping(dir, os.path.join(dir, 'filename_mapping.json'))
 

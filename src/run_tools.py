@@ -13,8 +13,6 @@ from typing import Callable
 
 import streamlit as st
 
-from icecream import ic
-
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
@@ -63,7 +61,7 @@ def load_message_history() -> None:
     """
     Load the message history from the database and add it to the session state
     """
-    
+
     last_chat_id = dba.get_latest_chat_id(st.session_state.user.user_id)
     message_history = dba.load_message_history(st.session_state.user.user_id, last_chat_id)
 
@@ -210,6 +208,7 @@ def process_user_input(
             recipient="counselor",
             role="assistant",
             message=suny_response.choices[0].message.content,
+            chat_id=chat_id
         )
         suny_agent.add_message(message)
 
