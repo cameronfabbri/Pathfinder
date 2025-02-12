@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 import src.constants as constants
 import src.assessment as assessment
+
 from src.database.db_access import get_db_connection, get_user_db_connection
 
 
@@ -40,13 +41,13 @@ def create_signup_code_table():
     ''')
     cursor.execute('SELECT COUNT(*) FROM signup_codes')
     code_count = cursor.fetchone()[0]
-    
+
     if code_count < 20:
         for code in constants.SIGNUP_CODES:
             cursor.execute('SELECT code FROM signup_codes WHERE code = ?', (code,))
             if not cursor.fetchone():
                 cursor.execute('''
-                    INSERT INTO signup_codes (code, used) VALUES (?, FALSE)
+                    INSERT OR IGNORE INTO signup_codes (code, used) VALUES (?, FALSE)
                 ''', (code,))
     conn.commit()
 
